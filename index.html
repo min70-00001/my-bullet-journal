@@ -80,11 +80,12 @@
   <!-- ================= 탭 1: 데일리 다이어리 (양면 / 스택 뷰) ================= -->
   <main id="view-daily" class="max-w-6xl mx-auto px-3 md:px-4 mt-3">
     <!-- 천사 D-Day & 밴드 일기 1초 복사 바 -->
-    <div class="flex items-center gap-2 text-xs md:text-sm font-medium text-stone-700">
-  <span>🐶 여름이 <strong class="text-rose-500 font-bold">D+<span id="ddaySummer">914</span></strong></span>
-  <span class="text-stone-300">|</span>
-  <span>🌟 달이 <strong class="text-amber-500 font-bold">D+<span id="ddayDal">438</span></strong></span>
-</div>
+    <div class="bg-white border border-stone-200 rounded-2xl p-3 mb-3 flex flex-wrap items-center justify-between gap-2 shadow-sm">
+      <div class="flex items-center gap-2 text-xs md:text-sm font-medium text-stone-700">
+        <span>🐶 여름이 <strong class="text-rose-500 font-bold">D+<span id="ddaySummer">914</span></strong></span>
+        <span class="text-stone-300">|</span>
+        <span>🌟 달이 <strong class="text-amber-500 font-bold">D+<span id="ddayDal">438</span></strong></span>
+      </div>
       <button onclick="copyBandDiaryText()" class="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-300 px-2.5 py-1.5 rounded-lg flex items-center gap-1 font-semibold">
         📋 밴드 일기 1초 복사
       </button>
