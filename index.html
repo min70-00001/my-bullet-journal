@@ -136,7 +136,7 @@
         <!-- 꼭 해야 할 일 & 생활 투두 (앱테크 기본 탑재) -->
         <div class="bg-white/80 border border-stone-200 rounded-xl p-3">
           <div class="flex items-center justify-between mb-2">
-            <h3 class="text-xs font-bold text-stone-600">📝 TO-DO & 생활 앱테크</h3>
+            <h3 class="text-xs font-bold text-stone-600">📝 TO-DO</h3>
             <button onclick="addNewTodo()" class="text-xs text-stone-500 hover:text-stone-800 font-semibold">+ 추가</button>
           </div>
           <div id="todoList" class="space-y-1.5 text-xs">
@@ -203,7 +203,7 @@
           </button>
         </div>
 
-        <!-- 혈당 케어 & 식단 슬롯 (아침/점심/저녁/간식) -->
+        <!-- 혈당 케어 & 식단 슬롯 (아침/점심/저녁) -->
         <div class="bg-stone-50/70 border border-stone-200 rounded-xl p-3">
           <div class="flex items-center justify-between mb-2">
             <h3 class="text-xs font-bold text-stone-700">🥗 식단 & 혈당 관리 로그</h3>
@@ -224,13 +224,11 @@
               </div>
               <input type="text" id="mealBreakfast" oninput="saveDailyData()" placeholder="식사 메뉴 및 식재료 입력..." class="w-full bg-transparent text-xs border-b border-stone-100 pb-1 mb-1 focus:outline-none">
               <div class="flex items-center gap-3 text-[11px] text-stone-500">
-                <label class="flex items-center gap-1"><input type="checkbox" onchange="saveDailyData()"> 애사비 🍏</label>
-                <label class="flex items-center gap-1"><input type="checkbox" onchange="saveDailyData()"> 채·단·탄 순서 🥗</label>
-                <label class="flex items-center gap-1"><input type="checkbox" onchange="saveDailyData()"> 식후 15분 걷기 🚶</label>
+                <label class="flex items-center gap-1"><input type="checkbox" onchange="saveDailyData()"> 채·단·탄 🥗</label>
               </div>
             </div>
 
-            <!-- 점심 -->
+            <!-- 점심 (애사비 + 채단탄 + 식후 움직임) -->
             <div class="bg-white p-2 rounded-lg border border-stone-200">
               <div class="flex justify-between items-center mb-1">
                 <span class="font-semibold text-stone-700">점심 식단</span>
@@ -241,12 +239,13 @@
               </div>
               <input type="text" id="mealLunch" oninput="saveDailyData()" placeholder="메뉴 입력..." class="w-full bg-transparent text-xs border-b border-stone-100 pb-1 mb-1 focus:outline-none">
               <div class="flex items-center gap-3 text-[11px] text-stone-500">
+                <label class="flex items-center gap-1"><input type="checkbox" onchange="saveDailyData()"> 애사비 🍏</label>
                 <label class="flex items-center gap-1"><input type="checkbox" onchange="saveDailyData()"> 채·단·탄 🥗</label>
                 <label class="flex items-center gap-1"><input type="checkbox" onchange="saveDailyData()"> 식후 움직임 🚶</label>
               </div>
             </div>
 
-            <!-- 저녁 -->
+            <!-- 저녁 (애사비 + 채단탄 + 식후 움직임 통일!) -->
             <div class="bg-white p-2 rounded-lg border border-stone-200">
               <div class="flex justify-between items-center mb-1">
                 <span class="font-semibold text-stone-700">저녁 식단</span>
@@ -257,13 +256,14 @@
               </div>
               <input type="text" id="mealDinner" oninput="saveDailyData()" placeholder="메뉴 입력..." class="w-full bg-transparent text-xs border-b border-stone-100 pb-1 mb-1 focus:outline-none">
               <div class="flex items-center gap-3 text-[11px] text-stone-500">
+                <label class="flex items-center gap-1"><input type="checkbox" onchange="saveDailyData()"> 애사비 🍏</label>
                 <label class="flex items-center gap-1"><input type="checkbox" onchange="saveDailyData()"> 채·단·탄 🥗</label>
-                <label class="flex items-center gap-1"><input type="checkbox" onchange="saveDailyData()"> 실내자전거/산책 🚴</label>
+                <label class="flex items-center gap-1"><input type="checkbox" onchange="saveDailyData()"> 식후 움직임 🚶</label>
               </div>
             </div>
           </div>
         </div>
-
+            
         <!-- 감성 OOTD (컬러칩 & 착장) & 오늘의 노래 -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
           <!-- OOTD -->
@@ -291,15 +291,18 @@
 
         <!-- 취미 미니 위젯 (뜨개 단수 카운터 & 독서) -->
         <div class="grid grid-cols-2 gap-2 text-xs">
-          <!-- 뜨개 카운터 -->
-          <div class="bg-rose-50/50 border border-rose-200/80 rounded-xl p-2.5 flex items-center justify-between">
-            <div>
-              <span class="font-bold text-rose-800 block">🧶 뜨개 단수</span>
-              <span id="knittingRowCount" class="text-base font-bold text-rose-600">0 단</span>
+          <!-- 뜨개 프로젝트 카운터 -->
+          <div class="bg-rose-50/50 border border-rose-200/80 rounded-xl p-2.5 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-1">
+              <input type="text" id="knittingProjectName" oninput="saveKnittingProject()" placeholder="편물 이름 (예: 미피 네트백)" class="bg-transparent font-bold text-xs text-rose-800 focus:outline-none w-28 truncate">
+              <button onclick="resetKnittingProject()" class="text-[10px] text-rose-400 hover:text-rose-600">리셋</button>
             </div>
-            <div class="flex items-center gap-1">
-              <button onclick="changeKnittingRow(-1)" class="w-6 h-6 bg-white border border-rose-200 rounded text-rose-700 font-bold">-</button>
-              <button onclick="changeKnittingRow(1)" class="w-6 h-6 bg-rose-600 text-white rounded font-bold">+</button>
+            <div class="flex items-center justify-between">
+              <span id="knittingRowCount" class="text-base font-bold text-rose-600">0 단</span>
+              <div class="flex items-center gap-1">
+                <button onclick="changeKnittingRow(-1)" class="w-6 h-6 bg-white border border-rose-200 rounded text-rose-700 font-bold hover:bg-rose-100">-</button>
+                <button onclick="changeKnittingRow(1)" class="w-6 h-6 bg-rose-600 text-white rounded font-bold hover:bg-rose-700">+</button>
+              </div>
             </div>
           </div>
           <!-- 독서 메모 -->
@@ -604,6 +607,7 @@
       updateDateDisplay();
       updateDDayCounters();
       loadDailyData();
+      initKnittingUI(); // 요거 한 줄 추가!
       updateBudgetUI();
       renderCalendar();
       checkAnniversary();
@@ -692,52 +696,58 @@
       link.click();
     }
 
-    // 6. 타임테이블 렌더링 (07:00 ~ 24:00)
     function renderTimeline() {
       const container = document.getElementById('timelineContainer');
       container.innerHTML = '';
+      
+      const key = `mingle_timeline_${currentDate.toISOString().slice(0,10)}`;
+      const savedBlocks = JSON.parse(localStorage.getItem(key) || '{}');
+
       for (let h = 7; h <= 23; h++) {
-        const timeStr = `${String(h).padStart(2, '0')}:00`;
         const row = document.createElement('div');
-        row.className = 'flex items-center gap-2 p-1 rounded hover:bg-stone-100 cursor-pointer transition';
-        row.onclick = () => logCustomTimeline(timeStr);
+        row.className = 'flex items-center gap-1.5 py-0.5 border-b border-stone-100';
+        
+        const hourStr = `${String(h).padStart(2, '0')}:00`;
+        let blocksHtml = '';
+        
+        for (let m = 0; m < 6; m++) {
+          const blockId = `${h}-${m}`;
+          const isFilled = savedBlocks[blockId] ? 'bg-amber-200 border-amber-400' : 'bg-white border-stone-200';
+          const title = savedBlocks[blockId] || `${hourStr} ${m * 10}분`;
+          blocksHtml += `
+            <div onclick="toggleTimelineBlock(${h}, ${m})" id="tb-${blockId}" title="${title}"
+                 class="flex-1 h-5 rounded-sm border ${isFilled} cursor-pointer hover:opacity-80 transition flex items-center justify-center text-[9px] text-stone-600 font-sans select-none">
+                 ${savedBlocks[blockId] ? '✔' : ''}
+            </div>
+          `;
+        }
+
         row.innerHTML = `
-          <span class="w-12 text-stone-400 font-bold">${timeStr}</span>
-          <div class="flex-1 h-5 bg-white border border-stone-200 rounded flex items-center px-2 text-[11px] text-stone-700 truncate" id="time-${h}"></div>
+          <span class="w-10 text-[11px] text-stone-400 font-bold">${hourStr}</span>
+          <div class="flex-1 grid grid-cols-6 gap-1">
+            ${blocksHtml}
+          </div>
         `;
         container.appendChild(row);
       }
     }
 
-    function logCurrentTimeToTimeline() {
-      const now = new Date();
-      const hour = now.getHours();
-      const text = prompt("지금 한 일을 적어주세요:", "📖 독서");
-      if (text && hour >= 7 && hour <= 23) {
-        const target = document.getElementById(`time-${hour}`);
-        if (target) {
-          target.innerText = text;
-          target.classList.add('bg-amber-100/70', 'border-amber-300');
-          saveDailyData();
-        }
-      }
-    }
+    // 10분 블록 터치 토글 & 기록
+    function toggleTimelineBlock(h, m) {
+      const key = `mingle_timeline_${currentDate.toISOString().slice(0,10)}`;
+      let savedBlocks = JSON.parse(localStorage.getItem(key) || '{}');
+      const blockId = `${h}-${m}`;
 
-    function logCustomTimeline(timeStr) {
-      const hour = parseInt(timeStr.split(':')[0]);
-      const text = prompt(`${timeStr}에 한 일을 기록하세요:`);
-      if (text !== null) {
-        const target = document.getElementById(`time-${hour}`);
-        if (target) {
-          target.innerText = text;
-          if (text) {
-            target.classList.add('bg-emerald-100/70', 'border-emerald-300');
-          } else {
-            target.className = 'flex-1 h-5 bg-white border border-stone-200 rounded flex items-center px-2 text-[11px] text-stone-700 truncate';
-          }
-          saveDailyData();
+      if (savedBlocks[blockId]) {
+        delete savedBlocks[blockId];
+      } else {
+        const act = prompt(`${h}시 ${m * 10}분 활동을 적어주세요 (빈칸으로 두면 색상만 칠해져요):`, "");
+        if (act !== null) {
+          savedBlocks[blockId] = act || "완료";
         }
       }
+      localStorage.setItem(key, JSON.stringify(savedBlocks));
+      renderTimeline();
     }
 
     // 7. 4대 루틴 칩
@@ -765,15 +775,47 @@
       btn.classList.add('bg-emerald-600', 'text-white');
       btn.innerText = `🏃 ${selectedWorkout} (${duration}분)`;
       closeWorkoutModal();
-      saveDailyData();
+
+      // 달력 연동용 플래그
+      const key = `mingle_journal_${currentDate.toISOString().slice(0,10)}`;
+      let data = JSON.parse(localStorage.getItem(key) || '{}');
+      data.workoutDone = true;
+      localStorage.setItem(key, JSON.stringify(data));
+      renderCalendar();
     }
 
-    // 뜨개 단수
-    let knittingCount = 0;
+    // 뜨개 프로젝트 단수 관리 (날짜와 무관하게 편물 진행도 유지)
+    let knittingData = JSON.parse(localStorage.getItem('mingle_knitting_project') || '{"name":"","count":0}');
+
+    function initKnittingUI() {
+      document.getElementById('knittingProjectName').value = knittingData.name || '';
+      document.getElementById('knittingRowCount').innerText = `${knittingData.count || 0} 단`;
+    }
+
+    function saveKnittingProject() {
+      knittingData.name = document.getElementById('knittingProjectName').value;
+      localStorage.setItem('mingle_knitting_project', JSON.stringify(knittingData));
+    }
+
     function changeKnittingRow(val) {
-      knittingCount = Math.max(0, knittingCount + val);
-      document.getElementById('knittingRowCount').innerText = `${knittingCount} 단`;
-      saveDailyData();
+      knittingData.count = Math.max(0, (knittingData.count || 0) + val);
+      document.getElementById('knittingRowCount').innerText = `${knittingData.count} 단`;
+      localStorage.setItem('mingle_knitting_project', JSON.stringify(knittingData));
+
+      // 오늘 날짜 다이어리에도 "오늘 뜨개 함" 표시해서 달력에 🧶 도장 찍기!
+      const key = `mingle_journal_${currentDate.toISOString().slice(0,10)}`;
+      let daily = JSON.parse(localStorage.getItem(key) || '{}');
+      daily.knittedToday = true;
+      localStorage.setItem(key, JSON.stringify(daily));
+      renderCalendar();
+    }
+
+    function resetKnittingProject() {
+      if (confirm("새로운 편물을 시작할까요? 단수가 0단으로 리셋됩니다.")) {
+        knittingData = { name: "", count: 0 };
+        localStorage.setItem('mingle_knitting_project', JSON.stringify(knittingData));
+        initKnittingUI();
+      }
     }
 
     // 8. 루티너리 모달 플레이어
@@ -945,27 +987,53 @@
     function renderCalendar() {
       const grid = document.getElementById('calendarGrid');
       grid.innerHTML = '';
-      for (let day = 1; day <= 30; day++) {
+      
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const savedData = localStorage.getItem(`mingle_journal_${dateStr}`);
+        
+        let stamps = [];
+
+        if (savedData) {
+          const parsed = JSON.parse(savedData);
+          // 식단 기록이 있으면 🥗
+          if (parsed.mealBreakfast || parsed.mealLunch || parsed.mealDinner) stamps.push('🥗');
+          // 운동 완료했으면 🏃
+          if (parsed.workoutDone) stamps.push('🏃');
+          // 읽은 책 제목 적었으면 📖
+          if (parsed.readingBook && parsed.readingBook.trim() !== '') stamps.push('📖');
+          // 오늘 뜨개질 단수 올렸으면 🧶
+          if (parsed.knittedToday) stamps.push('🧶');
+          // 체중 기록했으면 ⚖️
+          if (parsed.weight && parsed.weight.trim() !== '') stamps.push('⚖️');
+        }
+
         const box = document.createElement('div');
-        box.className = 'border border-stone-100 rounded-xl p-2 min-h-[64px] bg-stone-50/50 hover:bg-stone-100/80 cursor-pointer flex flex-col justify-between';
+        box.className = 'border border-stone-100 rounded-xl p-1.5 min-h-[64px] bg-stone-50/50 hover:bg-stone-100/80 cursor-pointer flex flex-col justify-between transition';
         box.onclick = () => {
-          currentDate = new Date(2026, 8, day);
+          currentDate = new Date(year, month, day);
           switchTab('daily');
           updateDateDisplay();
           updateDDayCounters();
           loadDailyData();
+          renderTimeline();
+          checkAnniversary();
         };
+
         box.innerHTML = `
           <span class="font-semibold text-stone-600 text-[11px]">${day}</span>
-          <div class="flex gap-0.5 text-xs mt-1">
-            <span>🥗</span>
-            <span>🏃</span>
+          <div class="flex flex-wrap gap-0.5 text-[11px] mt-1 min-h-[16px]">
+            ${stamps.map(s => `<span>${s}</span>`).join('')}
           </div>
         `;
         grid.appendChild(box);
       }
     }
-
+    
     function openAnniversaryModal() {
       document.getElementById('anniversaryModal').classList.remove('hidden');
     }
@@ -1100,6 +1168,10 @@
         document.getElementById('dailyBgm').value = data.dailyBgm || '';
         document.getElementById('readingBookTitle').value = data.readingBook || '';
         document.getElementById('shoppingList').value = data.shopping || '';
+
+        // 뜨개 단수 불러오기 추가된 부분!
+        knittingCount = data.knittingCount || 0;
+        document.getElementById('knittingRowCount').innerText = `${knittingCount} 단`;
       } else {
         document.getElementById('dailyWeight').value = '';
         document.getElementById('bsFasting').value = '';
@@ -1113,8 +1185,13 @@
         document.getElementById('dailyBgm').value = '';
         document.getElementById('readingBookTitle').value = '';
         document.getElementById('shoppingList').value = '';
+
+        // 기록 없는 날은 0단으로 초기화!
+        knittingCount = 0;
+        document.getElementById('knittingRowCount').innerText = `0 단`;
       }
     }
+    
   </script>
 </body>
 </html>
