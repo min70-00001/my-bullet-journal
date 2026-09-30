@@ -80,12 +80,11 @@
   <!-- ================= 탭 1: 데일리 다이어리 (양면 / 스택 뷰) ================= -->
   <main id="view-daily" class="max-w-6xl mx-auto px-3 md:px-4 mt-3">
     <!-- 천사 D-Day & 밴드 일기 1초 복사 바 -->
-    <div class="bg-white border border-stone-200 rounded-2xl p-3 mb-3 flex flex-wrap items-center justify-between gap-2 shadow-sm">
-      <div class="flex items-center gap-3 text-xs md:text-sm font-medium text-stone-700">
-        <span class="flex items-center gap-1">🐶 여름이 안 아픈 지 <strong id="ddaySummer" class="text-rose-500 font-bold">914</strong>일 째 ♡</span>
-        <span class="text-stone-300">|</span>
-        <span class="flex items-center gap-1">🌟 달이 천사된 지 <strong id="ddayDal" class="text-amber-500 font-bold">438</strong>일 째 ♡</span>
-      </div>
+    <div class="flex items-center gap-2 text-xs md:text-sm font-medium text-stone-700">
+  <span>🐶 여름이 <strong class="text-rose-500 font-bold">D+<span id="ddaySummer">914</span></strong></span>
+  <span class="text-stone-300">|</span>
+  <span>🌟 달이 <strong class="text-amber-500 font-bold">D+<span id="ddayDal">438</span></strong></span>
+</div>
       <button onclick="copyBandDiaryText()" class="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-300 px-2.5 py-1.5 rounded-lg flex items-center gap-1 font-semibold">
         📋 밴드 일기 1초 복사
       </button>
@@ -575,7 +574,7 @@
   <!-- ================= 자바스크립트 로직 (Firebase & Data Store) ================= -->
   <script>
     // 1. 현재 날짜 상태
-    let currentDate = new Date(2026, 8, 30); // 2026년 9월 30일 기본 세팅
+    let currentDate = new Date(); // 오늘 날짜 자동 인식!
 
     // 2. 루티너리 시퀀스 기본 템플릿
     let morningRoutines = [
@@ -619,13 +618,13 @@
     }
 
     function goToToday() {
-      currentDate = new Date(2026, 8, 30);
+      currentDate = new Date(); // 오늘 누르면 진짜 오늘로 즉시 이동!
       updateDateDisplay();
       updateDDayCounters();
       loadDailyData();
       checkAnniversary();
     }
-
+    
     function updateDateDisplay() {
       const days = ['일', '월', '화', '수', '목', '금', '토'];
       const y = currentDate.getFullYear();
