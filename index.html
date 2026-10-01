@@ -64,22 +64,29 @@
     <!-- 1. 일일 페이지 (VIEW: DAY) -->
     <section id="view-day" class="space-y-4">
       
-      <!-- 날짜 바 -->
-      <div class="bg-white rounded-2xl p-3 border border-stone-200 shadow-xs flex items-center justify-between">
-        <button onclick="changeDate(-1)" class="p-1.5 text-stone-400 hover:text-stone-700 font-bold">◀</button>
-        <div class="text-center flex flex-col items-center gap-1">
-          <div class="flex items-center gap-1.5">
-            <div class="relative cursor-pointer">
-              <span class="text-xs font-bold text-stone-800 hover:text-amber-800" id="currentDateLabel">2026년 10월 1일 (목)</span>
+      <!-- 🎨 감성 리디자인 날짜 헤더 바 -->
+      <div class="bg-white rounded-2xl p-4 border border-stone-200/80 shadow-xs space-y-2.5">
+        <div class="flex items-center justify-between">
+          <button onclick="changeDate(-1)" class="w-8 h-8 rounded-full bg-stone-50 hover:bg-stone-100 text-stone-400 hover:text-stone-700 font-bold flex items-center justify-center transition-colors">◀</button>
+          
+          <div class="text-center flex flex-col items-center">
+            <span class="text-[11px] font-mono text-stone-400 font-semibold tracking-wider" id="currentYearMonthLabel">2026. 10</span>
+            <div class="relative cursor-pointer flex items-center gap-1.5 mt-0.5">
+              <span class="text-base font-extrabold text-stone-800 hover:text-amber-900 tracking-tight" id="currentDateLabel">10월 1일 목요일</span>
+              <button id="todayJumpBtn" onclick="jumpToRealToday()" class="hidden text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-md font-bold">
+                오늘
+              </button>
               <input type="date" id="currentDateInput" onchange="onDateChanged(this.value)" class="absolute inset-0 opacity-0 cursor-pointer w-full">
             </div>
-            <button id="todayJumpBtn" onclick="jumpToRealToday()" class="hidden text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-md font-bold">
-              오늘
-            </button>
           </div>
-          <!-- 날씨 & 체감온도 및 감정 선택기 -->
-          <div class="flex items-center gap-1.5">
-            <select id="todayWeatherSelect" onchange="saveDayData()" class="bg-stone-50 border border-stone-200 rounded-lg text-[10px] px-2 py-0.5 text-stone-600 focus:outline-none cursor-pointer">
+
+          <button onclick="changeDate(1)" class="w-8 h-8 rounded-full bg-stone-50 hover:bg-stone-100 text-stone-400 hover:text-stone-700 font-bold flex items-center justify-center transition-colors">▶</button>
+        </div>
+
+        <!-- 소프트 필(Pill) 감성 날씨 & 무드 선택기 -->
+        <div class="flex items-center justify-center gap-2 pt-1 border-t border-stone-100">
+          <div class="relative inline-block">
+            <select id="todayWeatherSelect" onchange="saveDayData()" class="appearance-none bg-amber-50/70 hover:bg-amber-100/70 border border-amber-200/80 rounded-full text-xs font-semibold px-3 py-1 text-amber-900 focus:outline-none cursor-pointer pr-6">
               <option value="">날씨 선택</option>
               <option value="맑음 ☀️">맑음 ☀️</option>
               <option value="구름 조금 ⛅">구름 조금 ⛅</option>
@@ -90,7 +97,11 @@
               <option value="추워요 🥶">추워요 🥶</option>
               <option value="시원해요 🍃">시원해요 🍃</option>
             </select>
-            <select id="todayMoodSelect" onchange="saveDayData()" class="bg-stone-50 border border-stone-200 rounded-lg text-[10px] px-2 py-0.5 text-stone-600 focus:outline-none cursor-pointer">
+            <span class="absolute right-2.5 top-1.5 text-[9px] text-amber-700 pointer-events-none">▼</span>
+          </div>
+
+          <div class="relative inline-block">
+            <select id="todayMoodSelect" onchange="saveDayData()" class="appearance-none bg-emerald-50/70 hover:bg-emerald-100/70 border border-emerald-200/80 rounded-full text-xs font-semibold px-3 py-1 text-emerald-900 focus:outline-none cursor-pointer pr-6">
               <option value="">기분 선택</option>
               <option value="happy">최고예요 🥰</option>
               <option value="calm">평온해요 🌿</option>
@@ -101,9 +112,9 @@
               <option value="sad">슬퍼요 😢</option>
               <option value="sick">아파요 🩹</option>
             </select>
+            <span class="absolute right-2.5 top-1.5 text-[9px] text-emerald-700 pointer-events-none">▼</span>
           </div>
         </div>
-        <button onclick="changeDate(1)" class="p-1.5 text-stone-400 hover:text-stone-700 font-bold">▶</button>
       </div>
 
       <!-- 오늘의 특별 일정 & 교통 예매 리마인드 배너 -->
@@ -115,7 +126,7 @@
         <span class="text-[10px] bg-white text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded-md shrink-0 font-semibold">알림</span>
       </div>
 
-      <!-- 오늘의 할 일 (자동 이월) -->
+      <!-- 오늘의 할 일 (스크롤 없는 오가닉 높이 & 텍스트 터치 수정) -->
       <div class="bg-white border-2 border-amber-200/80 rounded-2xl p-3.5 shadow-xs">
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
@@ -127,7 +138,8 @@
           <input type="text" id="newTodayTaskInput" placeholder="오늘 꼭 해야 할 일 입력..." class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-400" onkeypress="if(event.key==='Enter') addTodayTask()">
           <button onclick="addTodayTask()" class="bg-amber-400 hover:bg-amber-500 text-stone-900 font-bold text-xs px-3 rounded-xl transition-colors shrink-0">추가</button>
         </div>
-        <div id="todayTaskList" class="space-y-1.5 max-h-40 overflow-y-auto pr-0.5"></div>
+        <!-- 오가닉 높이 리스트 (스크롤 박멸) -->
+        <div id="todayTaskList" class="space-y-1.5"></div>
       </div>
 
       <!-- 타임테이블 (모눈 뷰 + 버티컬 타임라인 뷰) -->
@@ -157,18 +169,18 @@
         <div id="timetableTimelineView" class="hidden space-y-1 max-h-80 overflow-y-auto pr-1"></div>
       </div>
 
-      <!-- 아침 루틴 (휴식 토글 탑재) -->
+      <!-- 아침 루틴 (휴식 버튼 단축) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div class="flex items-center gap-2">
             <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-              <span class="text-amber-500">☀️️</span> 아침 루틴
+              <span class="text-amber-500">☀</span> 아침 루틴
             </h3>
             <span id="morningProgressBadge" class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.2 rounded-full font-bold">0%</span>
           </div>
           <div class="flex items-center gap-1.5">
             <button id="morningRestBtn" onclick="toggleRoutineRest('morning')" class="text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap">
-              🍃 오늘은 쉬어요
+              🍃 휴식
             </button>
             <button onclick="openRoutineCustomModal('morning')" title="루틴 설정" class="text-[10px] text-stone-400 hover:text-stone-700 font-bold px-1">
               ⚙️ 설정
@@ -183,7 +195,7 @@
         </div>
       </div>
 
-      <!-- 저녁 루틴 (휴식 토글 탑재) -->
+      <!-- 저녁 루틴 (휴식 버튼 단축) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div class="flex items-center gap-2">
@@ -194,7 +206,7 @@
           </div>
           <div class="flex items-center gap-1.5">
             <button id="eveningRestBtn" onclick="toggleRoutineRest('evening')" class="text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap">
-              🍃 오늘은 쉬어요
+              🍃 휴식
             </button>
             <button onclick="openRoutineCustomModal('evening')" title="루틴 설정" class="text-[10px] text-stone-400 hover:text-stone-700 font-bold px-1">
               ⚙️ 설정
@@ -210,7 +222,7 @@
         </div>
       </div>
 
-      <!-- 식단 & 간식(돌출 방지) & 맞춤 음료 트래커 -->
+      <!-- 식단 & 🌜 밤간식 & 맞춤 음료 트래커 (애사비 스마트 자동연동) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
@@ -220,7 +232,7 @@
           <div class="flex items-center gap-1 bg-stone-50 px-2 py-1 rounded-xl border border-stone-200">
             <div id="drinkWaterDrops" class="flex gap-0.5 text-xs cursor-pointer" title="물 (200ml 단위)"></div>
             <span class="text-stone-300 text-[10px]">|</span>
-            <div id="drinkAcvDrops" class="flex gap-0.5 text-xs cursor-pointer" title="식전 애사비"></div>
+            <div id="drinkAcvDrops" class="flex gap-0.5 text-xs cursor-pointer" title="식전 애사비 (식단 체크 시 자동 채움)"></div>
             <span class="text-stone-300 text-[10px]">|</span>
             <div id="drinkCoffeeDrops" class="flex gap-0.5 text-xs cursor-pointer" title="라떼/커피"></div>
           </div>
@@ -242,7 +254,7 @@
           </div>
         </div>
 
-        <!-- 메인 식단 + 슬림 간식칸 (돌출 완벽 방지) -->
+        <!-- 식단 + 오전/오후/밤간식 (돌출 완전 방지) -->
         <div class="space-y-2 text-xs">
           <!-- 아침 -->
           <div class="p-2.5 rounded-xl bg-warm-50 border border-stone-200 space-y-1.5">
@@ -285,7 +297,7 @@
             <input type="text" id="mealMenu_2" placeholder="식단 메뉴..." onchange="saveDayData()" class="w-full bg-white border border-stone-200 rounded-lg p-1.5 text-xs">
             <div class="flex items-center justify-between text-[11px]">
               <div class="flex items-center gap-1.5">
-                <label class="flex items-center gap-0.5 whitespace-nowrap cursor-pointer"><input type="checkbox" id="mealAcv_2" onchange="saveDayData()">🍏애사비</label>
+                <label class="flex items-center gap-0.5 whitespace-nowrap cursor-pointer"><input type="checkbox" id="mealAcv_2" onchange="onMealAcvChange()">🍏애사비</label>
                 <label class="flex items-center gap-0.5 whitespace-nowrap cursor-pointer"><input type="checkbox" id="mealVege_2" onchange="saveDayData()">🥗채단탄</label>
                 <label class="flex items-center gap-0.5 whitespace-nowrap cursor-pointer"><input type="checkbox" id="mealWalk_2" onchange="saveDayData()">🏃운동</label>
               </div>
@@ -317,7 +329,7 @@
             <input type="text" id="mealMenu_3" placeholder="식단 메뉴..." onchange="saveDayData()" class="w-full bg-white border border-stone-200 rounded-lg p-1.5 text-xs">
             <div class="flex items-center justify-between text-[11px]">
               <div class="flex items-center gap-1.5">
-                <label class="flex items-center gap-0.5 whitespace-nowrap cursor-pointer"><input type="checkbox" id="mealAcv_3" onchange="saveDayData()">🍏애사비</label>
+                <label class="flex items-center gap-0.5 whitespace-nowrap cursor-pointer"><input type="checkbox" id="mealAcv_3" onchange="onMealAcvChange()">🍏애사비</label>
                 <label class="flex items-center gap-0.5 whitespace-nowrap cursor-pointer"><input type="checkbox" id="mealVege_3" onchange="saveDayData()">🥗채단탄</label>
                 <label class="flex items-center gap-0.5 whitespace-nowrap cursor-pointer"><input type="checkbox" id="mealWalk_3" onchange="saveDayData()">🏃운동</label>
               </div>
@@ -328,6 +340,13 @@
                 <option value="heavy">💧 더부룩</option>
               </select>
             </div>
+          </div>
+
+          <!-- 🌜 신설: 슬림 밤간식 -->
+          <div class="p-2 rounded-xl bg-[#f5f1eb] border border-[#e5ded3] flex items-center gap-2 text-xs min-w-0">
+            <span class="font-bold text-indigo-950 shrink-0 text-[11px]">🌜 밤간식</span>
+            <input type="time" id="snackTime_night" onchange="saveDayData()" class="text-[10px] bg-white border border-stone-200 rounded px-1 shrink-0">
+            <input type="text" id="snackMenu_night" placeholder="밤간식·야식 메뉴 메모..." onchange="saveDayData()" class="flex-1 min-w-0 bg-white border border-stone-200 rounded-lg px-2 py-1 text-xs focus:outline-none">
           </div>
         </div>
       </div>
@@ -345,7 +364,7 @@
         <div id="dayHabitCheckList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
       </div>
 
-      <!-- 오늘의 뜨개 & 독서 (시간 소급 & 수동 입력 지원!) -->
+      <!-- 오늘의 뜨개 & 독서 (시간 소급 & 수동 입력) -->
       <div class="grid grid-cols-2 gap-3">
         <!-- 뜨개 위젯 -->
         <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs flex flex-col justify-between space-y-2">
@@ -366,14 +385,14 @@
             </div>
             <input type="text" id="knitSectionTip" placeholder="구간 메모 (코줄임 등)" onchange="saveDayData()" class="w-full bg-transparent border-b border-stone-200 py-0.5 text-[10px] text-stone-500 focus:outline-none mt-1">
           </div>
-          <!-- 퀵 추가 & 시간 직접 입력 바 -->
+          <!-- 퀵 추가 & 시간 직접 입력 -->
           <div class="space-y-1 pt-1">
             <div class="grid grid-cols-2 gap-1">
               <button id="knitTimerBtn" onclick="toggleKnitTimer()" class="text-[10px] bg-rose-500 hover:bg-rose-600 text-white font-bold py-1.5 rounded-lg shadow-2xs">
                 시작 ▶
               </button>
               <button onclick="openManualTimeModal('뜨개', 'hobby')" class="text-[10px] bg-rose-50 hover:bg-rose-100 text-rose-800 font-semibold py-1.5 rounded-lg border border-rose-200">
-                ✏️ 직접입력
+                직접입력
               </button>
             </div>
             <div class="grid grid-cols-3 gap-0.5 text-[9px] font-mono">
@@ -394,14 +413,14 @@
             <input type="text" id="bookCurrentTitle" placeholder="읽고 있는 책 제목..." onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded px-1.5 py-1 text-xs mb-1.5">
             <input type="text" id="bookTodayPages" placeholder="오늘 읽은 페이지 (p.12~45)" onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded px-1.5 py-1 text-xs">
           </div>
-          <!-- 퀵 추가 & 시간 직접 입력 바 -->
+          <!-- 퀵 추가 & 시간 직접 입력 -->
           <div class="space-y-1 pt-1">
             <div class="grid grid-cols-2 gap-1">
               <button id="bookTimerBtn" onclick="toggleBookTimer()" class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg shadow-2xs">
                 시작 ▶
               </button>
               <button onclick="openManualTimeModal('독서', 'hobby')" class="text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold py-1.5 rounded-lg border border-emerald-200">
-                ✏️ 직접입력
+                직접입력
               </button>
             </div>
             <div class="grid grid-cols-3 gap-0.5 text-[9px] font-mono">
@@ -413,7 +432,7 @@
         </div>
       </div>
 
-      <!-- 데일리 TO-DO (순서 변경 & 주기 루틴) -->
+      <!-- 데일리 TO-DO (첫날/말일/분기 주기, 미니멀 파스텔 텍스트 뱃지, 스크롤 없는 오가닉 높이) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
@@ -429,53 +448,82 @@
           <input type="text" id="newRoutineTodoInput" placeholder="새로운 고정 반복 루틴..." class="w-full bg-white border border-stone-200 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-amber-400" onkeypress="if(event.key==='Enter') addRoutineTodo()">
           <div class="flex items-center gap-1.5">
             <select id="routineTypeSelect" onchange="onRoutineTypeChange(this.value)" class="flex-1 bg-white border border-stone-200 rounded-xl text-[11px] px-2 py-1.5 text-stone-700 font-medium cursor-pointer">
-              <option value="daily">🔁 매일</option>
-              <option value="weekly">📅 요일지정</option>
-              <option value="monthly">📆 매월 1일</option>
-              <option value="quarterly">🪴 분기별 1일</option>
+              <option value="daily">매일</option>
+              <option value="weekly">요일지정</option>
+              <option value="monthly_first">첫날 (매월 1일)</option>
+              <option value="monthly_last">말일 (매월 말일)</option>
+              <option value="quarterly">분기 (분기 첫날)</option>
             </select>
             <button onclick="addRoutineTodo()" class="bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs px-4 py-1.5 rounded-xl transition-colors shrink-0">추가</button>
           </div>
           <div id="weeklyDaysSelector" class="hidden flex items-center gap-1 pt-1 overflow-x-auto text-[10px]">
-            <span class="text-stone-400 shrink-0 font-medium mr-1">반복:</span>
-            <button type="button" onclick="toggleWeekDayChip(1)" id="wd_chip_1" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">월</button>
-            <button type="button" onclick="toggleWeekDayChip(2)" id="wd_chip_2" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">화</button>
-            <button type="button" onclick="toggleWeekDayChip(3)" id="wd_chip_3" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">수</button>
-            <button type="button" onclick="toggleWeekDayChip(4)" id="wd_chip_4" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">목</button>
-            <button type="button" onclick="toggleWeekDayChip(5)" id="wd_chip_5" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">금</button>
-            <button type="button" onclick="toggleWeekDayChip(6)" id="wd_chip_6" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">토</button>
-            <button type="button" onclick="toggleWeekDayChip(0)" id="wd_chip_0" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">일</button>
+            <span class="text-stone-400 shrink-0 font-medium mr-1">반복요일:</span>
+            <button type="button" onclick="toggleWeekDayChip(1)" id="wd_chip_1" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">월</button>
+            <button type="button" onclick="toggleWeekDayChip(2)" id="wd_chip_2" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">화</button>
+            <button type="button" onclick="toggleWeekDayChip(3)" id="wd_chip_3" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">수</button>
+            <button type="button" onclick="toggleWeekDayChip(4)" id="wd_chip_4" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">목</button>
+            <button type="button" onclick="toggleWeekDayChip(5)" id="wd_chip_5" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">금</button>
+            <button type="button" onclick="toggleWeekDayChip(6)" id="wd_chip_6" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">토</button>
+            <button type="button" onclick="toggleWeekDayChip(0)" id="wd_chip_0" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">일</button>
           </div>
         </div>
 
-        <div id="routineTodoList" class="space-y-1.5 max-h-48 overflow-y-auto pr-0.5"></div>
+        <!-- 오가닉 높이 리스트 (스크롤 박멸) -->
+        <div id="routineTodoList" class="space-y-1.5"></div>
       </div>
 
-      <!-- OOTD & 노래 -->
-      <div class="grid grid-cols-2 gap-3">
-        <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-amber-900 flex items-center gap-1">👗 오늘의 OOTD</span>
-            <div class="flex items-center gap-1">
-              <label for="ootdColorInput" title="대표 색상" class="cursor-pointer flex items-center gap-1">
-                <span id="ootdColorBadge" class="w-4 h-4 rounded-full border border-stone-300 shadow-2xs inline-block bg-[#ecdcc9]"></span>
-                <span class="text-[9px] text-stone-400 font-medium">컬러</span>
-              </label>
-              <input type="color" id="ootdColorInput" value="#ecdcc9" onchange="onOotdColorChange(this.value)" class="sr-only">
-            </div>
+      <!-- 🎵 오늘의 노래 (가로 슬림형 재배치) -->
+      <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs space-y-2">
+        <span class="text-xs font-bold text-indigo-900 flex items-center gap-1">🎵 오늘의 노래</span>
+        <div class="flex items-center gap-2.5">
+          <img id="bgmCoverImg" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&auto=format&fit=crop&q=60" alt="BGM" class="w-11 h-11 rounded-xl object-cover shadow-2xs border border-stone-200 shrink-0">
+          <div class="flex-1 min-w-0">
+            <input type="text" id="bgmSearchInput" placeholder="곡명 검색 (Enter)..." class="w-full bg-stone-50 border border-stone-100 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none truncate" onkeypress="if(event.key==='Enter') searchMusicTrack()">
+            <p id="bgmInfoText" class="text-[10px] text-stone-400 truncate mt-0.5">BGM을 검색해보세요</p>
           </div>
-          <input type="text" id="ootdTextInput" placeholder="아이보리 니트 + 데님..." onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded-xl px-2 py-1.5 text-xs focus:outline-none">
+        </div>
+      </div>
+
+      <!-- 👗 오늘의 OOTD (가로 100% 쾌적한 노션 감성 스마트 옷장 칩 바) -->
+      <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+          <span class="text-xs font-bold text-amber-900 flex items-center gap-1">👗 오늘의 OOTD</span>
+          <div class="flex items-center gap-1.5">
+            <label for="ootdColorInput" title="대표 색상" class="cursor-pointer flex items-center gap-1 bg-stone-50 px-2 py-0.5 rounded-lg border border-stone-200">
+              <span id="ootdColorBadge" class="w-3.5 h-3.5 rounded-full border border-stone-300 shadow-2xs inline-block bg-[#ecdcc9]"></span>
+              <span class="text-[10px] text-stone-500 font-medium">대표 컬러</span>
+            </label>
+            <input type="color" id="ootdColorInput" value="#ecdcc9" onchange="onOotdColorChange(this.value)" class="sr-only">
+          </div>
         </div>
 
-        <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs space-y-2">
-          <span class="text-xs font-bold text-indigo-900 flex items-center gap-1">🎵 오늘의 노래</span>
-          <div class="flex items-center gap-2">
-            <img id="bgmCoverImg" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&auto=format&fit=crop&q=60" alt="BGM" class="w-10 h-10 rounded-lg object-cover shadow-2xs border border-stone-200 shrink-0">
-            <div class="flex-1 min-w-0">
-              <input type="text" id="bgmSearchInput" placeholder="곡명 검색 (Enter)..." class="w-full bg-stone-50 border border-stone-100 rounded-lg px-2 py-1 text-xs focus:outline-none truncate" onkeypress="if(event.key==='Enter') searchMusicTrack()">
-              <p id="bgmInfoText" class="text-[9px] text-stone-400 truncate mt-0.5">BGM을 검색해보세요</p>
-            </div>
+        <!-- 스마트 옷장 칩 그룹 (상의 / 하의 / 신발 / 가방) -->
+        <div class="space-y-2 text-xs">
+          <!-- 상의 -->
+          <div class="flex items-start gap-2">
+            <span class="text-[11px] font-bold text-stone-500 shrink-0 mt-0.5 w-10">👕 상의</span>
+            <div id="ootdChips_top" class="flex-1 flex flex-wrap gap-1 items-center"></div>
           </div>
+          <!-- 하의 -->
+          <div class="flex items-start gap-2">
+            <span class="text-[11px] font-bold text-stone-500 shrink-0 mt-0.5 w-10">👖 하의</span>
+            <div id="ootdChips_bottom" class="flex-1 flex flex-wrap gap-1 items-center"></div>
+          </div>
+          <!-- 신발 -->
+          <div class="flex items-start gap-2">
+            <span class="text-[11px] font-bold text-stone-500 shrink-0 mt-0.5 w-10">👟 신발</span>
+            <div id="ootdChips_shoes" class="flex-1 flex flex-wrap gap-1 items-center"></div>
+          </div>
+          <!-- 가방 -->
+          <div class="flex items-start gap-2">
+            <span class="text-[11px] font-bold text-stone-500 shrink-0 mt-0.5 w-10">👜 가방</span>
+            <div id="ootdChips_bag" class="flex-1 flex flex-wrap gap-1 items-center"></div>
+          </div>
+        </div>
+
+        <!-- 오늘 착장 직접 메모 (글자 잘림 없이 100% 확장) -->
+        <div class="pt-1 border-t border-stone-100">
+          <input type="text" id="ootdTextInput" placeholder="오늘 착장 상세 메모 (예: 날씨가 쌀쌀해서 가디건 챙김)..." onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none">
         </div>
       </div>
 
@@ -520,35 +568,42 @@
         <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
       </div>
 
-      <!-- 🎫 신규: 교통 & 예매 확인 전용 카드 -->
-      <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2">
+      <!-- 🎫 예매 확인 카드 (3단계 필터 + 단골 지명 퀵 칩) -->
+      <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-            <span>🎫</span> 교통 & 예매 확인
+            <span>🎫</span> 예매 확인
           </h3>
           <button onclick="openTicketModal()" class="text-[10px] bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 font-bold px-2 py-0.5 rounded-lg">
             + 티켓 등록
           </button>
         </div>
+        <div class="flex gap-1 text-[11px] pb-1">
+          <button id="ticketFilter_7" onclick="setTicketFilter('7')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">임박 ⚡ (7일)</button>
+          <button id="ticketFilter_30" onclick="setTicketFilter('30')" class="px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold">다가올 🌿 (D-30)</button>
+          <button id="ticketFilter_all" onclick="setTicketFilter('all')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">전체보기 📖</button>
+        </div>
         <div id="ticketReservationList" class="space-y-1.5 text-xs"></div>
       </div>
 
-      <!-- 다가올 예정 (약속 & 휴가) -->
-      <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
-        <div class="flex items-center justify-between mb-2">
+      <!-- 📌 약속 & 일정 카드 (3단계 필터 + 코르크핀 헤더) -->
+      <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2.5">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-            <span>✈️</span> 다가올 예정 (약속 & 휴가)
+            <span>📌</span> 약속 & 일정
           </h3>
-          <div class="flex items-center gap-1.5">
-            <span class="text-[10px] text-stone-400">D-Day 순</span>
-            <button onclick="openCalendarEventModal()" class="text-[10px] bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold px-2 py-0.5 rounded-lg">+ 추가</button>
-          </div>
+          <button onclick="openCalendarEventModal()" class="text-[10px] bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold px-2 py-0.5 rounded-lg">+ 추가</button>
+        </div>
+        <div class="flex gap-1 text-[11px] pb-1">
+          <button id="eventFilter_7" onclick="setEventFilter('7')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">임박 ⚡ (7일)</button>
+          <button id="eventFilter_30" onclick="setEventFilter('30')" class="px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold">다가올 🌿 (D-30)</button>
+          <button id="eventFilter_all" onclick="setEventFilter('all')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">전체보기 📖</button>
         </div>
         <div id="upcomingEventsList" class="space-y-1.5 text-xs"></div>
       </div>
 
-      <!-- 기념일 & 이벤트 (3단계 실용 필터 탑재) -->
-      <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2">
+      <!-- 🎂 기념일 & 이벤트 (3단계 실용 필터) -->
+      <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
             <span>🎂</span> 기념일 & 이벤트
@@ -634,22 +689,22 @@
         <div id="moodGrid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
       </div>
 
-      <!-- 3순위: 루틴 진행도 트래커 (월 이동 지원!) -->
+      <!-- 3순위: 루틴 진행도 트래커 (줄바꿈 없는 한 줄 헤더 + ⭐ 타일) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
             <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-              <span>📊</span> 아침 & 저녁 루틴 진행도
+              <span>📊</span> 루틴 진행도
             </h3>
-            <p class="text-[10px] text-stone-400 mt-0.5">매일매일 채워가는 하루 루틴 달성률</p>
+            <p class="text-[10px] text-stone-400 mt-0.5">매일의 아침·저녁 실천율</p>
           </div>
-          <div class="flex items-center gap-2">
-            <div class="flex items-center gap-1 text-xs">
+          <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-0.5 text-xs">
               <button onclick="changeRoutineMonth(-1)" class="p-0.5 text-stone-400 hover:text-stone-700 font-bold">◀</button>
-              <span class="font-bold text-stone-700 text-xs" id="routineMonthTitle">2026년 10월</span>
+              <span class="font-bold text-stone-700 text-xs font-mono" id="routineMonthTitle">2026년 10월</span>
               <button onclick="changeRoutineMonth(1)" class="p-0.5 text-stone-400 hover:text-stone-700 font-bold">▶</button>
             </div>
-            <span class="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full" id="routineMonthlyAvg">평균 0%</span>
+            <span class="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md shrink-0" id="routineMonthlyAvg">평균 0%</span>
           </div>
         </div>
         <div id="routineProgressGrid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
@@ -666,7 +721,7 @@
           </div>
           <div class="flex items-center gap-1 text-xs">
             <button onclick="changeHealthMonth(-1)" class="p-0.5 text-stone-400 hover:text-stone-700 font-bold">◀</button>
-            <span class="font-bold text-stone-700 text-xs" id="healthMonthTitle">2026년 10월</span>
+            <span class="font-bold text-stone-700 text-xs font-mono" id="healthMonthTitle">2026년 10월</span>
             <button onclick="changeHealthMonth(1)" class="p-0.5 text-stone-400 hover:text-stone-700 font-bold">▶</button>
           </div>
         </div>
@@ -770,7 +825,7 @@
     </div>
   </nav>
 
-  <!-- 루틴 커스텀 관리 모달 (상하 2단 구조 + 카테고리 완전 관리 탑재) -->
+  <!-- 루틴 커스텀 관리 모달 -->
   <div id="routineCustomModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl max-h-[88vh] flex flex-col">
       <div class="flex items-center justify-between border-b border-stone-100 pb-2">
@@ -780,7 +835,7 @@
         <button onclick="closeRoutineCustomModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
       </div>
 
-      <!-- 상하 2단 새 루틴 추가 폼 (돌출 원천 차단) -->
+      <!-- 상하 2단 새 루틴 추가 폼 -->
       <div class="space-y-2 bg-stone-50 p-2.5 rounded-xl border border-stone-200 text-xs">
         <input type="text" id="newRoutineCustomName" placeholder="새 루틴 이름 (예: 폼롤러 스트레칭)" class="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none">
         <div class="flex items-center gap-1.5">
@@ -789,7 +844,7 @@
         </div>
       </div>
 
-      <!-- 카테고리(그룹) 관리 토글 버튼 -->
+      <!-- 카테고리 관리 토글 -->
       <div class="flex items-center justify-between pt-1">
         <span class="text-[10px] text-stone-400 font-medium">루틴 목록 (순서 변경 가능)</span>
         <button onclick="toggleCategoryManagerSection()" class="text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-700 px-2 py-0.5 rounded-lg font-bold border border-stone-200">
@@ -797,7 +852,7 @@
         </button>
       </div>
 
-      <!-- 카테고리 자체 관리 영역 (숨김/노출) -->
+      <!-- 카테고리 편집 영역 -->
       <div id="categoryManagerArea" class="hidden p-2 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2 text-xs">
         <div class="text-[11px] font-bold text-amber-950 flex items-center justify-between">
           <span>카테고리(그룹) 수정 및 추가</span>
@@ -806,7 +861,7 @@
         <div id="categoryManagerList" class="space-y-1 max-h-32 overflow-y-auto pr-0.5"></div>
       </div>
 
-      <!-- 루틴 목록 (모노톤 SVG 숨김 + 순서 변경) -->
+      <!-- 루틴 목록 -->
       <div class="flex-1 overflow-y-auto pr-1 space-y-2 text-xs" id="routineModalItemList"></div>
 
       <button onclick="closeRoutineCustomModal()" class="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs rounded-xl">
@@ -828,7 +883,7 @@
         <button onclick="closeCategoryModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
       </div>
 
-      <!-- 50분 포함 소요시간 선택기 -->
+      <!-- 소요시간 선택기 -->
       <div class="space-y-1">
         <span class="text-[10px] text-stone-400 font-medium">소요 시간 일괄 등록:</span>
         <div class="grid grid-cols-6 gap-1 text-[11px] font-mono">
@@ -880,12 +935,12 @@
     </div>
   </div>
 
-  <!-- 캘린더 약속 / 일정 등록 & 수정 모달 -->
+  <!-- 캘린더 약속 / 일정 등록 & 수정 모달 (체크 초기화 & 예시 제거) -->
   <div id="calendarEventModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
       <div class="flex items-center justify-between border-b border-stone-100 pb-2">
         <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5" id="calEventModalTitle">
-          <span>🗓</span> 일정 / 약속 등록
+          <span>📌</span> 일정 / 약속 등록
         </h3>
         <button onclick="closeCalendarEventModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
       </div>
@@ -896,7 +951,7 @@
         </div>
         <div>
           <label class="text-[10px] text-stone-500 block mb-1">일정 내용</label>
-          <input type="text" id="calEventTitle" placeholder="예: 가족 저녁식사, 달보드레 모임" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none">
+          <input type="text" id="calEventTitle" placeholder="일정 내용을 입력하세요" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none">
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
@@ -908,18 +963,18 @@
             <input type="date" id="calEventEnd" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1 text-[11px]">
           </div>
         </div>
-        <!-- 요일 반복 약속 설정 -->
+        <!-- 요일 반복 (예시 제거 & 초기 체크 없음) -->
         <div class="pt-1 border-t border-stone-100">
           <label class="flex items-center gap-1.5 text-[11px] font-bold text-stone-700 cursor-pointer">
             <input type="checkbox" id="calEventRepeatToggle" onchange="toggleCalEventRepeat(this.checked)" class="rounded text-amber-500">
-            <span>매주 요일 반복 (예: 화·목 독서모임)</span>
+            <span>매주 요일 반복</span>
           </label>
           <div id="calEventRepeatDaysBox" class="hidden flex items-center gap-1 pt-1.5 overflow-x-auto text-[10px]">
             <span class="text-stone-400 shrink-0 mr-1">반복요일:</span>
             <button type="button" onclick="toggleCalRepeatDay(1)" id="crd_1" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">월</button>
-            <button type="button" onclick="toggleCalRepeatDay(2)" id="crd_2" class="px-2 py-0.5 rounded border border-amber-300 bg-amber-100 text-amber-900 font-bold">화</button>
+            <button type="button" onclick="toggleCalRepeatDay(2)" id="crd_2" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">화</button>
             <button type="button" onclick="toggleCalRepeatDay(3)" id="crd_3" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">수</button>
-            <button type="button" onclick="toggleCalRepeatDay(4)" id="crd_4" class="px-2 py-0.5 rounded border border-amber-300 bg-amber-100 text-amber-900 font-bold">목</button>
+            <button type="button" onclick="toggleCalRepeatDay(4)" id="crd_4" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">목</button>
             <button type="button" onclick="toggleCalRepeatDay(5)" id="crd_5" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">금</button>
             <button type="button" onclick="toggleCalRepeatDay(6)" id="crd_6" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">토</button>
             <button type="button" onclick="toggleCalRepeatDay(0)" id="crd_0" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">일</button>
@@ -933,7 +988,7 @@
     </div>
   </div>
 
-  <!-- 🎫 교통 & 예매 등록 및 수정 모달 -->
+  <!-- 🎫 예매 확인 (단골 지명 퀵 칩 & 즐겨찾기 탑재) -->
   <div id="ticketModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
       <div class="flex items-center justify-between border-b border-stone-100 pb-2">
@@ -951,14 +1006,24 @@
             <button type="button" onclick="selectTicketType('flight')" id="tt_btn_flight" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600 text-center">✈️ 비행기</button>
           </div>
         </div>
+
+        <!-- 단골 지명 퀵 칩 바 -->
+        <div class="bg-stone-50 p-2 rounded-xl border border-stone-200 space-y-1">
+          <div class="flex items-center justify-between text-[10px] text-stone-500 font-medium">
+            <span>자주 가는 곳 (입력창 선택 후 터치):</span>
+            <button onclick="promptAddPlaceChip()" class="text-[10px] text-sky-700 font-bold">+ 추가</button>
+          </div>
+          <div id="favPlacesChipContainer" class="flex flex-wrap gap-1"></div>
+        </div>
+
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="text-[10px] text-stone-500 block mb-1">출발지</label>
-            <input type="text" id="ticketDepartPlace" placeholder="예: 서울경부" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2 py-1.5 text-xs">
+            <input type="text" id="ticketDepartPlace" onfocus="activePlaceInputId = 'ticketDepartPlace'" placeholder="출발지 (직접입력)" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2 py-1.5 text-xs focus:outline-none">
           </div>
           <div>
             <label class="text-[10px] text-stone-500 block mb-1">도착지</label>
-            <input type="text" id="ticketArrivePlace" placeholder="예: 부산(본가)" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2 py-1.5 text-xs">
+            <input type="text" id="ticketArrivePlace" onfocus="activePlaceInputId = 'ticketArrivePlace'" placeholder="도착지 (직접입력)" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2 py-1.5 text-xs focus:outline-none">
           </div>
         </div>
         <div class="grid grid-cols-2 gap-2">
@@ -1103,6 +1168,14 @@
       sick: { icon: '🩹', label: '아픔', bg: 'bg-red-100 border-red-300 text-red-900' }
     };
 
+    // 은은한 모노톤 SVG 연필 수정 아이콘 생성기
+    const EDIT_SVG_ICON = `
+      <svg class="w-3 h-3 text-stone-400 hover:text-stone-700 fill-none stroke-current stroke-2 inline-block shrink-0 transition-colors" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20h9"/>
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+      </svg>
+    `;
+
     const REAL_TODAY_STR = new Date().toISOString().slice(0, 10);
     let currentDate = REAL_TODAY_STR;
 
@@ -1120,9 +1193,13 @@
     let timetableViewMode = 'grid';
     let habitViewMode = 'week';
     let anniversaryFilterMode = '30';
+    let eventFilterMode = '30';
+    let ticketFilterMode = '30';
+
     let selectedCalEventCategory = 'family';
-    let calEventRepeatDays = [2, 4];
+    let calEventRepeatDays = [];
     let selectedTicketType = 'bus';
+    let activePlaceInputId = 'ticketDepartPlace';
     let editingEventId = null;
     let editingTicketId = null;
     let manualTimeTarget = { text: '독서', cat: 'hobby' };
@@ -1133,7 +1210,7 @@
     let selectedDurationMinutes = 10;
     let currentSelectedCategoryKey = null;
 
-    let selectedWeeklyDays = [1, 2, 3, 4, 0];
+    let selectedWeeklyDays = [];
     let knitTimerStartTime = null;
     let bookTimerStartTime = null;
     let routineModalTarget = 'morning';
@@ -1154,6 +1231,8 @@
       updateDateLabel();
       initTimetableGrid();
       initCalEventCategoryButtons();
+      renderFavPlaceChips();
+      renderOotdChips();
       
       subscribeDayData(currentDate);
       subscribeTodayTasks(currentDate);
@@ -1205,6 +1284,7 @@
         renderCalendar();
         renderUpcomingEvents();
         renderTicketList();
+        renderAnniversaries();
       } else if (tab === 'hobby') {
         if (subAction === 'knit') setHobbySubTab('knit');
         else setHobbySubTab('book');
@@ -1269,9 +1349,10 @@
     function updateDateLabel() {
       const parts = currentDate.split('-');
       const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-      const days = ['일', '월', '화', '수', '목', '금', '토'];
-      document.getElementById('currentDateLabel').innerText = 
-        `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+      const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+      
+      document.getElementById('currentYearMonthLabel').innerText = `${d.getFullYear()}. ${(d.getMonth() + 1) < 10 ? '0' + (d.getMonth() + 1) : (d.getMonth() + 1)}`;
+      document.getElementById('currentDateLabel').innerText = `${d.getMonth() + 1}월 ${d.getDate()}일 ${days[d.getDay()]}`;
 
       const btn = document.getElementById('todayJumpBtn');
       if (btn) {
@@ -1305,7 +1386,7 @@
       link.click();
     }
 
-    // 오늘의 할 일
+    // 오늘의 할 일 (스크롤 박멸 오가닉 높이 & 텍스트 터치 수정)
     function subscribeTodayTasks(dateStr) {
       if (unsubscribeTasks) unsubscribeTasks();
       migrateUnfinishedTasks(dateStr);
@@ -1378,6 +1459,15 @@
       }
     }
 
+    function editTodayTask(idx) {
+      const tasks = getTodayTasksLocal(currentDate);
+      if (!tasks[idx]) return;
+      const newText = prompt("할 일 내용을 수정해주세요:", tasks[idx].text);
+      if (newText === null || !newText.trim()) return;
+      tasks[idx].text = newText.trim();
+      saveTodayTasks(tasks);
+    }
+
     function deleteTodayTask(idx) {
       const tasks = getTodayTasksLocal(currentDate);
       tasks.splice(idx, 1);
@@ -1393,13 +1483,13 @@
       }
       list.innerHTML = tasks.map((t, idx) => `
         <div class="flex items-center justify-between p-1.5 rounded-lg bg-stone-50 border border-stone-100 text-xs">
-          <label class="flex items-center gap-2 flex-1 cursor-pointer">
-            <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodayTask(${idx})" class="rounded text-amber-500">
-            <span class="${t.done ? 'line-through text-stone-300' : 'text-stone-700 font-medium'}">
+          <div class="flex items-center gap-2 flex-1 min-w-0 pr-1">
+            <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodayTask(${idx})" class="rounded text-amber-500 cursor-pointer">
+            <span onclick="editTodayTask(${idx})" class="${t.done ? 'line-through text-stone-300' : 'text-stone-700 font-medium'} truncate cursor-pointer hover:underline" title="클릭하여 내용 수정">
               ${t.isMigrated ? '<span class="text-amber-600 font-bold mr-0.5" title="어제 이월된 할 일">&gt;</span>' : ''}${t.text}
             </span>
-          </label>
-          <button onclick="deleteTodayTask(${idx})" class="text-stone-300 hover:text-stone-500 px-1 text-xs">✕</button>
+          </div>
+          <button onclick="deleteTodayTask(${idx})" class="text-stone-300 hover:text-stone-500 px-1 text-xs shrink-0">✕</button>
         </div>
       `).join('');
     }
@@ -1543,7 +1633,7 @@
       }
     }
 
-    // 버티컬 타임라인 뷰 (블록 터치 시 '내용 즉시 수정' 지원)
+    // 버티컬 타임라인 뷰
     function renderVerticalTimeline() {
       const container = document.getElementById('timetableTimelineView');
       const dayData = getDayDataLocal(currentDate);
@@ -1617,7 +1707,10 @@
                       <span class="font-mono text-[10px] text-stone-500 font-semibold">${timeLabel}</span>
                       <span class="text-[9px] bg-white/80 px-1.5 py-0.2 rounded-full font-bold text-stone-600 border border-stone-200/60">${s.duration}분</span>
                     </div>
-                    <div class="font-bold text-xs mt-0.5 tracking-tight">${s.text} <span class="text-[9px] opacity-60">✏️</span></div>
+                    <div class="font-bold text-xs mt-0.5 tracking-tight flex items-center gap-1">
+                      <span>${s.text}</span>
+                      ${EDIT_SVG_ICON}
+                    </div>
                   </div>
                   <button onclick="clearSessionBlocks('${s.startH}', ${s.startB}, ${s.duration})" title="이 덩어리 삭제" class="text-stone-300 hover:text-stone-600 text-xs px-1 shrink-0">✕</button>
                 </div>
@@ -1662,7 +1755,7 @@
       renderVerticalTimeline();
     }
 
-    // 동적 루틴 & 카테고리(그룹) 완전 커스텀
+    // 동적 루틴 & 카테고리 완전 관리
     const DEFAULT_ROUTINES = {
       categories: {
         morning: ['🌤️ 기상·비움', '⚖️ 바디·건강', '🎒 외출·출근'],
@@ -1718,7 +1811,7 @@
       if (db) db.collection('routine_definitions').doc('master').set(defs).catch(console.error);
     }
 
-    // 휴식 모드 토글
+    // 휴식 모드 토글 (🍃 휴식)
     function toggleRoutineRest(type) {
       const dayData = getDayDataLocal(currentDate);
       if (!dayData.routineRest) dayData.routineRest = {};
@@ -1915,7 +2008,7 @@
       }
     }
 
-    // 루틴 설정 팝업 & 카테고리 관리자
+    // 루틴 설정 팝업 & 카테고리 관리
     function openRoutineCustomModal(type) {
       routineModalTarget = type;
       document.getElementById('routineModalHeaderTitle').innerText = 
@@ -1950,8 +2043,8 @@
 
       container.innerHTML = cats.map((cat, idx) => `
         <div class="flex items-center justify-between p-1 rounded bg-white border border-amber-200 text-xs">
-          <span onclick="editCategoryName(${idx})" class="font-bold text-amber-950 truncate cursor-pointer hover:underline" title="클릭하여 수정">
-            ${cat} <span class="text-[9px] opacity-50">✏️</span>
+          <span onclick="editCategoryName(${idx})" class="font-bold text-amber-950 truncate cursor-pointer hover:underline flex items-center gap-1" title="클릭하여 수정">
+            <span>${cat}</span> ${EDIT_SVG_ICON}
           </span>
           <div class="flex items-center gap-1 shrink-0">
             <button onclick="moveCategoryOrder(${idx}, -1)" class="text-stone-400 hover:text-stone-700 text-[10px] px-0.5">▲</button>
@@ -1981,7 +2074,6 @@
       if (!newName || !newName.trim()) return;
 
       defs.categories[routineModalTarget][idx] = newName.trim();
-      // 하위 루틴들의 소속 카테고리도 동시 갱신
       defs[routineModalTarget].forEach(item => {
         if (item.cat === oldName) item.cat = newName.trim();
       });
@@ -2021,10 +2113,10 @@
 
       container.innerHTML = list.map((item, idx) => `
         <div class="p-2 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-between gap-1.5">
-          <div class="flex-1 min-w-0">
-            <span class="text-[9px] bg-stone-200 text-stone-600 px-1 py-0.2 rounded font-bold">${item.cat}</span>
-            <span onclick="editRoutineItemName('${item.id}')" class="ml-1 text-xs font-semibold ${item.paused ? 'line-through text-stone-400' : 'text-stone-800'} cursor-pointer hover:text-amber-800" title="클릭하여 이름 수정">
-              ${item.name} <span class="text-[9px] opacity-50">✏️</span>
+          <div class="flex-1 min-w-0 flex items-center gap-1">
+            <span class="text-[9px] bg-stone-200 text-stone-600 px-1 py-0.2 rounded font-bold shrink-0">${item.cat}</span>
+            <span onclick="editRoutineItemName('${item.id}')" class="text-xs font-semibold ${item.paused ? 'line-through text-stone-400' : 'text-stone-800'} cursor-pointer hover:text-amber-800 truncate flex items-center gap-1" title="클릭하여 이름 수정">
+              <span>${item.name}</span> ${EDIT_SVG_ICON}
             </span>
           </div>
           <div class="flex items-center gap-1 shrink-0">
@@ -2103,7 +2195,19 @@
       renderRoutineModalItems();
     }
 
-    // 밍글 맞춤 음료 트래커 (💧 6잔 + 🍏 2잔 + ☕ 1잔)
+    // 식단 🍏 애사비 ↔ 상단 드링크 트래커 스마트 자동연동
+    function onMealAcvChange() {
+      const acv2 = document.getElementById('mealAcv_2')?.checked || false;
+      const acv3 = document.getElementById('mealAcv_3')?.checked || false;
+      const count = (acv2 ? 1 : 0) + (acv3 ? 1 : 0);
+
+      const dayData = getDayDataLocal(currentDate);
+      dayData.acvCount = count;
+      saveDayDataLocal(currentDate, dayData);
+      renderDrinkTracker(dayData);
+      saveDayData();
+    }
+
     function renderDrinkTracker(data) {
       const waterEl = document.getElementById('drinkWaterDrops');
       const acvEl = document.getElementById('drinkAcvDrops');
@@ -2135,6 +2239,13 @@
       let curr = dayData[key] || 0;
       let next = curr === idx ? idx - 1 : idx;
       dayData[key] = next;
+
+      // 상단 사과 직접 탭 시 식단 체크박스 연동
+      if (key === 'acvCount') {
+        if (document.getElementById('mealAcv_2')) document.getElementById('mealAcv_2').checked = (next >= 1);
+        if (document.getElementById('mealAcv_3')) document.getElementById('mealAcv_3').checked = (next >= 2);
+      }
+
       saveDayDataLocal(currentDate, dayData);
       renderDrinkTracker(dayData);
       if (db) db.collection('diary_days').doc(currentDate).set(dayData).catch(console.error);
@@ -2250,11 +2361,12 @@
       saveDayData();
     }
 
-    // 데일리 TO-DO
+    // 데일리 TO-DO (첫날 / 말일 / 분기, 미니멀 파스텔 텍스트 뱃지, 스크롤 박멸 오가닉 높이)
     function onRoutineTypeChange(val) {
       const selector = document.getElementById('weeklyDaysSelector');
       if (val === 'weekly') {
         selector.classList.remove('hidden');
+        selectedWeeklyDays = [];
         renderWeekDayChips();
       } else {
         selector.classList.add('hidden');
@@ -2264,7 +2376,7 @@
     function toggleWeekDayChip(dayNum) {
       const idx = selectedWeeklyDays.indexOf(dayNum);
       if (idx > -1) {
-        if (selectedWeeklyDays.length > 1) selectedWeeklyDays.splice(idx, 1);
+        selectedWeeklyDays.splice(idx, 1);
       } else {
         selectedWeeklyDays.push(dayNum);
       }
@@ -2301,8 +2413,9 @@
       const defaultRules = [
         { id: 1, text: "물 1.5L 마시기", type: "daily", sortOrder: 1 },
         { id: 2, text: "참마 화장실 청소 🚽", type: "weekly", days: [4], sortOrder: 2 },
-        { id: 3, text: "칫솔 바꾸기", type: "quarterly", sortOrder: 3 },
-        { id: 4, text: "브리타 필터 바꾸기", type: "quarterly", sortOrder: 4 }
+        { id: 3, text: "월세 보내기 🏠", type: "monthly_last", sortOrder: 3 },
+        { id: 4, text: "칫솔 바꾸기", type: "quarterly", sortOrder: 4 },
+        { id: 5, text: "브리타 필터 바꾸기", type: "quarterly", sortOrder: 5 }
       ];
       return JSON.parse(localStorage.getItem('mingle_routine_rules') || JSON.stringify(defaultRules));
     }
@@ -2320,7 +2433,6 @@
 
       const type = document.getElementById('routineTypeSelect').value;
       const rules = getRoutineRules();
-      const typeWeight = { daily: 1, weekly: 2, monthly: 3, quarterly: 4 };
 
       const newRule = {
         id: Date.now(),
@@ -2328,11 +2440,13 @@
         type,
         days: type === 'weekly' ? [...selectedWeeklyDays] : null,
         createdDate: currentDate,
-        sortOrder: (typeWeight[type] || 5) * 100 + rules.length
+        sortOrder: Date.now()
       };
 
       rules.push(newRule);
       input.value = '';
+      selectedWeeklyDays = [];
+      renderWeekDayChips();
       saveRoutineRules(rules);
     }
 
@@ -2368,10 +2482,13 @@
       if (!container) return;
 
       const parts = currentDate.split('-');
-      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      const year = parseInt(parts[0], 10);
+      const monthIdx = parseInt(parts[1], 10) - 1;
+      const d = new Date(year, monthIdx, parseInt(parts[2], 10));
       const dayOfWeek = d.getDay();
       const dateNum = d.getDate();
       const monthNum = d.getMonth() + 1;
+      const lastDayOfMonth = new Date(year, monthIdx + 1, 0).getDate();
 
       const rules = getRoutineRules();
       const dayData = getDayDataLocal(currentDate);
@@ -2380,9 +2497,18 @@
       const activeRules = rules.filter(r => {
         if (r.type === 'daily') return true;
         if (r.type === 'weekly') return r.days && r.days.includes(dayOfWeek);
-        if (r.type === 'monthly') return dateNum === 1;
+        if (r.type === 'monthly_first' || r.type === 'monthly') return dateNum === 1;
+        if (r.type === 'monthly_last') return dateNum === lastDayOfMonth;
         if (r.type === 'quarterly') return dateNum === 1 && [1, 4, 7, 10].includes(monthNum);
         return false;
+      });
+
+      // 3단계 정렬: 1순위(주기 짧은순) ➔ 2순위(가나다순)
+      const typeRank = { daily: 1, weekly: 2, monthly_first: 3, monthly: 3, monthly_last: 4, quarterly: 5 };
+      activeRules.sort((a, b) => {
+        const rankDiff = (typeRank[a.type] || 9) - (typeRank[b.type] || 9);
+        if (rankDiff !== 0) return rankDiff;
+        return a.text.localeCompare(b.text, 'ko');
       });
 
       document.getElementById('routineTodoCount').innerText = `${activeRules.length}건`;
@@ -2396,11 +2522,13 @@
 
       container.innerHTML = activeRules.map((r) => {
         const isDone = !!checks[r.id];
+        // 이모지 싹 뺀 미니멀 파스텔 단어 뱃지
         let badge = '';
-        if (r.type === 'daily') badge = '<span class="text-[9px] bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.2 rounded-full font-bold">🔁 매일</span>';
-        else if (r.type === 'weekly') badge = `<span class="text-[9px] bg-sky-50 text-sky-800 border border-sky-200 px-1.5 py-0.2 rounded-full font-bold">📅 ${dayNames[dayOfWeek]}</span>`;
-        else if (r.type === 'monthly') badge = '<span class="text-[9px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 rounded-full font-bold">📆 1일</span>';
-        else if (r.type === 'quarterly') badge = '<span class="text-[9px] bg-indigo-50 text-indigo-800 border border-indigo-200 px-1.5 py-0.2 rounded-full font-bold">🪴 분기</span>';
+        if (r.type === 'daily') badge = '<span class="text-[9px] bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.2 rounded font-semibold shrink-0">매일</span>';
+        else if (r.type === 'weekly') badge = `<span class="text-[9px] bg-sky-50 text-sky-900 border border-sky-200 px-1.5 py-0.2 rounded font-semibold shrink-0">${dayNames[dayOfWeek]}요일</span>`;
+        else if (r.type === 'monthly_first' || r.type === 'monthly') badge = '<span class="text-[9px] bg-emerald-50 text-emerald-900 border border-emerald-200 px-1.5 py-0.2 rounded font-semibold shrink-0">첫날</span>';
+        else if (r.type === 'monthly_last') badge = '<span class="text-[9px] bg-rose-50 text-rose-900 border border-rose-200 px-1.5 py-0.2 rounded font-semibold shrink-0">말일</span>';
+        else if (r.type === 'quarterly') badge = '<span class="text-[9px] bg-purple-50 text-purple-900 border border-purple-200 px-1.5 py-0.2 rounded font-semibold shrink-0">분기</span>';
 
         return `
           <div class="flex items-center justify-between p-1.5 rounded-lg bg-stone-50 border border-stone-100 text-xs">
@@ -2410,8 +2538,8 @@
               ${badge}
             </label>
             <div class="flex items-center gap-1 shrink-0">
-              <button onclick="moveRoutineOrder(${r.id}, -1)" title="위로 이동" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▲</button>
-              <button onclick="moveRoutineOrder(${r.id}, 1)" title="아래로 이동" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▼</button>
+              <button onclick="moveRoutineOrder(${r.id}, -1)" title="위로" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▲</button>
+              <button onclick="moveRoutineOrder(${r.id}, 1)" title="아래로" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▼</button>
               <button onclick="deleteRoutineRule(${r.id})" title="삭제" class="text-stone-300 hover:text-stone-500 px-1 text-xs">✕</button>
             </div>
           </div>
@@ -2419,7 +2547,77 @@
       }).join('');
     }
 
-    // OOTD & 노래
+    // 👗 노션 스타일 스마트 옷장 칩 바
+    const DEFAULT_OOTD_CLOSET = {
+      top: ['민트 브이넥 니트', '아이보리 셔츠', '화이트 반팔티'],
+      bottom: ['연청 데님', '블랙 슬랙스', '베이지 코튼팬츠'],
+      shoes: ['화이트 스니커즈', '반스 체커보드', '컨버스 로우'],
+      bag: ['미피 네트백', '블랙 백팩', '캔버스 에코백']
+    };
+
+    function getOotdCloset() {
+      return JSON.parse(localStorage.getItem('mingle_ootd_closet') || JSON.stringify(DEFAULT_OOTD_CLOSET));
+    }
+
+    function saveOotdCloset(closet) {
+      localStorage.setItem('mingle_ootd_closet', JSON.stringify(closet));
+      renderOotdChips();
+    }
+
+    function promptAddOotdChip(group) {
+      const item = prompt("새로운 의류/아이템을 등록해주세요:");
+      if (!item || !item.trim()) return;
+      const closet = getOotdCloset();
+      if (!closet[group]) closet[group] = [];
+      closet[group].push(item.trim());
+      saveOotdCloset(closet);
+    }
+
+    function deleteOotdChip(group, idx) {
+      const closet = getOotdCloset();
+      if (!closet[group]) return;
+      closet[group].splice(idx, 1);
+      saveOotdCloset(closet);
+    }
+
+    function toggleSelectOotdChip(group, item) {
+      const dayData = getDayDataLocal(currentDate);
+      if (!dayData.ootdSelected) dayData.ootdSelected = { top: '', bottom: '', shoes: '', bag: '' };
+      
+      if (dayData.ootdSelected[group] === item) {
+        dayData.ootdSelected[group] = '';
+      } else {
+        dayData.ootdSelected[group] = item;
+      }
+      saveDayDataLocal(currentDate, dayData);
+      renderOotdChips();
+      saveDayData();
+    }
+
+    function renderOotdChips() {
+      const closet = getOotdCloset();
+      const dayData = getDayDataLocal(currentDate);
+      const selected = dayData.ootdSelected || {};
+
+      ['top', 'bottom', 'shoes', 'bag'].forEach(group => {
+        const container = document.getElementById(`ootdChips_${group}`);
+        if (!container) return;
+        const list = closet[group] || [];
+
+        container.innerHTML = list.map((item, idx) => {
+          const isSelected = selected[group] === item;
+          return `
+            <div class="inline-flex items-center rounded-lg border text-[11px] font-semibold transition-all ${isSelected ? 'bg-amber-800 text-white border-amber-900 shadow-2xs' : 'bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100'}">
+              <span onclick="toggleSelectOotdChip('${group}', '${item.replace(/'/g, "\\'")}')" class="px-2 py-0.5 cursor-pointer">${item}</span>
+              <button onclick="deleteOotdChip('${group}', ${idx})" class="pr-1.5 opacity-40 hover:opacity-100 text-[9px]">✕</button>
+            </div>
+          `;
+        }).join('') + `
+          <button onclick="promptAddOotdChip('${group}')" class="text-[10px] bg-white border border-dashed border-stone-300 text-stone-500 hover:text-stone-800 px-1.5 py-0.5 rounded-lg font-bold">+ 등록</button>
+        `;
+      });
+    }
+
     function onOotdColorChange(colorVal) {
       document.getElementById('ootdColorBadge').style.backgroundColor = colorVal;
       saveDayData();
@@ -2452,7 +2650,7 @@
         });
     }
 
-    // 데일리 데이터 저장/복원
+    // 데일리 데이터 동기화
     function subscribeDayData(dateStr) {
       if (unsubscribeDay) unsubscribeDay();
       applyDayDataToUI(getDayDataLocal(dateStr));
@@ -2504,6 +2702,7 @@
           text: document.getElementById('ootdTextInput')?.value || '',
           color: document.getElementById('ootdColorInput')?.value || '#ecdcc9'
         },
+        ootdSelected: existing.ootdSelected || {},
         bgm: {
           song: document.getElementById('bgmSearchInput')?.value || '',
           info: document.getElementById('bgmInfoText')?.innerText || '',
@@ -2517,7 +2716,9 @@
             amTime: document.getElementById('snackTime_am')?.value || '',
             amMenu: document.getElementById('snackMenu_am')?.value || '',
             pmTime: document.getElementById('snackTime_pm')?.value || '',
-            pmMenu: document.getElementById('snackMenu_pm')?.value || ''
+            pmMenu: document.getElementById('snackMenu_pm')?.value || '',
+            nightTime: document.getElementById('snackTime_night')?.value || '',
+            nightMenu: document.getElementById('snackMenu_night')?.value || ''
           },
           meals: [1, 2, 3].map(i => ({
             time: document.getElementById(`mealTime_${i}`).value,
@@ -2569,6 +2770,7 @@
         document.getElementById('ootdColorInput').value = data.ootd.color || '#ecdcc9';
         document.getElementById('ootdColorBadge').style.backgroundColor = data.ootd.color || '#ecdcc9';
       }
+      renderOotdChips();
 
       if (data.bgm) {
         document.getElementById('bgmSearchInput').value = data.bgm.song || '';
@@ -2586,6 +2788,8 @@
           if (document.getElementById('snackMenu_am')) document.getElementById('snackMenu_am').value = data.health.snacks.amMenu || '';
           if (document.getElementById('snackTime_pm')) document.getElementById('snackTime_pm').value = data.health.snacks.pmTime || '';
           if (document.getElementById('snackMenu_pm')) document.getElementById('snackMenu_pm').value = data.health.snacks.pmMenu || '';
+          if (document.getElementById('snackTime_night')) document.getElementById('snackTime_night').value = data.health.snacks.nightTime || '';
+          if (document.getElementById('snackMenu_night')) document.getElementById('snackMenu_night').value = data.health.snacks.nightMenu || '';
         }
 
         if (data.health.meals) {
@@ -2658,17 +2862,25 @@
 
     function toggleCalEventRepeat(checked) {
       const box = document.getElementById('calEventRepeatDaysBox');
-      if (checked) box.classList.remove('hidden');
-      else box.classList.add('hidden');
+      if (checked) {
+        box.classList.remove('hidden');
+        renderCalRepeatDays();
+      } else {
+        box.classList.add('hidden');
+      }
     }
 
     function toggleCalRepeatDay(dayNum) {
       const idx = calEventRepeatDays.indexOf(dayNum);
       if (idx > -1) {
-        if (calEventRepeatDays.length > 1) calEventRepeatDays.splice(idx, 1);
+        calEventRepeatDays.splice(idx, 1);
       } else {
         calEventRepeatDays.push(dayNum);
       }
+      renderCalRepeatDays();
+    }
+
+    function renderCalRepeatDays() {
       [0, 1, 2, 3, 4, 5, 6].forEach(d => {
         const btn = document.getElementById(`crd_${d}`);
         if (btn) {
@@ -2688,6 +2900,7 @@
       renderCalendar();
       renderUpcomingEvents();
       renderTicketList();
+      renderAnniversaries();
     }
 
     function subscribeCalendarEvents() {
@@ -2718,26 +2931,39 @@
       if (db) db.collection('calendar_events').doc('all').set({ events }).catch(console.error);
     }
 
+    function setEventFilter(mode) {
+      eventFilterMode = mode;
+      ['7', '30', 'all'].forEach(m => {
+        const btn = document.getElementById(`eventFilter_${m}`);
+        if (btn) {
+          if (m === mode) btn.className = 'px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold';
+          else btn.className = 'px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold';
+        }
+      });
+      renderUpcomingEvents();
+    }
+
     function openCalendarEventModal(eventId = null) {
       editingEventId = eventId;
       if (eventId) {
         const ev = getCalendarEvents().find(e => e.id === eventId);
         if (ev) {
-          document.getElementById('calEventModalTitle').innerHTML = '<span>✏️</span> 일정 / 약속 수정';
+          document.getElementById('calEventModalTitle').innerHTML = '<span>📌</span> 일정 / 약속 수정';
           document.getElementById('calEventTitle').value = ev.title;
           document.getElementById('calEventStart').value = ev.start;
           document.getElementById('calEventEnd').value = ev.end;
           document.getElementById('calEventRepeatToggle').checked = !!ev.isRepeat;
+          calEventRepeatDays = ev.repeatDays ? [...ev.repeatDays] : [];
           toggleCalEventRepeat(!!ev.isRepeat);
-          if (ev.repeatDays) calEventRepeatDays = [...ev.repeatDays];
           selectCalEventCategory(ev.category || 'family');
         }
       } else {
-        document.getElementById('calEventModalTitle').innerHTML = '<span>🗓</span> 일정 / 약속 등록';
+        document.getElementById('calEventModalTitle').innerHTML = '<span>📌</span> 일정 / 약속 등록';
         document.getElementById('calEventTitle').value = '';
         document.getElementById('calEventStart').value = currentDate;
         document.getElementById('calEventEnd').value = currentDate;
         document.getElementById('calEventRepeatToggle').checked = false;
+        calEventRepeatDays = [];
         document.getElementById('calEventRepeatDaysBox').classList.add('hidden');
         selectCalEventCategory('family');
       }
@@ -2791,7 +3017,53 @@
       saveCalendarEvents(events);
     }
 
-    // 🎫 교통 & 예매 티켓 시스템
+    // 🎫 예매 확인 (단골 지명 퀵 칩 & 즐겨찾기)
+    const DEFAULT_FAV_PLACES = ['부산', '진주', '사천', '서울'];
+
+    function getFavPlaces() {
+      return JSON.parse(localStorage.getItem('mingle_fav_places') || JSON.stringify(DEFAULT_FAV_PLACES));
+    }
+
+    function saveFavPlaces(places) {
+      localStorage.setItem('mingle_fav_places', JSON.stringify(places));
+      renderFavPlaceChips();
+    }
+
+    function promptAddPlaceChip() {
+      const place = prompt("자주 가는 도시/지명을 입력해주세요:\n(예: 대전, 대구, 순천)");
+      if (!place || !place.trim()) return;
+      const places = getFavPlaces();
+      places.push(place.trim());
+      saveFavPlaces(places);
+    }
+
+    function deletePlaceChip(idx) {
+      const places = getFavPlaces();
+      places.splice(idx, 1);
+      saveFavPlaces(places);
+    }
+
+    function fillPlaceIntoInput(place) {
+      const targetInput = document.getElementById(activePlaceInputId) || document.getElementById('ticketDepartPlace');
+      if (targetInput) {
+        targetInput.value = place;
+        targetInput.focus();
+      }
+    }
+
+    function renderFavPlaceChips() {
+      const container = document.getElementById('favPlacesChipContainer');
+      if (!container) return;
+      const places = getFavPlaces();
+
+      container.innerHTML = places.map((p, idx) => `
+        <div class="inline-flex items-center rounded-lg border border-sky-200 bg-white text-[11px] font-semibold text-sky-900 shadow-2xs">
+          <span onclick="fillPlaceIntoInput('${p}')" class="px-2 py-0.5 cursor-pointer hover:bg-sky-50">${p}</span>
+          <button onclick="deletePlaceChip(${idx})" class="pr-1 text-[9px] text-stone-300 hover:text-rose-500">✕</button>
+        </div>
+      `).join('');
+    }
+
     function subscribeTicketData() {
       renderTicketList();
       if (!db) return;
@@ -2819,12 +3091,25 @@
       if (db) db.collection('tickets_data').doc('all').set({ tickets }).catch(console.error);
     }
 
+    function setTicketFilter(mode) {
+      ticketFilterMode = mode;
+      ['7', '30', 'all'].forEach(m => {
+        const btn = document.getElementById(`ticketFilter_${m}`);
+        if (btn) {
+          if (m === mode) btn.className = 'px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold';
+          else btn.className = 'px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold';
+        }
+      });
+      renderTicketList();
+    }
+
     function openTicketModal(ticketId = null) {
       editingTicketId = ticketId;
+      renderFavPlaceChips();
       if (ticketId) {
         const t = getTicketsLocal().find(item => item.id === ticketId);
         if (t) {
-          document.getElementById('ticketModalTitle').innerHTML = '<span>✏️</span> 승차권 / 예매 수정';
+          document.getElementById('ticketModalTitle').innerHTML = '<span>🎫</span> 승차권 / 예매 수정';
           selectTicketType(t.type);
           document.getElementById('ticketDepartPlace').value = t.depart;
           document.getElementById('ticketArrivePlace').value = t.arrive;
@@ -2910,14 +3195,22 @@
       const futureTickets = tickets.filter(t => t.date >= REAL_TODAY_STR);
       futureTickets.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
-      if (futureTickets.length === 0) {
-        container.innerHTML = `<p class="text-[11px] text-stone-300 py-3 text-center">예약된 버스/기차/비행기 표가 없어요 🌿</p>`;
+      const filtered = futureTickets.filter(t => {
+        const tDate = new Date(t.date);
+        const diff = Math.ceil((tDate - now) / (1000 * 60 * 60 * 24));
+        if (ticketFilterMode === '7') return diff <= 7;
+        if (ticketFilterMode === '30') return diff <= 30;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<p class="text-[11px] text-stone-300 py-3 text-center">해당 기간에 예매된 승차권이 없어요 🌿</p>`;
         return;
       }
 
       const iconMap = { bus: '🚌 버스', train: '🚅 기차', flight: '✈️ 비행기' };
 
-      container.innerHTML = futureTickets.map(t => {
+      container.innerHTML = filtered.map(t => {
         const tDate = new Date(t.date);
         const diff = Math.ceil((tDate - now) / (1000 * 60 * 60 * 24));
         const ddayText = diff === 0 ? "오늘 출발" : `D-${diff}`;
@@ -2929,7 +3222,10 @@
                 <span class="font-bold text-sky-950">${iconMap[t.type]} ${t.depart} ➔ ${t.arrive}</span>
                 <span class="text-[9px] bg-white text-sky-800 border border-sky-200 px-1 rounded font-bold">${t.time}</span>
               </div>
-              <div class="text-[10px] text-stone-500 mt-0.5">${t.date} ${t.seatMemo ? `| <b>${t.seatMemo}</b>` : ''} <span class="text-[9px] opacity-60">✏️</span></div>
+              <div class="text-[10px] text-stone-500 mt-0.5 flex items-center gap-1">
+                <span>${t.date} ${t.seatMemo ? `| <b>${t.seatMemo}</b>` : ''}</span>
+                ${EDIT_SVG_ICON}
+              </div>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
               <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${diff === 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-sky-200 text-sky-900'}">${ddayText}</span>
@@ -2949,12 +3245,21 @@
       const futureEvents = events.filter(e => e.isRepeat || e.end >= REAL_TODAY_STR);
       futureEvents.sort((a, b) => a.start.localeCompare(b.start));
 
-      if (futureEvents.length === 0) {
-        container.innerHTML = `<p class="text-[11px] text-stone-300 py-3 text-center">예정된 약속이나 휴가가 없어요 🌿</p>`;
+      const filtered = futureEvents.filter(e => {
+        if (e.isRepeat) return true;
+        const startD = new Date(e.start);
+        const diff = Math.ceil((startD - now) / (1000 * 60 * 60 * 24));
+        if (eventFilterMode === '7') return diff <= 7;
+        if (eventFilterMode === '30') return diff <= 30;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<p class="text-[11px] text-stone-300 py-3 text-center">해당 기간에 예정된 약속이나 일정이 없어요 🌿</p>`;
         return;
       }
 
-      container.innerHTML = futureEvents.map(e => {
+      container.innerHTML = filtered.map(e => {
         const catMeta = EVENT_CATEGORIES.find(c => c.key === e.category) || EVENT_CATEGORIES[6];
         const startD = new Date(e.start);
         const diff = Math.ceil((startD - now) / (1000 * 60 * 60 * 24));
@@ -2963,7 +3268,10 @@
         return `
           <div class="p-2 rounded-xl border flex items-center justify-between text-xs bg-stone-50 border-stone-100 text-stone-800">
             <div onclick="openCalendarEventModal(${e.id})" class="min-w-0 pr-2 flex-1 cursor-pointer hover:opacity-80" title="클릭하여 일정 수정">
-              <span class="font-bold">${catMeta.icon} ${e.title} <span class="text-[9px] opacity-60">✏️</span></span>
+              <span class="font-bold flex items-center gap-1">
+                <span>${catMeta.icon} ${e.title}</span>
+                ${EDIT_SVG_ICON}
+              </span>
               <span class="text-[10px] text-stone-400 block">${e.isRepeat ? '매주 반복 일정' : `${e.start} ~ ${e.end}`}</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
@@ -3065,10 +3373,8 @@
 
         const dayTickets = tickets.filter(t => t.date === dateKey);
 
-        // 1단: 날짜 + 무드
         const moodIcon = record?.mood && MOOD_META[record.mood] ? MOOD_META[record.mood].icon : '';
 
-        // 2단: 약속/일정/교통 스탬프 이모지
         let eventStampIcons = '';
         if (holidayName) eventStampIcons += '<span class="text-[8px] bg-rose-100 text-rose-700 px-1 py-0.2 rounded font-bold">휴일</span>';
         if (hitAnni) eventStampIcons += '🎂';
@@ -3081,7 +3387,6 @@
           eventStampIcons += `<span title="${ev.title}">${catMeta.icon}</span>`;
         });
 
-        // 3단: 활동 이모지
         let activityIcons = '';
         if (record?.weather) {
           if (record.weather.includes('☀️')) activityIcons += '☀';
@@ -3170,9 +3475,10 @@
 
       list.innerHTML = filtered.map((item, idx) => `
         <div class="p-2 rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-between text-xs">
-          <div onclick="editAnniversary(${idx})" class="cursor-pointer hover:text-amber-800 flex-1" title="클릭하여 수정">
-            <span class="font-bold text-stone-800">🎂 ${item.name} <span class="text-[9px] opacity-60">✏️</span></span>
-            <span class="text-[11px] text-stone-400 ml-1">(${item.origMonth}월 ${item.origDay}일)</span>
+          <div onclick="editAnniversary(${idx})" class="cursor-pointer hover:text-amber-800 flex-1 flex items-center gap-1" title="클릭하여 수정">
+            <span class="font-bold text-stone-800">🎂 ${item.name}</span>
+            <span class="text-[11px] text-stone-400">(${item.origMonth}월 ${item.origDay}일)</span>
+            ${EDIT_SVG_ICON}
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <span class="font-bold ${item.diff <= 7 ? 'text-rose-600 bg-rose-50' : 'text-amber-600 bg-amber-50'} px-2 py-0.5 rounded-full text-[11px]">D-${item.diff}</span>
@@ -3395,7 +3701,7 @@
       document.getElementById('healthAvgSugarPost').innerText = postCount > 0 ? `${Math.round(postSum / postCount)}` : '-';
     }
 
-    // 루틴 진행도 트래커 (휴식일 분모 제외)
+    // 루틴 진행도 트래커 (줄맞춤 + ⭐ 하루 평균 + 아침☀/저녁🌙)
     function changeRoutineMonth(delta) {
       routineMonth += delta;
       if (routineMonth < 0) { routineMonth = 11; routineYear--; }
@@ -3456,15 +3762,23 @@
           : (avg >= 80 ? 'bg-amber-100 border-amber-300 text-amber-900' : (avg > 0 ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-stone-50 border-stone-200 text-stone-400'));
 
         grid.innerHTML += `
-          <div onclick="selectDateFromCal('${dateKey}')" class="p-1 rounded-xl border ${tileColor} flex flex-col items-center justify-between min-h-[44px] cursor-pointer hover:scale-105 transition-transform">
-            <span class="text-[9px] font-bold opacity-70">${d}일</span>
-            <span class="text-[9px] font-bold font-mono">${isFullRest ? '휴식' : (avg > 0 ? `${avg}%` : '·')}</span>
+          <div onclick="selectDateFromCal('${dateKey}')" class="p-1 rounded-xl border ${tileColor} flex flex-col justify-between min-h-[46px] cursor-pointer hover:scale-105 transition-transform text-left">
+            <div class="flex items-center justify-between leading-none">
+              <span class="text-[9px] font-bold opacity-70">${d}일</span>
+              ${isFullRest ? '<span class="text-[8px] font-bold text-emerald-700">휴식</span>' : (avg > 0 ? `<span class="text-[9px] font-bold font-mono text-amber-900">⭐${avg}%</span>` : '')}
+            </div>
+            <div class="text-[8px] font-mono leading-tight space-y-0.2 pt-0.5 border-t border-stone-200/40">
+              ${isFullRest ? '<div class="text-[8px] text-stone-400 text-center py-1">쉼 🍃</div>' : (hasActiveDuty ? `
+                <div class="flex justify-between items-center text-amber-950 font-medium"><span>☀</span><span>${mPct}%</span></div>
+                <div class="flex justify-between items-center text-indigo-950 font-medium"><span>🌙</span><span>${ePct}%</span></div>
+              ` : '<div class="text-stone-300 text-center py-1">·</div>')}
+            </div>
           </div>
         `;
       }
 
       const overallAvg = recordedDaysCount > 0 ? Math.round(totalPctSum / recordedDaysCount) : 0;
-      document.getElementById('routineMonthlyAvg').innerText = `실천평균 ${overallAvg}%`;
+      document.getElementById('routineMonthlyAvg').innerText = `평균 ${overallAvg}%`;
     }
 
     // 무드 트래커
@@ -3635,8 +3949,9 @@
         container.innerHTML = activeHabits.map(h => `
           <div class="flex items-center justify-between p-2 rounded-xl bg-stone-50 border border-stone-100 text-xs">
             <div class="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
-              <span onclick="editHabitName(${h.id})" class="font-medium text-stone-700 truncate text-[11px] cursor-pointer hover:text-amber-700" title="클릭하여 이름 수정">
-                ${h.name} <span class="text-[9px] opacity-50">✏️</span>
+              <span onclick="editHabitName(${h.id})" class="font-medium text-stone-700 truncate text-[11px] cursor-pointer hover:text-amber-700 flex items-center gap-1" title="클릭하여 이름 수정">
+                <span>${h.name}</span>
+                ${EDIT_SVG_ICON}
               </span>
               <button onclick="pauseHabit(${h.id})" title="보관" class="text-stone-300 hover:text-stone-600 px-0.5 inline-flex items-center">
                 <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
