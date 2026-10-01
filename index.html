@@ -44,15 +44,12 @@
         <span class="text-xl">🐾</span>
         <div>
           <h1 class="text-sm font-bold text-stone-800 leading-tight">밍글의 불렛저널</h1>
-          <p class="text-[10px] text-sage-600 font-medium" id="syncStatus">☁️ 클라우드 동기화 대기</p>
+          <p class="text-[10px] text-sage-600 font-medium" id="syncStatus">☁️ 실시간 클라우드 연결 중...</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="downloadAsImage()" title="오늘 하루 이미지 저장" class="text-xs bg-white hover:bg-stone-50 border border-stone-200 px-2 py-1 rounded-lg text-stone-600 flex items-center gap-1 shadow-xs">
+        <button onclick="downloadAsImage()" title="오늘 하루 이미지 저장" class="text-xs bg-white hover:bg-stone-50 border border-stone-200 px-2.5 py-1 rounded-lg text-stone-600 flex items-center gap-1 shadow-xs">
           📷 <span>저장</span>
-        </button>
-        <button onclick="toggleFirebaseModal()" title="클라우드 설정" class="text-xs bg-amber-100/70 hover:bg-amber-100 border border-amber-200 px-2 py-1 rounded-lg text-amber-900 font-medium">
-          ⚙️ 연동
         </button>
       </div>
     </div>
@@ -64,17 +61,27 @@
     <!-- 1. 일일 페이지 (VIEW: DAY) -->
     <section id="view-day" class="space-y-4">
       
-      <!-- 날짜 선택 바 -->
+      <!-- 날짜 & 날씨 선택 바 -->
       <div class="bg-white rounded-2xl p-3 border border-stone-200 shadow-xs flex items-center justify-between">
         <button onclick="changeDate(-1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">◀</button>
-        <div class="text-center">
+        <div class="text-center flex flex-col items-center gap-1">
           <input type="date" id="currentDateInput" onchange="onDateChanged(this.value)" class="text-xs font-bold text-stone-700 bg-transparent text-center focus:outline-none cursor-pointer">
-          <div class="text-[11px] text-stone-500 font-medium" id="currentDateLabel">2026년 10월 1일 (목)</div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[11px] text-stone-500 font-medium" id="currentDateLabel">2026년 10월 1일 (목)</span>
+            <select id="todayWeatherSelect" onchange="saveDayData()" class="bg-stone-50 border border-stone-200 rounded text-[10px] px-1 py-0.5 text-stone-600 focus:outline-none cursor-pointer">
+              <option value="">날씨 선택</option>
+              <option value="맑음 ☀️">맑음 ☀️</option>
+              <option value="구름 조금 ⛅">구름 조금 ⛅</option>
+              <option value="흐림 ☁️">흐림 ☁️</option>
+              <option value="비 🌧️">비 🌧️</option>
+              <option value="눈 ❄️">눈 ❄️️</option>
+            </select>
+          </div>
         </div>
         <button onclick="changeDate(1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">▶</button>
       </div>
 
-      <!-- ⭐ 오늘의 할 일 (Today's Tasks) - 타임테이블 바로 위 명당! -->
+      <!-- ⭐ 오늘의 할 일 (Today's Tasks) -->
       <div class="bg-white border-2 border-amber-200/80 rounded-2xl p-3.5 shadow-xs">
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
@@ -107,7 +114,7 @@
           </div>
         </div>
 
-        <!-- 지금 한 일 빠른 기록 버튼 (간소화 & 줄바꿈 방지) -->
+        <!-- 지금 한 일 빠른 기록 버튼 -->
         <div class="flex gap-1.5 mb-3">
           <input type="text" id="quickActivityInput" placeholder="지금 한 일 기록..." class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-sage-300">
           <button onclick="recordCurrentTimeToTable()" class="bg-sage-600 hover:bg-sage-700 text-white font-bold text-xs px-2.5 py-1.5 rounded-xl transition-colors whitespace-nowrap flex items-center gap-1 shrink-0">
@@ -121,7 +128,7 @@
             <span>시</span><span>:00</span><span>:10</span><span>:20</span><span>:30</span><span>:40</span><span>:50</span>
           </div>
           <div id="gridRowsContainer" class="space-y-1">
-            <!-- 07시~24시 18개 시간대 동적 생성 -->
+            <!-- 07시~24시 동적 생성 -->
           </div>
         </div>
 
@@ -131,11 +138,11 @@
         </div>
       </div>
 
-      <!-- 🌅 아침 루틴 (시간 괄호 제거 & 심플화) -->
+      <!-- 🌅 아침 루틴 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-xs">
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-            <span class="text-amber-500">☀️️</span> 아침 50분 루틴
+            <span class="text-amber-500">☀️</span> 아침 50분 루틴
           </h3>
           <button onclick="completeMorningRoutine()" class="text-[10px] bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap">
             ⚡ 루틴 일괄완료
@@ -165,7 +172,7 @@
         </div>
       </div>
 
-      <!-- 🌙 저녁 루틴 (시간 괄호 제거 & 독서모임 토글) -->
+      <!-- 🌙 저녁 루틴 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-xs">
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
@@ -178,7 +185,6 @@
         </div>
 
         <div class="space-y-1.5 text-xs" id="eveningRoutineList">
-          <!-- 1단계: 집 & 바디 케어 -->
           <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
             <span class="text-[11px] font-bold text-stone-600">🧹 정리·바디</span>
             <div class="flex items-center gap-2">
@@ -187,7 +193,6 @@
               <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_skin" onchange="saveDayData()"><span class="text-[11px]">스킨케어</span></label>
             </div>
           </div>
-          <!-- 2단계: 반려 & 어항·식물 -->
           <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
             <span class="text-[11px] font-bold text-stone-600">🌿 반려·어항</span>
             <div class="flex items-center gap-2">
@@ -195,7 +200,6 @@
               <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_plant" onchange="saveDayData()"><span class="text-[11px]">어항·화분</span></label>
             </div>
           </div>
-          <!-- 3단계: 나만의 힐링 & 밤 마무리 -->
           <div class="p-2 bg-indigo-50/50 rounded-xl border border-indigo-100 flex flex-wrap items-center justify-between gap-1">
             <span class="text-[11px] font-bold text-indigo-800" id="evening3Label">🧶 마무리</span>
             <div class="flex items-center gap-2" id="evening3Options">
@@ -207,7 +211,7 @@
         </div>
       </div>
 
-      <!-- 🥗 식단 & 혈당 & 수면 관리 모듈 (줄바꿈 방지 & 🏃운동 반영) -->
+      <!-- 🥗 식단 & 혈당 & 수면 관리 모듈 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <h3 class="text-xs font-bold text-stone-800 flex items-center justify-between">
           <span class="flex items-center gap-1.5"><span>🥗</span> 식단 & 혈당 & 건강</span>
@@ -245,7 +249,7 @@
             <input type="text" id="mealMenu_1" placeholder="식단 메뉴..." onchange="saveDayData()" class="w-full bg-white border border-stone-200 rounded-lg p-1.5 text-xs">
             <div class="flex items-center justify-between text-[11px]">
               <label class="flex items-center gap-0.5 text-stone-600 whitespace-nowrap cursor-pointer"><input type="checkbox" id="mealVege_1" onchange="saveDayData()">🥗채단탄</label>
-              <select id="mealCond_1" onchange="saveDayData()" class="bg-white border border-stone-200 rounded text-[10px] p-0.5 shrink-0">
+              <select id="mealCond_1" onchange="saveDayData()" class="bg-white border border-stone-200 rounded text-[10px] p-0.5 shrink-0 cursor-pointer">
                 <option value="">식후 컨디션</option>
                 <option value="good">🌿 속편함</option>
                 <option value="tired">😴 식곤증</option>
@@ -270,7 +274,7 @@
                 <label class="flex items-center gap-0.5 whitespace-nowrap cursor-pointer"><input type="checkbox" id="mealVege_2" onchange="saveDayData()">🥗채단탄</label>
                 <label class="flex items-center gap-0.5 whitespace-nowrap cursor-pointer"><input type="checkbox" id="mealWalk_2" onchange="saveDayData()">🏃운동</label>
               </div>
-              <select id="mealCond_2" onchange="saveDayData()" class="bg-white border border-stone-200 rounded text-[10px] p-0.5 shrink-0">
+              <select id="mealCond_2" onchange="saveDayData()" class="bg-white border border-stone-200 rounded text-[10px] p-0.5 shrink-0 cursor-pointer">
                 <option value="">컨디션</option>
                 <option value="good">🌿 속편함</option>
                 <option value="tired">😴 식곤증</option>
@@ -295,7 +299,7 @@
                 <label class="flex items-center gap-0.5 whitespace-nowrap cursor-pointer"><input type="checkbox" id="mealVege_3" onchange="saveDayData()">🥗채단탄</label>
                 <label class="flex items-center gap-0.5 whitespace-nowrap cursor-pointer"><input type="checkbox" id="mealWalk_3" onchange="saveDayData()">🏃운동</label>
               </div>
-              <select id="mealCond_3" onchange="saveDayData()" class="bg-white border border-stone-200 rounded text-[10px] p-0.5 shrink-0">
+              <select id="mealCond_3" onchange="saveDayData()" class="bg-white border border-stone-200 rounded text-[10px] p-0.5 shrink-0 cursor-pointer">
                 <option value="">컨디션</option>
                 <option value="good">🌿 속편함</option>
                 <option value="tired">😴 식곤증</option>
@@ -326,7 +330,7 @@
             </div>
           </div>
           <button onclick="completeKnitSessionToTable()" class="mt-2 text-[10px] bg-rose-100 hover:bg-rose-200 text-rose-800 font-semibold py-1 rounded-lg w-full">
-            ⏱️ 뜨개 30분 타임테이블 등록
+            ⏱️ 뜨개 30분 등록
           </button>
         </div>
 
@@ -341,7 +345,7 @@
             <input type="text" id="bookTodayPages" placeholder="오늘 읽은 페이지 (p.12~45)" onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded px-1.5 py-1 text-xs">
           </div>
           <button onclick="completeBookSessionToTable()" class="mt-2 text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-semibold py-1 rounded-lg w-full">
-            ⏱️ 독서 30분 타임테이블 등록
+            ⏱️ 독서 30분 등록
           </button>
         </div>
       </div>
@@ -371,17 +375,14 @@
     <!-- 2. 캘린더 페이지 (VIEW: CALENDAR) -->
     <section id="view-calendar" class="hidden space-y-4">
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
-        <!-- 월 이동 헤더 -->
         <div class="flex items-center justify-between mb-3 border-b border-stone-100 pb-2.5">
           <button onclick="changeCalMonth(-1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">◀</button>
           <h3 class="text-sm font-bold text-stone-800" id="calendarMonthTitle">2026년 10월</h3>
           <button onclick="changeCalMonth(1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">▶</button>
         </div>
-        <!-- 요일 헤더 -->
         <div class="grid grid-cols-7 text-center text-xs font-semibold text-stone-400 mb-2">
           <span class="text-rose-400">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
         </div>
-        <!-- 날짜 그리드 -->
         <div id="calendarGrid" class="grid grid-cols-7 gap-1">
           <!-- 날짜 셀 동적 렌더링 -->
         </div>
@@ -441,7 +442,6 @@
             + 도서 등록
           </button>
         </div>
-        <!-- 책 카테고리 필터 -->
         <div class="flex gap-1 mb-2.5 overflow-x-auto text-[11px] pb-1 hide-scrollbar">
           <button onclick="filterBooks('all')" class="px-2 py-0.5 rounded-full bg-stone-800 text-white font-medium whitespace-nowrap">전체</button>
           <button onclick="filterBooks('소설')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-medium whitespace-nowrap">문학·소설</button>
@@ -478,7 +478,7 @@
   <!-- 하단 탭 바 (Day / Calendar / Tracker) -->
   <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 py-2 shadow-lg">
     <div class="max-w-md mx-auto grid grid-cols-3 text-center text-xs font-semibold">
-      <button onclick="switchTab('day')" id="nav-day" class="text-stone-800 py-1 flex flex-col items-center gap-0.5">
+      <button onclick="switchTab('day')" id="nav-day" class="text-stone-800 py-1 flex flex-col items-center gap-0.5 font-bold">
         <span class="text-base">📅</span><span>데일리</span>
       </button>
       <button onclick="switchTab('calendar')" id="nav-calendar" class="text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5">
@@ -490,87 +490,62 @@
     </div>
   </nav>
 
-  <!-- Firebase 설정 모달 -->
-  <div id="firebaseModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
-      <div class="flex items-center justify-between">
-        <h3 class="text-sm font-bold text-stone-800 flex items-center gap-1.5">
-          <span>☁️</span> Firebase 클라우드 연동
-        </h3>
-        <button onclick="toggleFirebaseModal()" class="text-stone-400 hover:text-stone-600 font-bold">✕</button>
-      </div>
-      <p class="text-[11px] text-stone-500 leading-relaxed">
-        Firebase 콘솔에서 발급받은 <code>firebaseConfig</code> JSON을 붙여넣으면 삼성 인터넷 시크릿 모드나 PC에서도 데이터가 100% 안전하게 클라우드 저장됩니다!
-      </p>
-      <textarea id="firebaseConfigInput" placeholder='{"apiKey": "...", "projectId": "...", ...}' class="w-full h-32 p-2 bg-stone-50 border border-stone-200 rounded-xl text-[11px] font-mono focus:outline-none"></textarea>
-      <button onclick="saveFirebaseConfig()" class="w-full py-2 bg-amber-400 hover:bg-amber-500 text-stone-900 font-bold text-xs rounded-xl">
-        설정 저장 및 동기화 시작
-      </button>
-    </div>
-  </div>
-
   <!-- 핵심 자바스크립트 로직 -->
   <script>
-    // 전역 상태
+    // 칭구의 Firebase 콘솔 설정 내장
+    const firebaseConfig = {
+      apiKey: "AIzaSyAXwjdZmy6Ij62RVyKww9UUalgUynyBqaA",
+      authDomain: "mingle-bullet-journal.firebaseapp.com",
+      projectId: "mingle-bullet-journal",
+      storageBucket: "mingle-bullet-journal.firebasestorage.app",
+      messagingSenderId: "975275683110",
+      appId: "1:975275683110:web:638400c7bdcdc0cd6f25e7",
+      measurementId: "G-5TGYM6V8LQ"
+    };
+
     let currentDate = new Date().toISOString().slice(0, 10);
     let calYear = new Date().getFullYear();
     let calMonth = new Date().getMonth();
-    let timetableViewMode = 'grid'; // 'grid' | 'card'
-    let db = null; // Firestore 인스턴스
+    let timetableViewMode = 'grid';
+    let db = null;
 
-    // 초기 실행
+    // 실시간 구독 리스너 해제용 변수
+    let unsubscribeDay = null;
+    let unsubscribeTasks = null;
+    let unsubscribeBooks = null;
+    let unsubscribeKnits = null;
+
     window.addEventListener('DOMContentLoaded', () => {
       initFirebase();
       document.getElementById('currentDateInput').value = currentDate;
       updateDateLabel();
       initTimetableGrid();
-      loadDayData();
-      renderTodayTasks();
+      
+      // 실시간 데이터 구독 시작
+      subscribeDayData(currentDate);
+      subscribeTodayTasks(currentDate);
+      subscribeArchives();
+
       renderCalendar();
       renderAnniversaries();
       renderMoodTracker();
       renderHabits();
-      renderBookShelf();
-      renderKnittingShowroom();
       calculateDDays();
     });
 
-    // 1. Firebase 클라우드 초기화
+    // 1. Firebase 자동 초기화
     function initFirebase() {
-      const savedConfig = localStorage.getItem('mingle_firebase_config');
-      if (savedConfig) {
-        try {
-          const config = JSON.parse(savedConfig);
-          if (!firebase.apps.length) {
-            firebase.initializeApp(config);
-          }
-          db = firebase.firestore();
-          document.getElementById('syncStatus').innerText = '☁️ 클라우드 동기화 활성 (Firestore)';
-          document.getElementById('syncStatus').className = 'text-[10px] text-emerald-600 font-bold';
-        } catch (e) {
-          console.error(e);
-          document.getElementById('syncStatus').innerText = '⚠️ 설정 오류 (로컬 모드)';
-        }
-      }
-    }
-
-    function toggleFirebaseModal() {
-      const modal = document.getElementById('firebaseModal');
-      modal.classList.toggle('hidden');
-      const saved = localStorage.getItem('mingle_firebase_config');
-      if (saved) document.getElementById('firebaseConfigInput').value = saved;
-    }
-
-    function saveFirebaseConfig() {
-      const val = document.getElementById('firebaseConfigInput').value.trim();
-      if (!val) return;
       try {
-        JSON.parse(val);
-        localStorage.setItem('mingle_firebase_config', val);
-        alert("Firebase 설정이 저장되었습니다! 페이지를 새로고침합니다.");
-        location.reload();
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        db = firebase.firestore();
+        document.getElementById('syncStatus').innerText = '☁️ 실시간 클라우드 동기화 활성';
+        document.getElementById('syncStatus').className = 'text-[10px] text-emerald-600 font-bold';
       } catch (e) {
-        alert("올바른 JSON 형식으로 입력해주세요!");
+        console.error("Firebase 초기화 에러:", e);
+        document.getElementById('syncStatus').innerText = '⚠️ 로컬 오프라인 모드';
+        document.getElementById('syncStatus').className = 'text-[10px] text-rose-500 font-medium';
       }
     }
 
@@ -592,12 +567,12 @@
       }
     }
 
-    // 3. 날짜 변경
+    // 3. 날짜 변경 및 실시간 구독 갱신
     function onDateChanged(val) {
       currentDate = val;
       updateDateLabel();
-      loadDayData();
-      renderTodayTasks();
+      subscribeDayData(currentDate);
+      subscribeTodayTasks(currentDate);
       calculateDDays();
     }
 
@@ -607,8 +582,8 @@
       currentDate = d.toISOString().slice(0, 10);
       document.getElementById('currentDateInput').value = currentDate;
       updateDateLabel();
-      loadDayData();
-      renderTodayTasks();
+      subscribeDayData(currentDate);
+      subscribeTodayTasks(currentDate);
       calculateDDays();
     }
 
@@ -619,44 +594,71 @@
         `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
     }
 
-    // 4. 오늘의 할 일 (Today's Tasks)
-    function getTodayTasks() {
+    // 4. 오늘의 할 일 (실시간 onSnapshot 연동)
+    function subscribeTodayTasks(dateStr) {
+      if (unsubscribeTasks) unsubscribeTasks();
+
+      // 우선 로컬 데이터로 즉시 화면 표시
+      renderTodayTasks(getTodayTasksLocal(dateStr));
+
+      if (!db) return;
+
+      unsubscribeTasks = db.collection('today_tasks').doc(dateStr)
+        .onSnapshot((doc) => {
+          if (doc.exists) {
+            const tasks = doc.data().tasks || [];
+            saveTodayTasksLocal(dateStr, tasks);
+            renderTodayTasks(tasks);
+          } else {
+            renderTodayTasks([]);
+          }
+        }, (err) => console.error("할 일 실시간 구독 오류:", err));
+    }
+
+    function getTodayTasksLocal(dateStr) {
       const all = JSON.parse(localStorage.getItem('mingle_today_tasks') || '{}');
-      return all[currentDate] || [];
+      return all[dateStr] || [];
+    }
+
+    function saveTodayTasksLocal(dateStr, tasks) {
+      const all = JSON.parse(localStorage.getItem('mingle_today_tasks') || '{}');
+      all[dateStr] = tasks;
+      localStorage.setItem('mingle_today_tasks', JSON.stringify(all));
     }
 
     function saveTodayTasks(tasks) {
-      const all = JSON.parse(localStorage.getItem('mingle_today_tasks') || '{}');
-      all[currentDate] = tasks;
-      localStorage.setItem('mingle_today_tasks', JSON.stringify(all));
-      if (db) db.collection('today_tasks').doc(currentDate).set({ tasks });
-      renderTodayTasks();
+      saveTodayTasksLocal(currentDate, tasks);
+      renderTodayTasks(tasks);
+      if (db) {
+        db.collection('today_tasks').doc(currentDate).set({ tasks }).catch(console.error);
+      }
     }
 
     function addTodayTask() {
       const input = document.getElementById('newTodayTaskInput');
       const text = input.value.trim();
       if (!text) return;
-      const tasks = getTodayTasks();
+      const tasks = getTodayTasksLocal(currentDate);
       tasks.push({ text, done: false, id: Date.now() });
       input.value = '';
       saveTodayTasks(tasks);
     }
 
     function toggleTodayTask(idx) {
-      const tasks = getTodayTasks();
-      tasks[idx].done = !tasks[idx].done;
-      saveTodayTasks(tasks);
+      const tasks = getTodayTasksLocal(currentDate);
+      if (tasks[idx]) {
+        tasks[idx].done = !tasks[idx].done;
+        saveTodayTasks(tasks);
+      }
     }
 
     function deleteTodayTask(idx) {
-      const tasks = getTodayTasks();
+      const tasks = getTodayTasksLocal(currentDate);
       tasks.splice(idx, 1);
       saveTodayTasks(tasks);
     }
 
-    function renderTodayTasks() {
-      const tasks = getTodayTasks();
+    function renderTodayTasks(tasks) {
       const list = document.getElementById('todayTaskList');
       document.getElementById('todayTaskCount').innerText = `${tasks.length}건`;
       if (tasks.length === 0) {
@@ -674,7 +676,7 @@
       `).join('');
     }
 
-    // 5. 타임테이블 초기화 및 모눈 뷰 / 카드 뷰 스위치
+    // 5. 타임테이블 초기화 및 모눈 뷰 / 카드 뷰 토글
     function setTimetableView(mode) {
       timetableViewMode = mode;
       if (mode === 'grid') {
@@ -745,12 +747,11 @@
       input.value = '';
       saveDayData();
       if (timetableViewMode === 'card') renderCardTimeline();
-      alert(`${hourStr}:${blockIdx * 10}분에 '${text}' 기록 완료! ✨`);
     }
 
     function renderCardTimeline() {
       const container = document.getElementById('timetableCardView');
-      const dayData = getDayData();
+      const dayData = getDayDataLocal(currentDate);
       const blocks = dayData.timetable || {};
       const keys = Object.keys(blocks).sort();
       if (keys.length === 0) {
@@ -780,7 +781,7 @@
       renderCardTimeline();
     }
 
-    // 6. 아침 & 저녁 루틴 완료 및 타임테이블 연동
+    // 6. 루틴 및 세션 일괄 등록
     function completeMorningRoutine() {
       ['m_routine_1', 'm_routine_2', 'm_routine_3', 'm_routine_4', 'm_routine_5'].forEach(id => {
         document.getElementById(id).checked = true;
@@ -789,13 +790,12 @@
       let hour = now.getHours();
       if (hour < 7) hour = 7;
       const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
-      const routines = ["🚽화장실", "⚖️체중", "💊비타민", "🥗아침식사", "🎒외출준비"];
+      const routines = ["🚽화장실", "⚖️️체중", "💊비타민", "🥗아침식사", "🎒외출준비"];
       routines.forEach((r, idx) => {
         if (idx < 6) setBlockData(hourStr, idx, r);
       });
       saveDayData();
       if (timetableViewMode === 'card') renderCardTimeline();
-      alert("아침 50분 루틴이 완료되고 타임테이블에 자동 채워졌어요! ☀️");
     }
 
     function toggleBookClubMode() {
@@ -838,7 +838,6 @@
       if (block + 2 < 6) setBlockData(hourStr, block + 2, "🧶뜨개질");
       saveDayData();
       if (timetableViewMode === 'card') renderCardTimeline();
-      alert("뜨개 30분 기록이 타임테이블에 등록되었어요! 🧶");
     }
 
     function completeBookSessionToTable() {
@@ -852,17 +851,39 @@
       if (block + 2 < 6) setBlockData(hourStr, block + 2, "📚독서");
       saveDayData();
       if (timetableViewMode === 'card') renderCardTimeline();
-      alert("독서 30분 기록이 타임테이블에 등록되었어요! 📖");
     }
 
-    // 7. 데일리 데이터 로컬 & 클라우드 저장
-    function getDayData() {
+    // 7. 데일리 데이터 실시간 동기화 (onSnapshot 구독)
+    function subscribeDayData(dateStr) {
+      if (unsubscribeDay) unsubscribeDay();
+
+      // 로컬 데이터 즉시 화면 반영
+      applyDayDataToUI(getDayDataLocal(dateStr));
+
+      if (!db) return;
+
+      unsubscribeDay = db.collection('diary_days').doc(dateStr)
+        .onSnapshot((doc) => {
+          if (doc.exists) {
+            const data = doc.data();
+            saveDayDataLocal(dateStr, data);
+            applyDayDataToUI(data);
+          }
+        }, (err) => console.error("일일 데이터 실시간 구독 오류:", err));
+    }
+
+    function getDayDataLocal(dateStr) {
       const all = JSON.parse(localStorage.getItem('mingle_diary_days') || '{}');
-      return all[currentDate] || {};
+      return all[dateStr] || {};
+    }
+
+    function saveDayDataLocal(dateStr, data) {
+      const all = JSON.parse(localStorage.getItem('mingle_diary_days') || '{}');
+      all[dateStr] = data;
+      localStorage.setItem('mingle_diary_days', JSON.stringify(all));
     }
 
     function saveDayData() {
-      const all = JSON.parse(localStorage.getItem('mingle_diary_days') || '{}');
       const timetableData = {};
       for (let h = 7; h <= 24; h++) {
         const hourStr = h < 10 ? `0${h}` : `${h}`;
@@ -873,18 +894,19 @@
       }
 
       const data = {
+        weather: document.getElementById('todayWeatherSelect')?.value || '',
         m_routines: [1,2,3,4,5].map(i => document.getElementById(`m_routine_${i}`).checked),
         evening: {
-          clean: document.getElementById('e_rot_clean')?.checked,
-          shower: document.getElementById('e_rot_shower')?.checked,
-          skin: document.getElementById('e_rot_skin')?.checked,
-          pet: document.getElementById('e_rot_pet')?.checked,
-          plant: document.getElementById('e_rot_plant')?.checked,
-          club: document.getElementById('e_rot_club')?.checked,
-          read: document.getElementById('e_rot_read')?.checked,
-          knit: document.getElementById('e_rot_knit')?.checked,
-          diary: document.getElementById('e_rot_diary')?.checked,
-          isBookClub: document.getElementById('bookClubToggle')?.checked
+          clean: document.getElementById('e_rot_clean')?.checked || false,
+          shower: document.getElementById('e_rot_shower')?.checked || false,
+          skin: document.getElementById('e_rot_skin')?.checked || false,
+          pet: document.getElementById('e_rot_pet')?.checked || false,
+          plant: document.getElementById('e_rot_plant')?.checked || false,
+          club: document.getElementById('e_rot_club')?.checked || false,
+          read: document.getElementById('e_rot_read')?.checked || false,
+          knit: document.getElementById('e_rot_knit')?.checked || false,
+          diary: document.getElementById('e_rot_diary')?.checked || false,
+          isBookClub: document.getElementById('bookClubToggle')?.checked || false
         },
         health: {
           sleepBed: document.getElementById('sleepBedTime').value,
@@ -894,9 +916,9 @@
             time: document.getElementById(`mealTime_${i}`).value,
             sugarPost: document.getElementById(`sugarPost_${i}`).value,
             menu: document.getElementById(`mealMenu_${i}`).value,
-            vege: document.getElementById(`mealVege_${i}`)?.checked,
-            acv: document.getElementById(`mealAcv_${i}`)?.checked,
-            walk: document.getElementById(`mealWalk_${i}`)?.checked,
+            vege: document.getElementById(`mealVege_${i}`)?.checked || false,
+            acv: document.getElementById(`mealAcv_${i}`)?.checked || false,
+            walk: document.getElementById(`mealWalk_${i}`)?.checked || false,
             cond: document.getElementById(`mealCond_${i}`).value,
             sugarFast: i === 1 ? document.getElementById('sugarFast').value : null
           }))
@@ -913,35 +935,37 @@
         timetable: timetableData
       };
 
-      all[currentDate] = data;
-      localStorage.setItem('mingle_diary_days', JSON.stringify(all));
+      saveDayDataLocal(currentDate, data);
 
-      // Firebase Firestore 실시간 동기화
       if (db) {
         db.collection('diary_days').doc(currentDate).set(data).catch(console.error);
       }
     }
 
-    function loadDayData() {
+    function applyDayDataToUI(data) {
       initTimetableGrid();
-      const all = JSON.parse(localStorage.getItem('mingle_diary_days') || '{}');
-      const data = all[currentDate] || {};
+
+      // 날씨 복원
+      const weatherEl = document.getElementById('todayWeatherSelect');
+      if (weatherEl) weatherEl.value = data.weather || '';
 
       // 루틴 복원
       if (data.m_routines) {
         data.m_routines.forEach((chk, idx) => {
           const el = document.getElementById(`m_routine_${idx + 1}`);
-          if (el) el.checked = chk;
+          if (el) el.checked = !!chk;
         });
       }
       if (data.evening) {
         if (data.evening.isBookClub) {
           document.getElementById('bookClubToggle').checked = true;
           toggleBookClubMode();
+        } else {
+          document.getElementById('bookClubToggle').checked = false;
         }
         ['clean', 'shower', 'skin', 'pet', 'plant', 'club', 'read', 'knit', 'diary'].forEach(k => {
           const el = document.getElementById(`e_rot_${k}`);
-          if (el) el.checked = data.evening[k] || false;
+          if (el) el.checked = !!data.evening[k];
         });
       }
 
@@ -956,9 +980,9 @@
             document.getElementById(`mealTime_${i}`).value = m.time || '';
             document.getElementById(`sugarPost_${i}`).value = m.sugarPost || '';
             document.getElementById(`mealMenu_${i}`).value = m.menu || '';
-            if (document.getElementById(`mealVege_${i}`)) document.getElementById(`mealVege_${i}`).checked = m.vege || false;
-            if (document.getElementById(`mealAcv_${i}`)) document.getElementById(`mealAcv_${i}`).checked = m.acv || false;
-            if (document.getElementById(`mealWalk_${i}`)) document.getElementById(`mealWalk_${i}`).checked = m.walk || false;
+            if (document.getElementById(`mealVege_${i}`)) document.getElementById(`mealVege_${i}`).checked = !!m.vege;
+            if (document.getElementById(`mealAcv_${i}`)) document.getElementById(`mealAcv_${i}`).checked = !!m.acv;
+            if (document.getElementById(`mealWalk_${i}`)) document.getElementById(`mealWalk_${i}`).checked = !!m.walk;
             document.getElementById(`mealCond_${i}`).value = m.cond || '';
             if (i === 1) document.getElementById('sugarFast').value = m.sugarFast || '';
           });
@@ -983,6 +1007,8 @@
           setBlockData(h, parseInt(b), data.timetable[k]);
         });
       }
+
+      if (timetableViewMode === 'card') renderCardTimeline();
     }
 
     // 8. 캘린더 & 스마트 기념일
@@ -1033,13 +1059,13 @@
       currentDate = dateStr;
       document.getElementById('currentDateInput').value = currentDate;
       updateDateLabel();
-      loadDayData();
-      renderTodayTasks();
-      calculateDDays();
+      subscribeDayData(currentDate);
+      subscribeTodayTasks(currentDate);
+      calculateDDDays();
       switchTab('day');
     }
 
-    // 9. 스마트 기념일 (매년 자동 반복)
+    // 9. 스마트 기념일
     function renderAnniversaries() {
       const list = document.getElementById('anniversaryList');
       const items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[{"name":"생일","date":"1994-10-04"}]');
@@ -1084,7 +1110,31 @@
       renderAnniversaries();
     }
 
-    // 10. 독서 책장 (My Library)
+    // 10. 독서 책장 & 뜨개 쇼룸 (실시간 onSnapshot 연동)
+    function subscribeArchives() {
+      // 로컬 캐시 즉시 렌더링
+      renderBookShelf();
+      renderKnittingShowroom();
+
+      if (!db) return;
+
+      if (unsubscribeBooks) unsubscribeBooks();
+      unsubscribeBooks = db.collection('bookshelf').onSnapshot((snapshot) => {
+        const books = [];
+        snapshot.forEach(doc => books.push({ id: doc.id, ...doc.data() }));
+        localStorage.setItem('mingle_bookshelf', JSON.stringify(books));
+        renderBookShelf();
+      }, err => console.error("책장 구독 오류:", err));
+
+      if (unsubscribeKnits) unsubscribeKnits();
+      unsubscribeKnits = db.collection('knitting_showroom').onSnapshot((snapshot) => {
+        const knits = [];
+        snapshot.forEach(doc => knits.push({ id: doc.id, ...doc.data() }));
+        localStorage.setItem('mingle_knitting_showroom', JSON.stringify(knits));
+        renderKnittingShowroom();
+      }, err => console.error("뜨개 구독 오류:", err));
+    }
+
     function renderBookShelf(filter = 'all') {
       const list = document.getElementById('bookshelfList');
       if (!list) return;
@@ -1094,7 +1144,7 @@
         list.innerHTML = `<p class="text-xs text-stone-300 py-6 text-center">등록된 도서 기록이 없어요 📖</p>`;
         return;
       }
-      list.innerHTML = filtered.map((b, idx) => `
+      list.innerHTML = filtered.map((b) => `
         <div class="p-3 rounded-xl bg-stone-50 border border-stone-100 text-xs space-y-1">
           <div class="flex items-center justify-between">
             <span class="font-bold text-stone-800 text-xs">📖 ${b.title}</span>
@@ -1116,14 +1166,17 @@
       const endDate = prompt("완독일 (읽는 중이면 엔터):", "");
       const rating = prompt("별점 (예: ⭐⭐⭐⭐⭐):", "⭐⭐⭐⭐⭐");
       const review = prompt("한 줄 서평 또는 인상 깊은 문장:");
+      
+      const newBook = { title, author, category, startDate, endDate, rating, review, createdAt: Date.now() };
+      
       const books = JSON.parse(localStorage.getItem('mingle_bookshelf') || '[]');
-      books.unshift({ title, author, category, startDate, endDate, rating, review });
+      books.unshift(newBook);
       localStorage.setItem('mingle_bookshelf', JSON.stringify(books));
-      if (db) db.collection('bookshelf').add({ title, author, category, startDate, endDate, rating, review });
       renderBookShelf();
+
+      if (db) db.collection('bookshelf').add(newBook).catch(console.error);
     }
 
-    // 11. 뜨개 쇼룸 (Knitting Archive)
     function renderKnittingShowroom() {
       const list = document.getElementById('knittingShowroomList');
       if (!list) return;
@@ -1132,7 +1185,7 @@
         list.innerHTML = `<p class="text-xs text-rose-300 py-6 text-center">등록된 뜨개 작품이 없어요 🧶</p>`;
         return;
       }
-      list.innerHTML = items.map((item, idx) => `
+      list.innerHTML = items.map((item) => `
         <div class="p-3 rounded-xl bg-rose-50/40 border border-rose-100 text-xs space-y-1">
           <div class="flex items-center justify-between">
             <span class="font-bold text-stone-800 text-xs">🧶 ${item.title}</span>
@@ -1154,14 +1207,18 @@
       const endDate = prompt("완성일 (진행 중이면 엔터):", "");
       const status = endDate ? "완성(FO) 🥳" : "뜨는 중 ⏳";
       const memo = prompt("도안 링크나 작업 팁 메모:");
+
+      const newKnit = { title, yarn, needle, startDate, endDate, status, memo, createdAt: Date.now() };
+
       const items = JSON.parse(localStorage.getItem('mingle_knitting_showroom') || '[]');
-      items.unshift({ title, yarn, needle, startDate, endDate, status, memo });
+      items.unshift(newKnit);
       localStorage.setItem('mingle_knitting_showroom', JSON.stringify(items));
-      if (db) db.collection('knitting_showroom').add({ title, yarn, needle, startDate, endDate, status, memo });
       renderKnittingShowroom();
+
+      if (db) db.collection('knitting_showroom').add(newKnit).catch(console.error);
     }
 
-    // 12. 무드 & 해빗 트래커
+    // 11. 무드 & 해빗 트래커
     function renderMoodTracker() {
       const grid = document.getElementById('moodGrid');
       const colors = ['bg-amber-100', 'bg-rose-100', 'bg-emerald-100', 'bg-sky-100', 'bg-purple-100'];
@@ -1185,16 +1242,16 @@
       `).join('');
     }
 
-    // 13. D-Day 매일 자동 계산 (오늘 날짜 기준 자동 +1)
+    // 12. D-Day 매일 자동 계산 (오늘 날짜 기준 자동 +1)
     function calculateDDays() {
       const cur = new Date(currentDate);
       const todayZero = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate());
 
-      // 여름이: 2024년 3월 31일 기준 (JS 월은 0부터 시작하므로 2가 3월)
+      // 여름이: 2024년 3월 31일 기준 (JS 월은 0부터 시작)
       const summerBase = new Date(2024, 2, 31);
       const diffSummer = Math.round((todayZero - summerBase) / (1000 * 60 * 60 * 24));
       
-      // 달이: 2025년 7월 20일 기준 (6이 7월)
+      // 달이: 2025년 7월 20일 기준
       const moonBase = new Date(2025, 6, 20);
       const diffMoon = Math.round((todayZero - moonBase) / (1000 * 60 * 60 * 24));
 
@@ -1204,11 +1261,15 @@
       if (elM) elM.innerText = `D+${diffMoon}`;
     }
 
-    // 14. 밴드 일기 1초 복사 (칭구 전용 감성 서식)
+    // 13. 밴드 일기 1초 복사 (선택한 날씨 자동 연동)
     function copyToBandDiary() {
       const today = new Date(currentDate);
       const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
       const dateText = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${days[today.getDay()]}`;
+
+      // 선택한 날씨 가져오기
+      const data = getDayDataLocal(currentDate);
+      const weatherText = data.weather ? `${data.weather}` : '';
 
       // 여름이 & 달이 D-Day 실시간 계산
       const cur = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -1221,20 +1282,20 @@
 `#오늘의일기 
 
 ${dateText}
-날씨 : 
+날씨 : ${weatherText}
 
 우리 여름이 안 아픈 지 ${diffSummer}일 째 되는 날 ♡
 우리 달이 천사된 지 ${diffMoon}일 째 되는 날 ♡`;
 
       navigator.clipboard.writeText(bandText).then(() => {
-        alert("밴드 일기 양식이 복사되었어요! 밴드에 바로 붙여넣어 보세요 📋🤍");
+        alert("선택한 날씨까지 포함해서 밴드 일기가 복사되었어요! 📋🤍");
       }).catch(err => {
         alert("복사 중 오류가 발생했습니다.");
         console.error(err);
       });
     }
 
-    // 15. 화면 이미지(PNG) 다운로드
+    // 14. 화면 이미지(PNG) 다운로드
     function downloadAsImage() {
       const area = document.getElementById('captureArea');
       html2canvas(area, { scale: 2 }).then(canvas => {
