@@ -48,7 +48,7 @@
         </div>
       </div>
       <div class="flex items-center gap-1.5">
-        <button onclick="downloadDateCard()" title="밴드/사진첩 날짜 구분 카드 저장" class="text-xs bg-white hover:bg-stone-50 border border-stone-200 px-2 py-1 rounded-lg text-stone-700 flex items-center gap-1 shadow-xs font-semibold">
+        <button onclick="downloadDateCard()" title="날짜 구분 카드 저장" class="text-xs bg-white hover:bg-stone-50 border border-stone-200 px-2 py-1 rounded-lg text-stone-700 flex items-center gap-1 shadow-xs font-semibold">
           🏷️ <span>날짜카드</span>
         </button>
         <button onclick="downloadAsImage()" title="오늘 하루 이미지 저장" class="text-xs bg-white hover:bg-stone-50 border border-stone-200 px-2 py-1 rounded-lg text-stone-700 flex items-center gap-1 shadow-xs font-semibold">
@@ -64,7 +64,7 @@
     <!-- 1. 일일 페이지 (VIEW: DAY) -->
     <section id="view-day" class="space-y-4">
       
-      <!-- 날짜 바 (오늘 복귀 스마트 뱃지 포함) -->
+      <!-- 날짜 바 -->
       <div class="bg-white rounded-2xl p-3 border border-stone-200 shadow-xs flex items-center justify-between">
         <button onclick="changeDate(-1)" class="p-1.5 text-stone-400 hover:text-stone-700 font-bold">◀</button>
         <div class="text-center flex flex-col items-center gap-1">
@@ -106,13 +106,13 @@
         <button onclick="changeDate(1)" class="p-1.5 text-stone-400 hover:text-stone-700 font-bold">▶</button>
       </div>
 
-      <!-- 오늘의 특별한 일정 알림 배너 -->
-      <div id="todaySpecialEventBanner" class="hidden bg-amber-50/80 border border-amber-200 rounded-2xl p-2.5 px-3 shadow-2xs flex items-center justify-between text-xs">
+      <!-- 오늘의 특별 일정 & 교통 예매 리마인드 배너 -->
+      <div id="todaySpecialEventBanner" class="hidden bg-amber-50/90 border border-amber-200 rounded-2xl p-2.5 px-3 shadow-2xs flex items-center justify-between text-xs">
         <div class="flex items-center gap-1.5 min-w-0">
           <span class="text-amber-600 font-bold shrink-0">💌 오늘:</span>
           <span id="todaySpecialEventText" class="font-bold text-amber-950 truncate"></span>
         </div>
-        <span class="text-[10px] bg-white text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded-md shrink-0 font-semibold">일정</span>
+        <span class="text-[10px] bg-white text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded-md shrink-0 font-semibold">알림</span>
       </div>
 
       <!-- 오늘의 할 일 (자동 이월) -->
@@ -130,14 +130,14 @@
         <div id="todayTaskList" class="space-y-1.5 max-h-40 overflow-y-auto pr-0.5"></div>
       </div>
 
-      <!-- 타임테이블 (모눈 뷰 + 호보니치 버티컬 타임라인 뷰) -->
+      <!-- 타임테이블 (모눈 뷰 + 버티컬 타임라인 뷰) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div class="flex items-center justify-between mb-3 border-b border-stone-100 pb-2.5">
           <div>
             <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
               <span>⏱</span> 타임테이블 (07:00 ~ 24:00)
             </h3>
-            <p class="text-[10px] text-stone-400 mt-0.5">칸을 누르면 소요시간별로 한 번에 등록돼요</p>
+            <p class="text-[10px] text-stone-400 mt-0.5">블록을 탭하면 소요시간 지정 또는 즉시 수정돼요</p>
           </div>
           <div class="flex bg-stone-100 p-0.5 rounded-xl border border-stone-200 text-[11px]">
             <button id="viewBtnGrid" onclick="setTimetableView('grid')" class="px-2 py-1 rounded-lg font-bold bg-white text-stone-800 shadow-xs">모눈 뷰</button>
@@ -153,32 +153,37 @@
           <div id="gridRowsContainer" class="space-y-1"></div>
         </div>
 
-        <!-- 2) 호보니치 감성 버티컬 타임라인 뷰 -->
+        <!-- 2) 버티컬 타임라인 뷰 -->
         <div id="timetableTimelineView" class="hidden space-y-1 max-h-80 overflow-y-auto pr-1"></div>
       </div>
 
-      <!-- 아침 루틴 -->
+      <!-- 아침 루틴 (휴식 토글 탑재) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div class="flex items-center gap-2">
             <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-              <span class="text-amber-500">☀️</span> 아침 루틴
+              <span class="text-amber-500">☀️️</span> 아침 루틴
             </h3>
             <span id="morningProgressBadge" class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.2 rounded-full font-bold">0%</span>
           </div>
           <div class="flex items-center gap-1.5">
-            <button onclick="openRoutineCustomModal('morning')" title="루틴 항목 추가/수정/관리" class="text-[10px] text-stone-400 hover:text-stone-700 font-bold px-1">
-              ⚙️ 관리
+            <button id="morningRestBtn" onclick="toggleRoutineRest('morning')" class="text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap">
+              🍃 오늘은 쉬어요
+            </button>
+            <button onclick="openRoutineCustomModal('morning')" title="루틴 설정" class="text-[10px] text-stone-400 hover:text-stone-700 font-bold px-1">
+              ⚙️ 설정
             </button>
             <button onclick="completeAllMorningRoutines()" class="text-[10px] bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap">
-              ⚡ 일괄완료
+              ⚡ 완료
             </button>
           </div>
         </div>
-        <div class="space-y-2 text-xs" id="morningRoutineDynamicList"></div>
+        <div id="morningRoutineContentWrapper">
+          <div class="space-y-2 text-xs" id="morningRoutineDynamicList"></div>
+        </div>
       </div>
 
-      <!-- 저녁 루틴 -->
+      <!-- 저녁 루틴 (휴식 토글 탑재) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div class="flex items-center gap-2">
@@ -188,28 +193,36 @@
             <span id="eveningProgressBadge" class="text-[10px] bg-indigo-50 text-indigo-800 border border-indigo-200 px-1.5 py-0.2 rounded-full font-bold">0%</span>
           </div>
           <div class="flex items-center gap-1.5">
-            <button onclick="openRoutineCustomModal('evening')" title="루틴 항목 추가/수정/관리" class="text-[10px] text-stone-400 hover:text-stone-700 font-bold px-1">
-              ⚙️ 관리
+            <button id="eveningRestBtn" onclick="toggleRoutineRest('evening')" class="text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap">
+              🍃 오늘은 쉬어요
+            </button>
+            <button onclick="openRoutineCustomModal('evening')" title="루틴 설정" class="text-[10px] text-stone-400 hover:text-stone-700 font-bold px-1">
+              ⚙️ 설정
             </button>
             <label class="flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 cursor-pointer">
               <input type="checkbox" id="bookClubToggle" onchange="toggleBookClubMode()" class="rounded text-indigo-600">
-              <span>📖 독서모임</span>
+              <span>📖 모임</span>
             </label>
           </div>
         </div>
-        <div class="space-y-2 text-xs" id="eveningRoutineDynamicList"></div>
+        <div id="eveningRoutineContentWrapper">
+          <div class="space-y-2 text-xs" id="eveningRoutineDynamicList"></div>
+        </div>
       </div>
 
-      <!-- 식단 & 간식 & 수면 & 물방울 관리 모듈 -->
+      <!-- 식단 & 간식(돌출 방지) & 맞춤 음료 트래커 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-            <span>🥗</span> 식단 & 건강 케어
+            <span>🥗</span> 식단 & 데일리 드링크
           </h3>
-          <!-- 원터치 물방울 카운터 -->
-          <div class="flex items-center gap-1 bg-sky-50 px-2 py-1 rounded-xl border border-sky-100">
-            <span class="text-[9px] font-bold text-sky-800" id="waterAmountText">0ml</span>
-            <div id="waterDropContainer" class="flex gap-0.5 text-xs cursor-pointer"></div>
+          <!-- 밍글 맞춤 음료 트래커 (💧6 + 🍏2 + ☕1) -->
+          <div class="flex items-center gap-1 bg-stone-50 px-2 py-1 rounded-xl border border-stone-200">
+            <div id="drinkWaterDrops" class="flex gap-0.5 text-xs cursor-pointer" title="물 (200ml 단위)"></div>
+            <span class="text-stone-300 text-[10px]">|</span>
+            <div id="drinkAcvDrops" class="flex gap-0.5 text-xs cursor-pointer" title="식전 애사비"></div>
+            <span class="text-stone-300 text-[10px]">|</span>
+            <div id="drinkCoffeeDrops" class="flex gap-0.5 text-xs cursor-pointer" title="라떼/커피"></div>
           </div>
         </div>
 
@@ -229,7 +242,7 @@
           </div>
         </div>
 
-        <!-- 메인 식단 + 슬림 간식칸 -->
+        <!-- 메인 식단 + 슬림 간식칸 (돌출 완벽 방지) -->
         <div class="space-y-2 text-xs">
           <!-- 아침 -->
           <div class="p-2.5 rounded-xl bg-warm-50 border border-stone-200 space-y-1.5">
@@ -253,11 +266,11 @@
             </div>
           </div>
 
-          <!-- 🥐 오전간식 -->
-          <div class="p-2 rounded-xl bg-[#faf7f2] border border-[#ebe4da] flex items-center gap-2 text-xs">
+          <!-- 🥐 슬림 오전간식 -->
+          <div class="p-2 rounded-xl bg-[#faf7f2] border border-[#ebe4da] flex items-center gap-2 text-xs min-w-0">
             <span class="font-bold text-amber-900 shrink-0 text-[11px]">🥐 오전간식</span>
-            <input type="time" id="snackTime_am" onchange="saveDayData()" class="text-[10px] bg-white border border-stone-200 rounded px-1">
-            <input type="text" id="snackMenu_am" placeholder="간식 메뉴 메모..." onchange="saveDayData()" class="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-xs focus:outline-none">
+            <input type="time" id="snackTime_am" onchange="saveDayData()" class="text-[10px] bg-white border border-stone-200 rounded px-1 shrink-0">
+            <input type="text" id="snackMenu_am" placeholder="간식 메뉴 메모..." onchange="saveDayData()" class="flex-1 min-w-0 bg-white border border-stone-200 rounded-lg px-2 py-1 text-xs focus:outline-none">
           </div>
 
           <!-- 점심 -->
@@ -285,11 +298,11 @@
             </div>
           </div>
 
-          <!-- 🍪 오후간식 -->
-          <div class="p-2 rounded-xl bg-[#faf7f2] border border-[#ebe4da] flex items-center gap-2 text-xs">
+          <!-- 🍪 슬림 오후간식 -->
+          <div class="p-2 rounded-xl bg-[#faf7f2] border border-[#ebe4da] flex items-center gap-2 text-xs min-w-0">
             <span class="font-bold text-amber-900 shrink-0 text-[11px]">🍪 오후간식</span>
-            <input type="time" id="snackTime_pm" onchange="saveDayData()" class="text-[10px] bg-white border border-stone-200 rounded px-1">
-            <input type="text" id="snackMenu_pm" placeholder="간식 메뉴 메모..." onchange="saveDayData()" class="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-xs focus:outline-none">
+            <input type="time" id="snackTime_pm" onchange="saveDayData()" class="text-[10px] bg-white border border-stone-200 rounded px-1 shrink-0">
+            <input type="text" id="snackMenu_pm" placeholder="간식 메뉴 메모..." onchange="saveDayData()" class="flex-1 min-w-0 bg-white border border-stone-200 rounded-lg px-2 py-1 text-xs focus:outline-none">
           </div>
 
           <!-- 저녁 -->
@@ -332,7 +345,7 @@
         <div id="dayHabitCheckList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
       </div>
 
-      <!-- 오늘의 뜨개 & 오늘의 독서 -->
+      <!-- 오늘의 뜨개 & 독서 (시간 소급 & 수동 입력 지원!) -->
       <div class="grid grid-cols-2 gap-3">
         <!-- 뜨개 위젯 -->
         <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs flex flex-col justify-between space-y-2">
@@ -353,13 +366,21 @@
             </div>
             <input type="text" id="knitSectionTip" placeholder="구간 메모 (코줄임 등)" onchange="saveDayData()" class="w-full bg-transparent border-b border-stone-200 py-0.5 text-[10px] text-stone-500 focus:outline-none mt-1">
           </div>
-          <div class="grid grid-cols-2 gap-1 pt-1">
-            <button id="knitTimerBtn" onclick="toggleKnitTimer()" class="text-[10px] bg-rose-500 hover:bg-rose-600 text-white font-bold py-1.5 rounded-lg shadow-2xs">
-              시작 ▶
-            </button>
-            <button onclick="completeKnitSessionToTable()" class="text-[10px] bg-rose-100 hover:bg-rose-200 text-rose-800 font-semibold py-1.5 rounded-lg">
-              +30분
-            </button>
+          <!-- 퀵 추가 & 시간 직접 입력 바 -->
+          <div class="space-y-1 pt-1">
+            <div class="grid grid-cols-2 gap-1">
+              <button id="knitTimerBtn" onclick="toggleKnitTimer()" class="text-[10px] bg-rose-500 hover:bg-rose-600 text-white font-bold py-1.5 rounded-lg shadow-2xs">
+                시작 ▶
+              </button>
+              <button onclick="openManualTimeModal('뜨개', 'hobby')" class="text-[10px] bg-rose-50 hover:bg-rose-100 text-rose-800 font-semibold py-1.5 rounded-lg border border-rose-200">
+                ✏️ 직접입력
+              </button>
+            </div>
+            <div class="grid grid-cols-3 gap-0.5 text-[9px] font-mono">
+              <button onclick="quickAddMinutes('뜨개', 'hobby', 10)" class="py-0.5 rounded bg-rose-50 text-rose-700 hover:bg-rose-100">+10분</button>
+              <button onclick="quickAddMinutes('뜨개', 'hobby', 20)" class="py-0.5 rounded bg-rose-50 text-rose-700 hover:bg-rose-100">+20분</button>
+              <button onclick="quickAddMinutes('뜨개', 'hobby', 30)" class="py-0.5 rounded bg-rose-50 text-rose-700 hover:bg-rose-100">+30분</button>
+            </div>
           </div>
         </div>
 
@@ -373,13 +394,21 @@
             <input type="text" id="bookCurrentTitle" placeholder="읽고 있는 책 제목..." onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded px-1.5 py-1 text-xs mb-1.5">
             <input type="text" id="bookTodayPages" placeholder="오늘 읽은 페이지 (p.12~45)" onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded px-1.5 py-1 text-xs">
           </div>
-          <div class="grid grid-cols-2 gap-1 pt-1">
-            <button id="bookTimerBtn" onclick="toggleBookTimer()" class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg shadow-2xs">
-              시작 ▶
-            </button>
-            <button onclick="completeBookSessionToTable()" class="text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-semibold py-1.5 rounded-lg">
-              +30분
-            </button>
+          <!-- 퀵 추가 & 시간 직접 입력 바 -->
+          <div class="space-y-1 pt-1">
+            <div class="grid grid-cols-2 gap-1">
+              <button id="bookTimerBtn" onclick="toggleBookTimer()" class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg shadow-2xs">
+                시작 ▶
+              </button>
+              <button onclick="openManualTimeModal('독서', 'hobby')" class="text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold py-1.5 rounded-lg border border-emerald-200">
+                ✏️ 직접입력
+              </button>
+            </div>
+            <div class="grid grid-cols-3 gap-0.5 text-[9px] font-mono">
+              <button onclick="quickAddMinutes('독서', 'hobby', 10)" class="py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100">+10분</button>
+              <button onclick="quickAddMinutes('독서', 'hobby', 20)" class="py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100">+20분</button>
+              <button onclick="quickAddMinutes('독서', 'hobby', 30)" class="py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100">+30분</button>
+            </div>
           </div>
         </div>
       </div>
@@ -428,7 +457,7 @@
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-amber-900 flex items-center gap-1">👗 오늘의 OOTD</span>
             <div class="flex items-center gap-1">
-              <label for="ootdColorInput" title="옷 대표 색상 지정" class="cursor-pointer flex items-center gap-1">
+              <label for="ootdColorInput" title="대표 색상" class="cursor-pointer flex items-center gap-1">
                 <span id="ootdColorBadge" class="w-4 h-4 rounded-full border border-stone-300 shadow-2xs inline-block bg-[#ecdcc9]"></span>
                 <span class="text-[9px] text-stone-400 font-medium">컬러</span>
               </label>
@@ -488,8 +517,20 @@
         <div class="grid grid-cols-7 text-center text-xs font-semibold text-stone-400 mb-2">
           <span class="text-rose-500">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
         </div>
-        <!-- 높이 고정 정방형 3단 스탬프 타일 그리드 -->
         <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
+      </div>
+
+      <!-- 🎫 신규: 교통 & 예매 확인 전용 카드 -->
+      <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+          <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+            <span>🎫</span> 교통 & 예매 확인
+          </h3>
+          <button onclick="openTicketModal()" class="text-[10px] bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 font-bold px-2 py-0.5 rounded-lg">
+            + 티켓 등록
+          </button>
+        </div>
+        <div id="ticketReservationList" class="space-y-1.5 text-xs"></div>
       </div>
 
       <!-- 다가올 예정 (약속 & 휴가) -->
@@ -514,7 +555,6 @@
           </h3>
           <button onclick="addAnniversaryPrompt()" class="text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-700 px-2 py-0.5 rounded font-semibold border border-stone-200">+ 추가</button>
         </div>
-        <!-- 3단계 필터 칩 바 -->
         <div class="flex gap-1 text-[11px] pb-1">
           <button id="anniFilter_7" onclick="setAnniversaryFilter('7')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">임박 ⚡ (7일)</button>
           <button id="anniFilter_30" onclick="setAnniversaryFilter('30')" class="px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold">다가올 🌿 (D-30)</button>
@@ -527,7 +567,7 @@
     <!-- 3. 트래커 페이지 (VIEW: TRACKER) -->
     <section id="view-tracker" class="hidden space-y-4">
       
-      <!-- 1순위: 해빗 트래커 (모노톤 SVG 멈춤 아이콘) -->
+      <!-- 1순위: 해빗 트래커 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
@@ -576,7 +616,7 @@
         </div>
       </div>
 
-      <!-- 2순위: 무드 트래커 (확장된 감정 8종) -->
+      <!-- 2순위: 무드 트래커 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div class="flex items-center justify-between mb-2 border-b border-stone-100 pb-2">
           <div>
@@ -615,7 +655,7 @@
         <div id="routineProgressGrid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
       </div>
 
-      <!-- 4순위: 건강 관리 달력 & 추이 통계 (신설!) -->
+      <!-- 4순위: 건강 관리 달력 & 추이 통계 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
@@ -631,7 +671,6 @@
           </div>
         </div>
 
-        <!-- 월간 요약 카드 바 -->
         <div class="grid grid-cols-3 gap-2 bg-stone-50 p-2 rounded-xl border border-stone-100 text-center text-xs">
           <div>
             <span class="text-[9px] text-stone-400 block">평균 체중</span>
@@ -647,16 +686,14 @@
           </div>
         </div>
 
-        <!-- 건강 캘린더 타일 -->
         <div id="healthCalendarGrid" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
       </div>
 
     </section>
 
-    <!-- 4. 취미 페이지 (VIEW: HOBBY - 독립 분리 신설!) -->
+    <!-- 4. 취미 페이지 (VIEW: HOBBY) -->
     <section id="view-hobby" class="hidden space-y-4">
       
-      <!-- 독서 책장 / 뜨개 쇼룸 상단 토글 -->
       <div class="bg-white p-1 rounded-2xl border border-stone-200 shadow-xs flex">
         <button id="hobbySubTabBook" onclick="setHobbySubTab('book')" class="flex-1 py-2 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 shadow-xs transition-all">
           📚 독서 책장
@@ -680,7 +717,7 @@
           </button>
         </div>
 
-        <!-- 가로 스크롤 다채로운 카테고리 칩 바 -->
+        <!-- 가로 스크롤 장르 칩 바 -->
         <div class="flex gap-1 overflow-x-auto text-[11px] pb-1 hide-scrollbar">
           <button onclick="filterBooks('all')" class="px-2.5 py-1 rounded-full bg-stone-800 text-white font-medium whitespace-nowrap shrink-0">전체</button>
           <button onclick="filterBooks('소설·문학')" class="px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 font-medium whitespace-nowrap shrink-0">소설·문학</button>
@@ -715,7 +752,7 @@
 
   </main>
 
-  <!-- 하단 4단 탭 바 (완벽한 엄지 동선!) -->
+  <!-- 하단 4단 탭 바 -->
   <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 py-2 shadow-lg">
     <div class="max-w-md mx-auto grid grid-cols-4 text-center text-xs font-semibold">
       <button onclick="switchTab('day')" id="nav-day" class="text-stone-800 py-1 flex flex-col items-center gap-0.5 font-bold">
@@ -733,9 +770,9 @@
     </div>
   </nav>
 
-  <!-- 루틴 커스텀 관리 모달 -->
+  <!-- 루틴 커스텀 관리 모달 (상하 2단 구조 + 카테고리 완전 관리 탑재) -->
   <div id="routineCustomModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl max-h-[85vh] flex flex-col">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl max-h-[88vh] flex flex-col">
       <div class="flex items-center justify-between border-b border-stone-100 pb-2">
         <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5" id="routineModalHeaderTitle">
           <span>⚙️</span> 루틴 항목 설정
@@ -743,15 +780,33 @@
         <button onclick="closeRoutineCustomModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
       </div>
 
-      <div class="space-y-1.5 bg-stone-50 p-2.5 rounded-xl border border-stone-200 text-xs">
-        <div class="text-[11px] font-bold text-stone-600">새 루틴 추가</div>
-        <div class="flex gap-1.5">
-          <input type="text" id="newRoutineCustomName" placeholder="루틴 이름 (예: 폼롤러 스트레칭)" class="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-xs focus:outline-none">
-          <select id="newRoutineCustomCat" class="bg-white border border-stone-200 rounded-lg text-[10px] px-1.5 py-1 text-stone-700 cursor-pointer"></select>
-          <button onclick="addNewCustomRoutineItem()" class="bg-stone-800 text-white font-bold text-xs px-2.5 py-1 rounded-lg">추가</button>
+      <!-- 상하 2단 새 루틴 추가 폼 (돌출 원천 차단) -->
+      <div class="space-y-2 bg-stone-50 p-2.5 rounded-xl border border-stone-200 text-xs">
+        <input type="text" id="newRoutineCustomName" placeholder="새 루틴 이름 (예: 폼롤러 스트레칭)" class="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none">
+        <div class="flex items-center gap-1.5">
+          <select id="newRoutineCustomCat" class="flex-1 bg-white border border-stone-200 rounded-lg text-xs px-2 py-1.5 text-stone-700 cursor-pointer"></select>
+          <button onclick="addNewCustomRoutineItem()" class="bg-stone-800 text-white font-bold text-xs px-3 py-1.5 rounded-lg shrink-0">추가</button>
         </div>
       </div>
 
+      <!-- 카테고리(그룹) 관리 토글 버튼 -->
+      <div class="flex items-center justify-between pt-1">
+        <span class="text-[10px] text-stone-400 font-medium">루틴 목록 (순서 변경 가능)</span>
+        <button onclick="toggleCategoryManagerSection()" class="text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-700 px-2 py-0.5 rounded-lg font-bold border border-stone-200">
+          📁 카테고리 관리
+        </button>
+      </div>
+
+      <!-- 카테고리 자체 관리 영역 (숨김/노출) -->
+      <div id="categoryManagerArea" class="hidden p-2 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2 text-xs">
+        <div class="text-[11px] font-bold text-amber-950 flex items-center justify-between">
+          <span>카테고리(그룹) 수정 및 추가</span>
+          <button onclick="promptAddNewCategory()" class="text-[10px] bg-white border border-amber-300 text-amber-900 px-1.5 py-0.5 rounded font-bold">+ 새 그룹</button>
+        </div>
+        <div id="categoryManagerList" class="space-y-1 max-h-32 overflow-y-auto pr-0.5"></div>
+      </div>
+
+      <!-- 루틴 목록 (모노톤 SVG 숨김 + 순서 변경) -->
       <div class="flex-1 overflow-y-auto pr-1 space-y-2 text-xs" id="routineModalItemList"></div>
 
       <button onclick="closeRoutineCustomModal()" class="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs rounded-xl">
@@ -760,7 +815,7 @@
     </div>
   </div>
 
-  <!-- 타임테이블 소요시간(50분 포함) + 카테고리 모달 -->
+  <!-- 타임테이블 소요시간 + 카테고리 모달 -->
   <div id="categoryModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
       <div class="flex items-center justify-between border-b border-stone-100 pb-2">
@@ -814,7 +869,7 @@
         <div class="text-[11px] font-bold text-stone-500 flex items-center gap-1" id="subCategoryHeader"></div>
         <div id="subCategoryButtons" class="grid grid-cols-3 gap-2 text-xs"></div>
         <div class="pt-2 border-t border-stone-100 flex gap-1.5">
-          <input type="text" id="categoryCustomInput" placeholder="직접 입력..." class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none">
+          <input type="text" id="categoryCustomInput" placeholder="직접 입력..." class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-stone-400">
           <button onclick="selectCustomSubInput()" class="bg-stone-800 text-white font-bold text-xs px-3 rounded-xl shrink-0">등록</button>
         </div>
       </div>
@@ -825,11 +880,11 @@
     </div>
   </div>
 
-  <!-- 캘린더 약속 / 휴가 등록 모달 (7대 우선순위 카테고리 & 요일 반복 지원) -->
+  <!-- 캘린더 약속 / 일정 등록 & 수정 모달 -->
   <div id="calendarEventModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
       <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5" id="calEventModalTitle">
           <span>🗓</span> 일정 / 약속 등록
         </h3>
         <button onclick="closeCalendarEventModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
@@ -872,8 +927,92 @@
         </div>
       </div>
       <div class="flex gap-2 pt-2">
-        <button onclick="saveCalendarEvent()" class="flex-1 py-2 bg-amber-400 hover:bg-amber-500 text-stone-900 font-bold text-xs rounded-xl">일정 저장</button>
+        <button onclick="saveCalendarEvent()" class="flex-1 py-2 bg-amber-400 hover:bg-amber-500 text-stone-900 font-bold text-xs rounded-xl">저장</button>
         <button onclick="closeCalendarEventModal()" class="py-2 px-3 bg-stone-100 text-stone-600 text-xs rounded-xl">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🎫 교통 & 예매 등록 및 수정 모달 -->
+  <div id="ticketModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5" id="ticketModalTitle">
+          <span>🎫</span> 승차권 / 예매 등록
+        </h3>
+        <button onclick="closeTicketModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
+      </div>
+      <div class="space-y-2 text-xs">
+        <div>
+          <label class="text-[10px] text-stone-500 block mb-1">교통수단</label>
+          <div class="grid grid-cols-3 gap-1">
+            <button type="button" onclick="selectTicketType('bus')" id="tt_btn_bus" class="py-1 rounded-lg border border-sky-300 bg-sky-100 text-sky-900 font-bold text-center">🚌 버스</button>
+            <button type="button" onclick="selectTicketType('train')" id="tt_btn_train" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600 text-center">🚅 기차</button>
+            <button type="button" onclick="selectTicketType('flight')" id="tt_btn_flight" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600 text-center">✈️ 비행기</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">출발지</label>
+            <input type="text" id="ticketDepartPlace" placeholder="예: 서울경부" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2 py-1.5 text-xs">
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">도착지</label>
+            <input type="text" id="ticketArrivePlace" placeholder="예: 부산(본가)" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2 py-1.5 text-xs">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">탑승 일자</label>
+            <input type="date" id="ticketDate" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1 text-[11px]">
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">출발 시각</label>
+            <input type="time" id="ticketTime" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1 text-[11px]">
+          </div>
+        </div>
+        <div>
+          <label class="text-[10px] text-stone-500 block mb-1">좌석 번호 & 메모</label>
+          <input type="text" id="ticketSeatMemo" placeholder="예: 3호차 11A, 우등 5번 좌석" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs">
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="saveTicketData()" class="flex-1 py-2 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-xl">티켓 저장</button>
+        <button onclick="closeTicketModal()" class="py-2 px-3 bg-stone-100 text-stone-600 text-xs rounded-xl">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 독서/뜨개 시간 직접 입력 모달 -->
+  <div id="manualTimeModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full space-y-3 shadow-xl">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+          <span>⏱️</span> <span id="manualTimeModalTitle">시간 직접 입력</span>
+        </h3>
+        <button onclick="closeManualTimeModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
+      </div>
+      <div class="space-y-2 text-xs">
+        <div>
+          <label class="text-[10px] text-stone-400 block mb-1">시작 시각</label>
+          <input type="time" id="manualStartTime" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1.5 text-xs">
+        </div>
+        <div>
+          <label class="text-[10px] text-stone-400 block mb-1">소요 시간</label>
+          <select id="manualDurationSelect" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1.5 text-xs">
+            <option value="10">10분</option>
+            <option value="20">20분</option>
+            <option value="30" selected>30분</option>
+            <option value="40">40분</option>
+            <option value="50">50분</option>
+            <option value="60">60분 (1시간)</option>
+            <option value="90">90분 (1시간 30분)</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="confirmManualTimeSave()" class="flex-1 py-2 bg-stone-800 text-white font-bold text-xs rounded-xl">타임테이블에 반영</button>
+        <button onclick="closeManualTimeModal()" class="py-2 px-3 bg-stone-100 text-stone-600 text-xs rounded-xl">취소</button>
       </div>
     </div>
   </div>
@@ -982,9 +1121,13 @@
     let habitViewMode = 'week';
     let anniversaryFilterMode = '30';
     let selectedCalEventCategory = 'family';
-    let calEventRepeatDays = [2, 4]; // 기본 화·목 독서모임
-    let db = null;
+    let calEventRepeatDays = [2, 4];
+    let selectedTicketType = 'bus';
+    let editingEventId = null;
+    let editingTicketId = null;
+    let manualTimeTarget = { text: '독서', cat: 'hobby' };
 
+    let db = null;
     let activeHourStr = null;
     let activeBlockIdx = null;
     let selectedDurationMinutes = 10;
@@ -1002,6 +1145,7 @@
     let unsubscribeHabits = null;
     let unsubscribeRoutines = null;
     let unsubscribeCalEvents = null;
+    let unsubscribeTickets = null;
     let unsubscribeRoutineDef = null;
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -1017,6 +1161,7 @@
       subscribeHabitData();
       subscribeRoutineMaster();
       subscribeCalendarEvents();
+      subscribeTicketData();
       subscribeRoutineDefinitions();
 
       renderCalendar();
@@ -1043,7 +1188,6 @@
       }
     }
 
-    // 4단 하단 탭 스위처
     function switchTab(tab, subAction) {
       ['day', 'calendar', 'tracker', 'hobby'].forEach(t => {
         document.getElementById(`view-${t}`).classList.add('hidden');
@@ -1060,6 +1204,7 @@
       } else if (tab === 'calendar') {
         renderCalendar();
         renderUpcomingEvents();
+        renderTicketList();
       } else if (tab === 'hobby') {
         if (subAction === 'knit') setHobbySubTab('knit');
         else setHobbySubTab('book');
@@ -1148,7 +1293,6 @@
 
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, 1080, 1080);
-
       ctx.fillStyle = '#000000';
       ctx.font = '900 170px Pretendard, sans-serif';
       ctx.textAlign = 'center';
@@ -1399,7 +1543,7 @@
       }
     }
 
-    // 버티컬 타임라인 렌더러
+    // 버티컬 타임라인 뷰 (블록 터치 시 '내용 즉시 수정' 지원)
     function renderVerticalTimeline() {
       const container = document.getElementById('timetableTimelineView');
       const dayData = getDayDataLocal(currentDate);
@@ -1467,21 +1611,39 @@
             return `
               <div class="relative group">
                 <div class="absolute -left-[31px] top-2 w-2.5 h-2.5 rounded-full bg-white border-2 border-amber-400"></div>
-                <div class="p-2.5 rounded-xl border border-stone-200/70 ${markerStyle} shadow-2xs flex items-center justify-between transition-all">
-                  <div class="min-w-0 pr-2">
+                <div class="p-2.5 rounded-xl border border-stone-200/70 ${markerStyle} shadow-2xs flex items-center justify-between transition-all cursor-pointer hover:opacity-90">
+                  <div onclick="editTimelineSession('${s.startH}', ${s.startB}, ${s.duration}, '${s.text.replace(/'/g, "\\'")}', '${s.cat}')" class="min-w-0 pr-2 flex-1" title="클릭하여 내용 수정">
                     <div class="flex items-center gap-1.5">
                       <span class="font-mono text-[10px] text-stone-500 font-semibold">${timeLabel}</span>
                       <span class="text-[9px] bg-white/80 px-1.5 py-0.2 rounded-full font-bold text-stone-600 border border-stone-200/60">${s.duration}분</span>
                     </div>
-                    <div class="font-bold text-xs mt-0.5 tracking-tight">${s.text}</div>
+                    <div class="font-bold text-xs mt-0.5 tracking-tight">${s.text} <span class="text-[9px] opacity-60">✏️</span></div>
                   </div>
-                  <button onclick="clearSessionBlocks('${s.startH}', ${s.startB}, ${s.duration})" title="이 덩어리 삭제" class="text-stone-300 hover:text-stone-600 text-xs px-1">✕</button>
+                  <button onclick="clearSessionBlocks('${s.startH}', ${s.startB}, ${s.duration})" title="이 덩어리 삭제" class="text-stone-300 hover:text-stone-600 text-xs px-1 shrink-0">✕</button>
                 </div>
               </div>
             `;
           }).join('')}
         </div>
       `;
+    }
+
+    function editTimelineSession(startH, startB, duration, currentText, cat) {
+      const newText = prompt("일정 내용을 수정해주세요:", currentText);
+      if (newText === null || !newText.trim()) return;
+      const blocksCount = Math.round(duration / 10);
+      let sH = parseInt(startH, 10);
+      let sB = startB;
+
+      for (let i = 0; i < blocksCount; i++) {
+        let currH = sH + Math.floor((sB + i) / 6);
+        let currB = (sB + i) % 6;
+        if (currH > 24) break;
+        const hStr = currH < 10 ? `0${currH}` : `${currH}`;
+        setBlockData(hStr, currB, newText.trim(), cat);
+      }
+      saveDayData();
+      renderVerticalTimeline();
     }
 
     function clearSessionBlocks(startH, startB, duration) {
@@ -1500,8 +1662,12 @@
       renderVerticalTimeline();
     }
 
-    // 동적 루틴 마스터
+    // 동적 루틴 & 카테고리(그룹) 완전 커스텀
     const DEFAULT_ROUTINES = {
+      categories: {
+        morning: ['🌤️ 기상·비움', '⚖️ 바디·건강', '🎒 외출·출근'],
+        evening: ['🧹 정리·바디', '🌿 반려·어항', '🧶 마무리']
+      },
       morning: [
         { id: 'm1', cat: '🌤️ 기상·비움', name: '화장실', autoTime: false, autoCat: 'routine', paused: false },
         { id: 'm2', cat: '🌤️ 기상·비움', name: '미온수 한 잔', autoTime: false, autoCat: 'routine', paused: false },
@@ -1539,13 +1705,29 @@
     }
 
     function getRoutineDefs() {
-      return JSON.parse(localStorage.getItem('mingle_routine_defs') || JSON.stringify(DEFAULT_ROUTINES));
+      const defs = JSON.parse(localStorage.getItem('mingle_routine_defs') || JSON.stringify(DEFAULT_ROUTINES));
+      if (!defs.categories) {
+        defs.categories = DEFAULT_ROUTINES.categories;
+      }
+      return defs;
     }
 
     function saveRoutineDefs(defs) {
       localStorage.setItem('mingle_routine_defs', JSON.stringify(defs));
       renderDynamicRoutines();
       if (db) db.collection('routine_definitions').doc('master').set(defs).catch(console.error);
+    }
+
+    // 휴식 모드 토글
+    function toggleRoutineRest(type) {
+      const dayData = getDayDataLocal(currentDate);
+      if (!dayData.routineRest) dayData.routineRest = {};
+      dayData.routineRest[type] = !dayData.routineRest[type];
+      saveDayDataLocal(currentDate, dayData);
+      renderDynamicRoutines();
+      if (db) db.collection('diary_days').doc(currentDate).set(dayData).catch(console.error);
+      renderRoutineProgressTracker();
+      renderCalendar();
     }
 
     function autoFillTimetableNow(text, category = 'routine') {
@@ -1629,78 +1811,117 @@
       const dayData = getDayDataLocal(currentDate);
       const checks = dayData.dynamicRoutineChecks || {};
       const catTags = dayData.catCareTags || {};
+      const rest = dayData.routineRest || {};
 
-      const mList = document.getElementById('morningRoutineDynamicList');
-      if (mList) {
+      // 아침 루틴
+      const mWrapper = document.getElementById('morningRoutineContentWrapper');
+      const mRestBtn = document.getElementById('morningRestBtn');
+      if (mRestBtn) {
+        mRestBtn.className = rest.morning 
+          ? 'text-[10px] bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap'
+          : 'text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap';
+      }
+
+      if (rest.morning) {
+        document.getElementById('morningProgressBadge').innerText = '휴식 🍃';
+        mWrapper.innerHTML = `
+          <div class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-center text-emerald-900 text-xs font-semibold">
+            ☕ 오늘은 아침 루틴 없이 편안히 쉬어가는 날이에요! (통계 제외)
+          </div>
+        `;
+      } else {
         const activeMorning = defs.morning.filter(i => !i.paused);
-        const categories = [...new Set(activeMorning.map(i => i.cat))];
+        const categories = defs.categories?.morning || [...new Set(activeMorning.map(i => i.cat))];
         let doneCount = activeMorning.filter(i => checks[i.id]).length;
         let pct = activeMorning.length > 0 ? Math.round((doneCount / activeMorning.length) * 100) : 0;
         document.getElementById('morningProgressBadge').innerText = `${pct}%`;
 
-        mList.innerHTML = categories.map(cat => {
-          const items = activeMorning.filter(i => i.cat === cat);
-          return `
-            <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
-              <span class="text-[11px] font-bold text-stone-600">${cat}</span>
-              <div class="flex items-center gap-2 flex-wrap">
-                ${items.map(i => `
-                  <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap">
-                    <input type="checkbox" ${checks[i.id] ? 'checked' : ''} onchange="toggleDynamicRoutineCheck('morning', '${i.id}', ${i.autoTime}, '${i.autoCat}', '${i.name}')" class="rounded text-amber-500">
-                    <span class="text-[11px] ${checks[i.id] ? 'line-through text-stone-300' : 'text-stone-700'}">${i.name}</span>
-                  </label>
-                `).join('')}
-              </div>
-            </div>
-          `;
-        }).join('');
+        mWrapper.innerHTML = `
+          <div class="space-y-2 text-xs">
+            ${categories.map(cat => {
+              const items = activeMorning.filter(i => i.cat === cat);
+              if (items.length === 0) return '';
+              return `
+                <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
+                  <span class="text-[11px] font-bold text-stone-600">${cat}</span>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    ${items.map(i => `
+                      <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap">
+                        <input type="checkbox" ${checks[i.id] ? 'checked' : ''} onchange="toggleDynamicRoutineCheck('morning', '${i.id}', ${i.autoTime}, '${i.autoCat}', '${i.name}')" class="rounded text-amber-500">
+                        <span class="text-[11px] ${checks[i.id] ? 'line-through text-stone-300' : 'text-stone-700'}">${i.name}</span>
+                      </label>
+                    `).join('')}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
       }
 
-      const eList = document.getElementById('eveningRoutineDynamicList');
-      if (eList) {
+      // 저녁 루틴
+      const eWrapper = document.getElementById('eveningRoutineContentWrapper');
+      const eRestBtn = document.getElementById('eveningRestBtn');
+      if (eRestBtn) {
+        eRestBtn.className = rest.evening 
+          ? 'text-[10px] bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap'
+          : 'text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap';
+      }
+
+      if (rest.evening) {
+        document.getElementById('eveningProgressBadge').innerText = '휴식 🍃';
+        eWrapper.innerHTML = `
+          <div class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-center text-emerald-900 text-xs font-semibold">
+            🛋️ 오늘은 저녁 루틴 없이 푹 쉬는 힐링 데이예요! (통계 제외)
+          </div>
+        `;
+      } else {
         const activeEvening = defs.evening.filter(i => !i.paused);
-        const categories = [...new Set(activeEvening.map(i => i.cat))];
+        const categories = defs.categories?.evening || [...new Set(activeEvening.map(i => i.cat))];
         let doneCount = activeEvening.filter(i => checks[i.id]).length;
         let pct = activeEvening.length > 0 ? Math.round((doneCount / activeEvening.length) * 100) : 0;
         document.getElementById('eveningProgressBadge').innerText = `${pct}%`;
 
-        eList.innerHTML = categories.map(cat => {
-          const items = activeEvening.filter(i => i.cat === cat);
-          return `
-            <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
-              <span class="text-[11px] font-bold text-stone-600">${cat}</span>
-              <div class="flex items-center gap-2 flex-wrap">
-                ${items.map(i => `
-                  <div class="flex items-center gap-1">
-                    <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap">
-                      <input type="checkbox" ${checks[i.id] ? 'checked' : ''} onchange="toggleDynamicRoutineCheck('evening', '${i.id}', ${i.autoTime}, '${i.autoCat}', '${i.name}')" class="rounded text-indigo-500">
-                      <span class="text-[11px] ${checks[i.id] ? 'line-through text-stone-300' : 'text-stone-700'}">${i.name}</span>
-                    </label>
-                    ${i.isCatTime ? `
-                      <div class="inline-flex gap-0.5 ml-1 text-[9px]">
-                        <button onclick="toggleCatCareTag('brush')" class="px-1 py-0.2 rounded border ${catTags.brush ? 'bg-amber-200 border-amber-300 font-bold' : 'bg-white border-stone-200 text-stone-400'}">빗질</button>
-                        <button onclick="toggleCatCareTag('treat')" class="px-1 py-0.2 rounded border ${catTags.treat ? 'bg-amber-200 border-amber-300 font-bold' : 'bg-white border-stone-200 text-stone-400'}">간식</button>
-                        <button onclick="toggleCatCareTag('play')" class="px-1 py-0.2 rounded border ${catTags.play ? 'bg-amber-200 border-amber-300 font-bold' : 'bg-white border-stone-200 text-stone-400'}">사냥</button>
+        eWrapper.innerHTML = `
+          <div class="space-y-2 text-xs">
+            ${categories.map(cat => {
+              const items = activeEvening.filter(i => i.cat === cat);
+              if (items.length === 0) return '';
+              return `
+                <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
+                  <span class="text-[11px] font-bold text-stone-600">${cat}</span>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    ${items.map(i => `
+                      <div class="flex items-center gap-1">
+                        <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap">
+                          <input type="checkbox" ${checks[i.id] ? 'checked' : ''} onchange="toggleDynamicRoutineCheck('evening', '${i.id}', ${i.autoTime}, '${i.autoCat}', '${i.name}')" class="rounded text-indigo-500">
+                          <span class="text-[11px] ${checks[i.id] ? 'line-through text-stone-300' : 'text-stone-700'}">${i.name}</span>
+                        </label>
+                        ${i.isCatTime ? `
+                          <div class="inline-flex gap-0.5 ml-1 text-[9px]">
+                            <button onclick="toggleCatCareTag('brush')" class="px-1 py-0.2 rounded border ${catTags.brush ? 'bg-amber-200 border-amber-300 font-bold' : 'bg-white border-stone-200 text-stone-400'}">빗질</button>
+                            <button onclick="toggleCatCareTag('treat')" class="px-1 py-0.2 rounded border ${catTags.treat ? 'bg-amber-200 border-amber-300 font-bold' : 'bg-white border-stone-200 text-stone-400'}">간식</button>
+                            <button onclick="toggleCatCareTag('play')" class="px-1 py-0.2 rounded border ${catTags.play ? 'bg-amber-200 border-amber-300 font-bold' : 'bg-white border-stone-200 text-stone-400'}">사냥</button>
+                          </div>
+                        ` : ''}
                       </div>
-                    ` : ''}
+                    `).join('')}
                   </div>
-                `).join('')}
-              </div>
-            </div>
-          `;
-        }).join('');
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
       }
     }
 
+    // 루틴 설정 팝업 & 카테고리 관리자
     function openRoutineCustomModal(type) {
       routineModalTarget = type;
       document.getElementById('routineModalHeaderTitle').innerText = 
         type === 'morning' ? '☀️ 아침 루틴 설정' : '🌙 저녁 루틴 설정';
-      
-      const catSelect = document.getElementById('newRoutineCustomCat');
-      const cats = type === 'morning' ? ['🌤️ 기상·비움', '⚖️ 바디·건강', '🎒 외출·출근'] : ['🧹 정리·바디', '🌿 반려·어항', '🧶 마무리'];
-      catSelect.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
-
+      document.getElementById('categoryManagerArea').classList.add('hidden');
+      updateRoutineCustomCatSelect();
       renderRoutineModalItems();
       document.getElementById('routineCustomModal').classList.remove('hidden');
     }
@@ -1709,27 +1930,127 @@
       document.getElementById('routineCustomModal').classList.add('hidden');
     }
 
+    function updateRoutineCustomCatSelect() {
+      const catSelect = document.getElementById('newRoutineCustomCat');
+      const defs = getRoutineDefs();
+      const cats = defs.categories?.[routineModalTarget] || [];
+      catSelect.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function toggleCategoryManagerSection() {
+      const area = document.getElementById('categoryManagerArea');
+      const isHidden = area.classList.toggle('hidden');
+      if (!isHidden) renderCategoryManagerList();
+    }
+
+    function renderCategoryManagerList() {
+      const container = document.getElementById('categoryManagerList');
+      const defs = getRoutineDefs();
+      const cats = defs.categories?.[routineModalTarget] || [];
+
+      container.innerHTML = cats.map((cat, idx) => `
+        <div class="flex items-center justify-between p-1 rounded bg-white border border-amber-200 text-xs">
+          <span onclick="editCategoryName(${idx})" class="font-bold text-amber-950 truncate cursor-pointer hover:underline" title="클릭하여 수정">
+            ${cat} <span class="text-[9px] opacity-50">✏️</span>
+          </span>
+          <div class="flex items-center gap-1 shrink-0">
+            <button onclick="moveCategoryOrder(${idx}, -1)" class="text-stone-400 hover:text-stone-700 text-[10px] px-0.5">▲</button>
+            <button onclick="moveCategoryOrder(${idx}, 1)" class="text-stone-400 hover:text-stone-700 text-[10px] px-0.5">▼</button>
+            <button onclick="deleteCategory(${idx})" class="text-stone-300 hover:text-rose-500 text-xs px-1">✕</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function promptAddNewCategory() {
+      const name = prompt("새로운 카테고리(그룹) 이름을 입력해주세요:\n(예: 🧘 폼롤러·요가, 🐾 집사케어)");
+      if (!name || !name.trim()) return;
+      const defs = getRoutineDefs();
+      if (!defs.categories) defs.categories = { morning: [], evening: [] };
+      if (!defs.categories[routineModalTarget]) defs.categories[routineModalTarget] = [];
+      defs.categories[routineModalTarget].push(name.trim());
+      saveRoutineDefs(defs);
+      updateRoutineCustomCatSelect();
+      renderCategoryManagerList();
+    }
+
+    function editCategoryName(idx) {
+      const defs = getRoutineDefs();
+      const oldName = defs.categories[routineModalTarget][idx];
+      const newName = prompt("카테고리 이름을 수정해주세요:", oldName);
+      if (!newName || !newName.trim()) return;
+
+      defs.categories[routineModalTarget][idx] = newName.trim();
+      // 하위 루틴들의 소속 카테고리도 동시 갱신
+      defs[routineModalTarget].forEach(item => {
+        if (item.cat === oldName) item.cat = newName.trim();
+      });
+
+      saveRoutineDefs(defs);
+      updateRoutineCustomCatSelect();
+      renderCategoryManagerList();
+      renderRoutineModalItems();
+    }
+
+    function moveCategoryOrder(idx, delta) {
+      const defs = getRoutineDefs();
+      const list = defs.categories[routineModalTarget];
+      const targetIdx = idx + delta;
+      if (targetIdx < 0 || targetIdx >= list.length) return;
+      const temp = list[idx];
+      list[idx] = list[targetIdx];
+      list[targetIdx] = temp;
+      saveRoutineDefs(defs);
+      updateRoutineCustomCatSelect();
+      renderCategoryManagerList();
+    }
+
+    function deleteCategory(idx) {
+      if (!confirm("이 카테고리를 삭제할까요?\n소속된 루틴 항목들은 기본 카테고리로 유지됩니다.")) return;
+      const defs = getRoutineDefs();
+      defs.categories[routineModalTarget].splice(idx, 1);
+      saveRoutineDefs(defs);
+      updateRoutineCustomCatSelect();
+      renderCategoryManagerList();
+    }
+
     function renderRoutineModalItems() {
       const container = document.getElementById('routineModalItemList');
       const defs = getRoutineDefs();
       const list = defs[routineModalTarget] || [];
 
-      container.innerHTML = list.map(item => `
+      container.innerHTML = list.map((item, idx) => `
         <div class="p-2 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-between gap-1.5">
           <div class="flex-1 min-w-0">
             <span class="text-[9px] bg-stone-200 text-stone-600 px-1 py-0.2 rounded font-bold">${item.cat}</span>
             <span onclick="editRoutineItemName('${item.id}')" class="ml-1 text-xs font-semibold ${item.paused ? 'line-through text-stone-400' : 'text-stone-800'} cursor-pointer hover:text-amber-800" title="클릭하여 이름 수정">
-              ${item.name}
+              ${item.name} <span class="text-[9px] opacity-50">✏️</span>
             </span>
           </div>
           <div class="flex items-center gap-1 shrink-0">
-            <button onclick="togglePauseRoutineItem('${item.id}')" class="text-[10px] bg-white border border-stone-200 px-1.5 py-0.5 rounded text-stone-500 font-bold hover:bg-stone-100">
-              ${item.paused ? '▶ 재개' : '⏸️ 숨김'}
+            <button onclick="moveRoutineItemOrder('${item.id}', -1)" title="위로" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▲</button>
+            <button onclick="moveRoutineItemOrder('${item.id}', 1)" title="아래로" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▼</button>
+            <button onclick="togglePauseRoutineItem('${item.id}')" title="숨김/재개" class="p-1 rounded bg-white border border-stone-200 hover:bg-stone-100 inline-flex items-center">
+              <svg class="w-2.5 h-2.5 ${item.paused ? 'text-stone-300' : 'text-stone-600'} fill-current" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
             </button>
             <button onclick="deleteRoutineItem('${item.id}')" class="text-stone-300 hover:text-rose-500 text-xs px-1">✕</button>
           </div>
         </div>
       `).join('');
+    }
+
+    function moveRoutineItemOrder(id, delta) {
+      const defs = getRoutineDefs();
+      const list = defs[routineModalTarget];
+      const idx = list.findIndex(i => i.id === id);
+      if (idx === -1) return;
+      const targetIdx = idx + delta;
+      if (targetIdx < 0 || targetIdx >= list.length) return;
+      const temp = list[idx];
+      list[idx] = list[targetIdx];
+      list[targetIdx] = temp;
+      saveRoutineDefs(defs);
+      renderRoutineModalItems();
     }
 
     function addNewCustomRoutineItem() {
@@ -1782,28 +2103,44 @@
       renderRoutineModalItems();
     }
 
-    // 원터치 물방울 카운터
-    function renderWaterDrops(count = 0) {
-      const container = document.getElementById('waterDropContainer');
-      if (!container) return;
-      const totalMl = count * 200;
-      document.getElementById('waterAmountText').innerText = `${totalMl}ml / 1.6L`;
-      container.innerHTML = [1, 2, 3, 4, 5, 6, 7, 8].map(i => `
-        <span onclick="setWaterCount(${i})" class="transition-transform hover:scale-125 ${i <= count ? 'opacity-100' : 'opacity-25 grayscale'}">💧</span>
+    // 밍글 맞춤 음료 트래커 (💧 6잔 + 🍏 2잔 + ☕ 1잔)
+    function renderDrinkTracker(data) {
+      const waterEl = document.getElementById('drinkWaterDrops');
+      const acvEl = document.getElementById('drinkAcvDrops');
+      const coffeeEl = document.getElementById('drinkCoffeeDrops');
+      if (!waterEl) return;
+
+      const waterCount = data.waterCount || 0;
+      const acvCount = data.acvCount || 0;
+      const coffeeCount = data.coffeeCount || 0;
+
+      // 💧 물방울 6개
+      waterEl.innerHTML = [1, 2, 3, 4, 5, 6].map(i => `
+        <span onclick="toggleDrinkItem('waterCount', ${i})" class="transition-transform hover:scale-125 ${i <= waterCount ? 'opacity-100' : 'opacity-25 grayscale'}">💧</span>
       `).join('');
+
+      // 🍏 애사비 2개
+      acvEl.innerHTML = [1, 2].map(i => `
+        <span onclick="toggleDrinkItem('acvCount', ${i})" class="transition-transform hover:scale-125 ${i <= acvCount ? 'opacity-100' : 'opacity-25 grayscale'}">🍏</span>
+      `).join('');
+
+      // ☕ 커피 1개
+      coffeeEl.innerHTML = `
+        <span onclick="toggleDrinkItem('coffeeCount', 1)" class="transition-transform hover:scale-125 ${coffeeCount >= 1 ? 'opacity-100' : 'opacity-25 grayscale'}">☕</span>
+      `;
     }
 
-    function setWaterCount(idx) {
+    function toggleDrinkItem(key, idx) {
       const dayData = getDayDataLocal(currentDate);
-      let curr = dayData.waterCount || 0;
+      let curr = dayData[key] || 0;
       let next = curr === idx ? idx - 1 : idx;
-      dayData.waterCount = next;
+      dayData[key] = next;
       saveDayDataLocal(currentDate, dayData);
-      renderWaterDrops(next);
+      renderDrinkTracker(dayData);
       if (db) db.collection('diary_days').doc(currentDate).set(dayData).catch(console.error);
     }
 
-    // 뜨개 & 독서 타이머
+    // 독서 & 뜨개 시간 소급 & 수동 입력
     function resetKnitRow() {
       if (confirm("뜨개 단수를 0단으로 리셋할까요?")) {
         document.getElementById('knitRowCount').innerText = "0";
@@ -1825,9 +2162,7 @@
         btn.className = "text-[10px] bg-rose-500 hover:bg-rose-600 text-white font-bold py-1.5 rounded-lg shadow-2xs";
 
         if (diffMins > 0) {
-          selectedDurationMinutes = diffMins;
-          selectDirect("뜨개", "hobby");
-          alert(`🧶 총 ${diffMins}분 동안 뜨개 완료! 타임테이블에 연속 기록되었어요 ✨`);
+          quickAddMinutes("뜨개", "hobby", diffMins);
         }
       }
     }
@@ -1846,23 +2181,66 @@
         btn.className = "text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg shadow-2xs";
 
         if (diffMins > 0) {
-          selectedDurationMinutes = diffMins;
-          selectDirect("독서", "hobby");
-          alert(`📚 총 ${diffMins}분 동안 독서 완료! 타임테이블에 연속 기록되었어요 ✨`);
+          quickAddMinutes("독서", "hobby", diffMins);
         }
       }
     }
 
-    function completeKnitSessionToTable() {
-      selectedDurationMinutes = 30;
-      selectDirect("뜨개", 'hobby');
-      alert("🧶 뜨개 30분이 타임테이블에 기록되었습니다!");
+    function quickAddMinutes(text, category, mins) {
+      const now = new Date();
+      let h = now.getHours();
+      if (h < 7) h = 7;
+      if (h > 24) h = 24;
+      const b = Math.floor(now.getMinutes() / 10);
+      const blocksCount = Math.max(1, Math.round(mins / 10));
+
+      for (let i = 0; i < blocksCount; i++) {
+        let currH = h + Math.floor((b + i) / 6);
+        let currB = (b + i) % 6;
+        if (currH > 24) break;
+        const hStr = currH < 10 ? `0${currH}` : `${currH}`;
+        setBlockData(hStr, currB, text, category);
+      }
+      saveDayData();
+      if (timetableViewMode === 'timeline') renderVerticalTimeline();
+      alert(`✨ ${text} ${mins}분이 타임테이블에 반영되었어요!`);
     }
 
-    function completeBookSessionToTable() {
-      selectedDurationMinutes = 30;
-      selectDirect("독서", 'hobby');
-      alert("📚 독서 30분이 타임테이블에 기록되었습니다!");
+    function openManualTimeModal(text, cat) {
+      manualTimeTarget = { text, cat };
+      document.getElementById('manualTimeModalTitle').innerText = `${text} 시간 직접 입력`;
+      const now = new Date();
+      const hStr = now.getHours() < 10 ? `0${now.getHours()}` : `${now.getHours()}`;
+      const mStr = now.getMinutes() < 10 ? `0${now.getMinutes()}` : `${now.getMinutes()}`;
+      document.getElementById('manualStartTime').value = `${hStr}:${mStr}`;
+      document.getElementById('manualTimeModal').classList.remove('hidden');
+    }
+
+    function closeManualTimeModal() {
+      document.getElementById('manualTimeModal').classList.add('hidden');
+    }
+
+    function confirmManualTimeSave() {
+      const timeVal = document.getElementById('manualStartTime').value;
+      const dur = parseInt(document.getElementById('manualDurationSelect').value, 10);
+      if (!timeVal) return;
+
+      const [hPart, mPart] = timeVal.split(':').map(Number);
+      let startH = Math.max(7, Math.min(24, hPart));
+      let startB = Math.floor(mPart / 10);
+      const blocksCount = Math.max(1, Math.round(dur / 10));
+
+      for (let i = 0; i < blocksCount; i++) {
+        let currH = startH + Math.floor((startB + i) / 6);
+        let currB = (startB + i) % 6;
+        if (currH > 24) break;
+        const hStr = currH < 10 ? `0${currH}` : `${currH}`;
+        setBlockData(hStr, currB, manualTimeTarget.text, manualTimeTarget.cat);
+      }
+      saveDayData();
+      closeManualTimeModal();
+      if (timetableViewMode === 'timeline') renderVerticalTimeline();
+      alert(`✨ ${manualTimeTarget.text} ${dur}분이 오차 없이 기록되었어요!`);
     }
 
     function updateKnitRow(delta) {
@@ -1872,7 +2250,7 @@
       saveDayData();
     }
 
-    // 데일리 TO-DO (순서 변경 탑재)
+    // 데일리 TO-DO
     function onRoutineTypeChange(val) {
       const selector = document.getElementById('weeklyDaysSelector');
       if (val === 'weekly') {
@@ -1942,7 +2320,6 @@
 
       const type = document.getElementById('routineTypeSelect').value;
       const rules = getRoutineRules();
-
       const typeWeight = { daily: 1, weekly: 2, monthly: 3, quarterly: 4 };
 
       const newRule = {
@@ -1965,11 +2342,9 @@
       if (idx === -1) return;
       const targetIdx = idx + delta;
       if (targetIdx < 0 || targetIdx >= rules.length) return;
-
       const temp = rules[idx];
       rules[idx] = rules[targetIdx];
       rules[targetIdx] = temp;
-
       saveRoutineRules(rules);
     }
 
@@ -2066,7 +2441,6 @@
             document.getElementById('bgmCoverImg').src = coverUrl;
             document.getElementById('bgmInfoText').innerText = info;
             document.getElementById('bgmSearchInput').value = track.trackName;
-
             saveDayData();
           } else {
             document.getElementById('bgmInfoText').innerText = "검색 결과가 없어요 😢";
@@ -2167,7 +2541,9 @@
         },
         memo: document.getElementById('dailyMemo').value,
         timetable: timetableData,
-        waterCount: existing.waterCount || 0
+        waterCount: existing.waterCount || 0,
+        acvCount: existing.acvCount || 0,
+        coffeeCount: existing.coffeeCount || 0
       };
 
       saveDayDataLocal(currentDate, data);
@@ -2227,7 +2603,7 @@
         }
       }
 
-      renderWaterDrops(data.waterCount || 0);
+      renderDrinkTracker(data);
 
       if (data.knit) {
         document.getElementById('knitCurrentProject').value = data.knit.project || '';
@@ -2258,7 +2634,7 @@
       if (timetableViewMode === 'timeline') renderVerticalTimeline();
     }
 
-    // 캘린더 & 7대 우선순위 약속 & 스탬프
+    // 캘린더 약속 / 일정 & 클릭 수정
     function initCalEventCategoryButtons() {
       const container = document.getElementById('calEventCategoryContainer');
       if (!container) return;
@@ -2311,6 +2687,7 @@
       if (calMonth > 11) { calMonth = 0; calYear++; }
       renderCalendar();
       renderUpcomingEvents();
+      renderTicketList();
     }
 
     function subscribeCalendarEvents() {
@@ -2341,18 +2718,35 @@
       if (db) db.collection('calendar_events').doc('all').set({ events }).catch(console.error);
     }
 
-    function openCalendarEventModal() {
-      document.getElementById('calEventTitle').value = '';
-      document.getElementById('calEventStart').value = currentDate;
-      document.getElementById('calEventEnd').value = currentDate;
-      document.getElementById('calEventRepeatToggle').checked = false;
-      document.getElementById('calEventRepeatDaysBox').classList.add('hidden');
-      selectCalEventCategory('family');
+    function openCalendarEventModal(eventId = null) {
+      editingEventId = eventId;
+      if (eventId) {
+        const ev = getCalendarEvents().find(e => e.id === eventId);
+        if (ev) {
+          document.getElementById('calEventModalTitle').innerHTML = '<span>✏️</span> 일정 / 약속 수정';
+          document.getElementById('calEventTitle').value = ev.title;
+          document.getElementById('calEventStart').value = ev.start;
+          document.getElementById('calEventEnd').value = ev.end;
+          document.getElementById('calEventRepeatToggle').checked = !!ev.isRepeat;
+          toggleCalEventRepeat(!!ev.isRepeat);
+          if (ev.repeatDays) calEventRepeatDays = [...ev.repeatDays];
+          selectCalEventCategory(ev.category || 'family');
+        }
+      } else {
+        document.getElementById('calEventModalTitle').innerHTML = '<span>🗓</span> 일정 / 약속 등록';
+        document.getElementById('calEventTitle').value = '';
+        document.getElementById('calEventStart').value = currentDate;
+        document.getElementById('calEventEnd').value = currentDate;
+        document.getElementById('calEventRepeatToggle').checked = false;
+        document.getElementById('calEventRepeatDaysBox').classList.add('hidden');
+        selectCalEventCategory('family');
+      }
       document.getElementById('calendarEventModal').classList.remove('hidden');
     }
 
     function closeCalendarEventModal() {
       document.getElementById('calendarEventModal').classList.add('hidden');
+      editingEventId = null;
     }
 
     function saveCalendarEvent() {
@@ -2362,18 +2756,30 @@
       if (!title || !start) return;
 
       const isRepeat = document.getElementById('calEventRepeatToggle').checked;
+      let events = getCalendarEvents();
 
-      const events = getCalendarEvents();
-      events.push({
-        id: Date.now(),
-        title,
-        start,
-        end,
-        category: selectedCalEventCategory,
-        isRepeat,
-        repeatDays: isRepeat ? [...calEventRepeatDays] : null,
-        skippedDates: [] // 휴회(건너뛰기) 일자 목록
-      });
+      if (editingEventId) {
+        const idx = events.findIndex(e => e.id === editingEventId);
+        if (idx > -1) {
+          events[idx].title = title;
+          events[idx].start = start;
+          events[idx].end = end;
+          events[idx].category = selectedCalEventCategory;
+          events[idx].isRepeat = isRepeat;
+          events[idx].repeatDays = isRepeat ? [...calEventRepeatDays] : null;
+        }
+      } else {
+        events.push({
+          id: Date.now(),
+          title,
+          start,
+          end,
+          category: selectedCalEventCategory,
+          isRepeat,
+          repeatDays: isRepeat ? [...calEventRepeatDays] : null,
+          skippedDates: []
+        });
+      }
 
       saveCalendarEvents(events);
       closeCalendarEventModal();
@@ -2385,14 +2791,153 @@
       saveCalendarEvents(events);
     }
 
-    function skipRepeatEventDate(id, dateStr) {
-      let events = getCalendarEvents();
-      const target = events.find(e => e.id === id);
-      if (target) {
-        if (!target.skippedDates) target.skippedDates = [];
-        target.skippedDates.push(dateStr);
-        saveCalendarEvents(events);
+    // 🎫 교통 & 예매 티켓 시스템
+    function subscribeTicketData() {
+      renderTicketList();
+      if (!db) return;
+      if (unsubscribeTickets) unsubscribeTickets();
+      unsubscribeTickets = db.collection('tickets_data').doc('all')
+        .onSnapshot(doc => {
+          if (doc.exists) {
+            localStorage.setItem('mingle_tickets', JSON.stringify(doc.data().tickets || []));
+            renderTicketList();
+            renderCalendar();
+            updateTodaySpecialBanner();
+          }
+        }, err => console.error(err));
+    }
+
+    function getTicketsLocal() {
+      return JSON.parse(localStorage.getItem('mingle_tickets') || '[]');
+    }
+
+    function saveTicketsLocal(tickets) {
+      localStorage.setItem('mingle_tickets', JSON.stringify(tickets));
+      renderTicketList();
+      renderCalendar();
+      updateTodaySpecialBanner();
+      if (db) db.collection('tickets_data').doc('all').set({ tickets }).catch(console.error);
+    }
+
+    function openTicketModal(ticketId = null) {
+      editingTicketId = ticketId;
+      if (ticketId) {
+        const t = getTicketsLocal().find(item => item.id === ticketId);
+        if (t) {
+          document.getElementById('ticketModalTitle').innerHTML = '<span>✏️</span> 승차권 / 예매 수정';
+          selectTicketType(t.type);
+          document.getElementById('ticketDepartPlace').value = t.depart;
+          document.getElementById('ticketArrivePlace').value = t.arrive;
+          document.getElementById('ticketDate').value = t.date;
+          document.getElementById('ticketTime').value = t.time;
+          document.getElementById('ticketSeatMemo').value = t.seatMemo || '';
+        }
+      } else {
+        document.getElementById('ticketModalTitle').innerHTML = '<span>🎫</span> 승차권 / 예매 등록';
+        selectTicketType('bus');
+        document.getElementById('ticketDepartPlace').value = '';
+        document.getElementById('ticketArrivePlace').value = '';
+        document.getElementById('ticketDate').value = currentDate;
+        document.getElementById('ticketTime').value = '14:00';
+        document.getElementById('ticketSeatMemo').value = '';
       }
+      document.getElementById('ticketModal').classList.remove('hidden');
+    }
+
+    function closeTicketModal() {
+      document.getElementById('ticketModal').classList.add('hidden');
+      editingTicketId = null;
+    }
+
+    function selectTicketType(type) {
+      selectedTicketType = type;
+      ['bus', 'train', 'flight'].forEach(t => {
+        const btn = document.getElementById(`tt_btn_${t}`);
+        if (btn) {
+          if (t === type) btn.className = 'py-1 rounded-lg border border-sky-300 bg-sky-100 text-sky-900 font-bold text-center';
+          else btn.className = 'py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600 text-center';
+        }
+      });
+    }
+
+    function saveTicketData() {
+      const depart = document.getElementById('ticketDepartPlace').value.trim();
+      const arrive = document.getElementById('ticketArrivePlace').value.trim();
+      const date = document.getElementById('ticketDate').value;
+      const time = document.getElementById('ticketTime').value;
+      const seatMemo = document.getElementById('ticketSeatMemo').value.trim();
+      if (!depart || !arrive || !date) return;
+
+      let tickets = getTicketsLocal();
+      if (editingTicketId) {
+        const idx = tickets.findIndex(t => t.id === editingTicketId);
+        if (idx > -1) {
+          tickets[idx].type = selectedTicketType;
+          tickets[idx].depart = depart;
+          tickets[idx].arrive = arrive;
+          tickets[idx].date = date;
+          tickets[idx].time = time;
+          tickets[idx].seatMemo = seatMemo;
+        }
+      } else {
+        tickets.push({
+          id: Date.now(),
+          type: selectedTicketType,
+          depart,
+          arrive,
+          date,
+          time,
+          seatMemo
+        });
+      }
+
+      saveTicketsLocal(tickets);
+      closeTicketModal();
+    }
+
+    function deleteTicketData(id) {
+      let tickets = getTicketsLocal();
+      tickets = tickets.filter(t => t.id !== id);
+      saveTicketsLocal(tickets);
+    }
+
+    function renderTicketList() {
+      const container = document.getElementById('ticketReservationList');
+      if (!container) return;
+      const tickets = getTicketsLocal();
+      const now = new Date(REAL_TODAY_STR);
+
+      const futureTickets = tickets.filter(t => t.date >= REAL_TODAY_STR);
+      futureTickets.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+      if (futureTickets.length === 0) {
+        container.innerHTML = `<p class="text-[11px] text-stone-300 py-3 text-center">예약된 버스/기차/비행기 표가 없어요 🌿</p>`;
+        return;
+      }
+
+      const iconMap = { bus: '🚌 버스', train: '🚅 기차', flight: '✈️ 비행기' };
+
+      container.innerHTML = futureTickets.map(t => {
+        const tDate = new Date(t.date);
+        const diff = Math.ceil((tDate - now) / (1000 * 60 * 60 * 24));
+        const ddayText = diff === 0 ? "오늘 출발" : `D-${diff}`;
+
+        return `
+          <div class="p-2.5 rounded-xl border border-sky-200 bg-sky-50/60 flex items-center justify-between text-xs transition-colors">
+            <div onclick="openTicketModal(${t.id})" class="min-w-0 pr-2 flex-1 cursor-pointer hover:opacity-80" title="클릭하여 예매 정보 수정">
+              <div class="flex items-center gap-1.5">
+                <span class="font-bold text-sky-950">${iconMap[t.type]} ${t.depart} ➔ ${t.arrive}</span>
+                <span class="text-[9px] bg-white text-sky-800 border border-sky-200 px-1 rounded font-bold">${t.time}</span>
+              </div>
+              <div class="text-[10px] text-stone-500 mt-0.5">${t.date} ${t.seatMemo ? `| <b>${t.seatMemo}</b>` : ''} <span class="text-[9px] opacity-60">✏️</span></div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${diff === 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-sky-200 text-sky-900'}">${ddayText}</span>
+              <button onclick="deleteTicketData(${t.id})" class="text-stone-300 hover:text-rose-500 text-xs px-1">✕</button>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     function renderUpcomingEvents() {
@@ -2417,8 +2962,8 @@
 
         return `
           <div class="p-2 rounded-xl border flex items-center justify-between text-xs bg-stone-50 border-stone-100 text-stone-800">
-            <div class="min-w-0 pr-2">
-              <span class="font-bold">${catMeta.icon} ${e.title}</span>
+            <div onclick="openCalendarEventModal(${e.id})" class="min-w-0 pr-2 flex-1 cursor-pointer hover:opacity-80" title="클릭하여 일정 수정">
+              <span class="font-bold">${catMeta.icon} ${e.title} <span class="text-[9px] opacity-60">✏️</span></span>
               <span class="text-[10px] text-stone-400 block">${e.isRepeat ? '매주 반복 일정' : `${e.start} ~ ${e.end}`}</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
@@ -2441,11 +2986,12 @@
 
       const hitEvents = events.filter(e => {
         if (e.skippedDates && e.skippedDates.includes(currentDate)) return false;
-        if (e.isRepeat) {
-          return e.repeatDays && e.repeatDays.includes(dayOfWeek);
-        }
+        if (e.isRepeat) return e.repeatDays && e.repeatDays.includes(dayOfWeek);
         return currentDate >= e.start && currentDate <= e.end;
       });
+
+      const tickets = getTicketsLocal().filter(t => t.date === currentDate);
+      const ticketIconMap = { bus: '🚌 버스', train: '🚅 기차', flight: '✈️ 비행기' };
 
       const anniversaries = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
       const parts = currentDate.split('-');
@@ -2463,6 +3009,9 @@
       const highlights = [];
       if (holidayName) highlights.push(`🇰🇷 ${holidayName}`);
       if (hitAnni) highlights.push(`🎂 ${hitAnni.name}`);
+      tickets.forEach(t => {
+        highlights.push(`${ticketIconMap[t.type]} ${t.time} ${t.depart}➔${t.arrive} (${t.seatMemo || '탑승'})`);
+      });
       hitEvents.forEach(e => {
         const catMeta = EVENT_CATEGORIES.find(c => c.key === e.category) || EVENT_CATEGORIES[6];
         highlights.push(`${catMeta.icon} ${e.title}`);
@@ -2487,6 +3036,7 @@
       const allDays = JSON.parse(localStorage.getItem('mingle_diary_days') || '{}');
       const anniversaries = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
       const events = getCalendarEvents();
+      const tickets = getTicketsLocal();
 
       for (let i = 0; i < firstDay; i++) {
         grid.innerHTML += `<div class="h-16 bg-stone-50/40 rounded-xl"></div>`;
@@ -2513,19 +3063,25 @@
           return dateKey >= e.start && dateKey <= e.end;
         });
 
+        const dayTickets = tickets.filter(t => t.date === dateKey);
+
         // 1단: 날짜 + 무드
         const moodIcon = record?.mood && MOOD_META[record.mood] ? MOOD_META[record.mood].icon : '';
 
-        // 2단: 약속/일정 스탬프 이모지 (텍스트 띠지 제거)
+        // 2단: 약속/일정/교통 스탬프 이모지
         let eventStampIcons = '';
         if (holidayName) eventStampIcons += '<span class="text-[8px] bg-rose-100 text-rose-700 px-1 py-0.2 rounded font-bold">휴일</span>';
         if (hitAnni) eventStampIcons += '🎂';
+        dayTickets.forEach(t => {
+          const tIcon = t.type === 'bus' ? '🚌' : t.type === 'train' ? '🚅' : '✈️';
+          eventStampIcons += `<span title="${t.depart}➔${t.arrive}">${tIcon}</span>`;
+        });
         dayEvents.slice(0, 2).forEach(ev => {
           const catMeta = EVENT_CATEGORIES.find(c => c.key === ev.category) || EVENT_CATEGORIES[6];
           eventStampIcons += `<span title="${ev.title}">${catMeta.icon}</span>`;
         });
 
-        // 3단: 활동 이모지 (날씨, 독서, 뜨개, ootd)
+        // 3단: 활동 이모지
         let activityIcons = '';
         if (record?.weather) {
           if (record.weather.includes('☀️')) activityIcons += '☀';
@@ -2542,16 +3098,13 @@
 
         grid.innerHTML += `
           <div onclick="selectDateFromCal('${dateKey}')" class="h-16 p-1 bg-stone-50 hover:bg-amber-50/80 border border-stone-100 rounded-xl cursor-pointer flex flex-col justify-between transition-colors overflow-hidden">
-            <!-- 1단 -->
             <div class="flex items-center justify-between leading-none">
               <span class="text-[10px] font-bold ${isRedDay ? 'text-rose-500' : 'text-stone-700'}">${d}</span>
               <span class="text-[10px]">${moodIcon}</span>
             </div>
-            <!-- 2단 (이모지 스탬프) -->
             <div class="flex items-center justify-center gap-0.5 text-xs truncate py-0.5">
               ${eventStampIcons || '<span class="text-[9px] text-stone-200">·</span>'}
             </div>
-            <!-- 3단 (활동 발자국) -->
             <div class="flex items-center justify-between text-[8px] leading-none pt-0.5 border-t border-stone-100/60">
               <span class="truncate tracking-tighter">${activityIcons}</span>
               ${ootdDot}
@@ -2574,7 +3127,7 @@
       switchTab('day');
     }
 
-    // 기념일 (3단계 실용 필터 탑재)
+    // 기념일
     function setAnniversaryFilter(mode) {
       anniversaryFilterMode = mode;
       ['7', '30', 'all'].forEach(m => {
@@ -2617,11 +3170,11 @@
 
       list.innerHTML = filtered.map((item, idx) => `
         <div class="p-2 rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-between text-xs">
-          <div onclick="editAnniversary(${idx})" class="cursor-pointer hover:text-amber-800" title="클릭하여 수정">
-            <span class="font-bold text-stone-800">🎂 ${item.name}</span>
+          <div onclick="editAnniversary(${idx})" class="cursor-pointer hover:text-amber-800 flex-1" title="클릭하여 수정">
+            <span class="font-bold text-stone-800">🎂 ${item.name} <span class="text-[9px] opacity-60">✏️</span></span>
             <span class="text-[11px] text-stone-400 ml-1">(${item.origMonth}월 ${item.origDay}일)</span>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 shrink-0">
             <span class="font-bold ${item.diff <= 7 ? 'text-rose-600 bg-rose-50' : 'text-amber-600 bg-amber-50'} px-2 py-0.5 rounded-full text-[11px]">D-${item.diff}</span>
             <button onclick="deleteAnniversary(${item.id})" class="text-stone-300 hover:text-stone-500 text-xs">✕</button>
           </div>
@@ -2773,7 +3326,7 @@
       if (db) db.collection('knitting_showroom').add(newKnit).catch(console.error);
     }
 
-    // 4순위: 건강 관리 달력 & 추이 트래커
+    // 건강 관리 달력 & 추이 트래커
     function changeHealthMonth(delta) {
       healthMonth += delta;
       if (healthMonth < 0) { healthMonth = 11; healthYear--; }
@@ -2807,7 +3360,6 @@
 
         let weight = record?.health?.weight;
         let sugarFast = record?.health?.meals?.[0]?.sugarFast;
-        
         let postMeals = (record?.health?.meals || []).map(m => parseFloat(m.sugarPost)).filter(n => !isNaN(n));
         let avgPost = postMeals.length > 0 ? Math.round(postMeals.reduce((a, b) => a + b, 0) / postMeals.length) : null;
 
@@ -2843,7 +3395,7 @@
       document.getElementById('healthAvgSugarPost').innerText = postCount > 0 ? `${Math.round(postSum / postCount)}` : '-';
     }
 
-    // 루틴 진행도 트래커 (월 이동 지원!)
+    // 루틴 진행도 트래커 (휴식일 분모 제외)
     function changeRoutineMonth(delta) {
       routineMonth += delta;
       if (routineMonth < 0) { routineMonth = 11; routineYear--; }
@@ -2872,38 +3424,47 @@
         const dStr = d < 10 ? `0${d}` : `${d}`;
         const dateKey = `${routineYear}-${mStr}-${dStr}`;
         const record = allDays[dateKey];
+        const rest = record?.routineRest || {};
 
         let mPct = 0;
         let ePct = 0;
-        let hasData = false;
+        let hasActiveDuty = false;
 
         if (record?.dynamicRoutineChecks) {
-          hasData = true;
-          if (mActive.length > 0) {
+          if (!rest.morning && mActive.length > 0) {
             const mDone = mActive.filter(i => record.dynamicRoutineChecks[i.id]).length;
             mPct = Math.round((mDone / mActive.length) * 100);
+            hasActiveDuty = true;
           }
-          if (eActive.length > 0) {
+          if (!rest.evening && eActive.length > 0) {
             const eDone = eActive.filter(i => record.dynamicRoutineChecks[i.id]).length;
             ePct = Math.round((eDone / eActive.length) * 100);
+            hasActiveDuty = true;
           }
-          totalPctSum += Math.round((mPct + ePct) / 2);
-          recordedDaysCount++;
+          
+          if (hasActiveDuty) {
+            const dayAvg = Math.round((mPct + ePct) / 2);
+            totalPctSum += dayAvg;
+            recordedDaysCount++;
+          }
         }
 
-        const avg = Math.round((mPct + ePct) / 2);
-        const tileColor = hasData && avg > 0 ? (avg >= 80 ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-amber-50 border-amber-200 text-amber-800') : 'bg-stone-50 border-stone-200 text-stone-400';
+        const isFullRest = rest.morning && rest.evening;
+        const avg = hasActiveDuty ? Math.round((mPct + ePct) / 2) : 0;
+        const tileColor = isFullRest 
+          ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+          : (avg >= 80 ? 'bg-amber-100 border-amber-300 text-amber-900' : (avg > 0 ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-stone-50 border-stone-200 text-stone-400'));
 
         grid.innerHTML += `
           <div onclick="selectDateFromCal('${dateKey}')" class="p-1 rounded-xl border ${tileColor} flex flex-col items-center justify-between min-h-[44px] cursor-pointer hover:scale-105 transition-transform">
             <span class="text-[9px] font-bold opacity-70">${d}일</span>
-            <span class="text-[9px] font-bold font-mono">${hasData ? `${avg}%` : '·'}</span>
+            <span class="text-[9px] font-bold font-mono">${isFullRest ? '휴식' : (avg > 0 ? `${avg}%` : '·')}</span>
           </div>
         `;
       }
 
       const overallAvg = recordedDaysCount > 0 ? Math.round(totalPctSum / recordedDaysCount) : 0;
-      document.getElementById('routineMonthlyAvg').innerText = `월평균 ${overallAvg}%`;
+      document.getElementById('routineMonthlyAvg').innerText = `실천평균 ${overallAvg}%`;
     }
 
     // 무드 트래커
@@ -2955,7 +3516,7 @@
       }
     }
 
-    // 해빗 트래커 (모노톤 SVG 멈춤 아이콘)
+    // 해빗 트래커
     function subscribeHabitData() {
       renderHabits();
       renderDayHabitList();
@@ -2978,7 +3539,7 @@
       const defaultHabits = [
         { id: 1, name: "물 1.5L 마시기 💧", paused: false },
         { id: 2, name: "유산균·영양제 💊", paused: false },
-        { id: 3, name: "공복 스트레칭 🧘", paused: false }
+        { id: 3, name: "식후 10분 가볍게 걷기 🚶‍♀️", paused: false }
       ];
       return JSON.parse(localStorage.getItem('mingle_habits') || JSON.stringify(defaultHabits));
     }
@@ -3074,12 +3635,13 @@
         container.innerHTML = activeHabits.map(h => `
           <div class="flex items-center justify-between p-2 rounded-xl bg-stone-50 border border-stone-100 text-xs">
             <div class="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
-              <span onclick="editHabitName(${h.id})" class="font-medium text-stone-700 truncate text-[11px] cursor-pointer hover:text-amber-700" title="클릭하여 이름 수정">${h.name}</span>
-              <!-- 시스템 강제 노란색/주황색 이모지를 막는 모노톤 SVG 아이콘 -->
-              <button onclick="pauseHabit(${h.id})" title="잠시 멈춤/보관" class="text-stone-300 hover:text-stone-600 px-0.5 inline-flex items-center">
+              <span onclick="editHabitName(${h.id})" class="font-medium text-stone-700 truncate text-[11px] cursor-pointer hover:text-amber-700" title="클릭하여 이름 수정">
+                ${h.name} <span class="text-[9px] opacity-50">✏️</span>
+              </span>
+              <button onclick="pauseHabit(${h.id})" title="보관" class="text-stone-300 hover:text-stone-600 px-0.5 inline-flex items-center">
                 <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
               </button>
-              <button onclick="deleteHabit(${h.id})" title="완전 삭제" class="text-stone-300 hover:text-rose-500 text-[10px] px-0.5">✕</button>
+              <button onclick="deleteHabit(${h.id})" title="삭제" class="text-stone-300 hover:text-rose-500 text-[10px] px-0.5">✕</button>
             </div>
             <div class="flex gap-1 shrink-0">
               ${weekDates.map(dStr => {
@@ -3116,7 +3678,7 @@
     }
 
     function addHabitPrompt() {
-      const name = prompt("새로운 습관 이름 (예: 독서 20분 📖):");
+      const name = prompt("새로운 습관 이름 (예: 식후 10분 걷기 🚶‍♀️):");
       if (!name) return;
       const habits = getHabitsLocal();
       const logs = getHabitLogsLocal();
