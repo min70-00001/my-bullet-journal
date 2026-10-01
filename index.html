@@ -1394,17 +1394,18 @@
       `).join('');
     }
 
-    // 12. D-Day 매일 자동 계산 (오늘 날짜 기준 자동 +1)
+    // 12. D-Day 매일 자동 계산 (안녕한 날 기준 다음 날 = 1일째)
     function calculateDDays() {
-      const cur = new Date(currentDate);
-      const todayZero = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate());
+      // YYYY-MM-DD를 안전하게 로컬 날짜 자정으로 변환 (시차 오차 방지)
+      const parts = currentDate.split('-');
+      const todayZero = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
 
-      // 여름이: 2024년 3월 31일 기준
-      const summerBase = new Date(2024, 2, 31);
+      // 여름이: 2024년 3월 30일 기준 (월은 0부터 시작하므로 2가 3월)
+      const summerBase = new Date(2024, 2, 30);
       const diffSummer = Math.round((todayZero - summerBase) / (1000 * 60 * 60 * 24));
       
-      // 달이: 2025년 7월 20일 기준
-      const moonBase = new Date(2025, 6, 20);
+      // 달이: 2025년 7월 19일 기준 (6이 7월)
+      const moonBase = new Date(2025, 6, 19);
       const diffMoon = Math.round((todayZero - moonBase) / (1000 * 60 * 60 * 24));
 
       const elS = document.getElementById('ddaySummer');
@@ -1415,18 +1416,19 @@
 
     // 13. 밴드 일기 1초 복사
     function copyToBandDiary() {
-      const today = new Date(currentDate);
+      const parts = currentDate.split('-');
+      const today = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
       const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
       const dateText = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${days[today.getDay()]}`;
 
       const data = getDayDataLocal(currentDate);
       const weatherText = data.weather ? `${data.weather}` : '';
 
-      const cur = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const summerStart = new Date(2024, 2, 31);
-      const moonStart = new Date(2025, 6, 20);
-      const diffSummer = Math.round((cur - summerStart) / (1000 * 60 * 60 * 24));
-      const diffMoon = Math.round((cur - moonStart) / (1000 * 60 * 60 * 24));
+      // 안녕한 날 기준 D-Day 계산
+      const summerStart = new Date(2024, 2, 30);
+      const moonStart = new Date(2025, 6, 19);
+      const diffSummer = Math.round((today - summerStart) / (1000 * 60 * 60 * 24));
+      const diffMoon = Math.round((today - moonStart) / (1000 * 60 * 60 * 24));
 
       const bandText = 
 `#오늘의일기 
