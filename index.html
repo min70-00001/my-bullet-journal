@@ -105,7 +105,7 @@
             <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
               <span>⏱️</span> 10분 타임테이블 (07:00 ~ 24:00)
             </h3>
-            <p class="text-[10px] text-stone-400 mt-0.5">칸을 누르면 카테고리 색상으로 바로 등록돼요</p>
+            <p class="text-[10px] text-stone-400 mt-0.5">칸을 누르면 카테고리별로 쏙 등록돼요</p>
           </div>
           <!-- 뷰 스위처 토글 -->
           <div class="flex bg-stone-100 p-0.5 rounded-xl border border-stone-200 text-[11px]">
@@ -482,45 +482,63 @@
     </div>
   </nav>
 
-  <!-- 🎨 카테고리별 활동 선택 모달 -->
+  <!-- 🎨 카테고리 2단계 모달 -->
   <div id="categoryModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
+      
+      <!-- 상단 헤더 -->
       <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-          <span>⏱️</span> <span id="categoryModalTimeTitle">00:00 기록</span>
-        </h3>
+        <div class="flex items-center gap-2">
+          <button id="categoryBackBtn" onclick="showMainCategories()" class="hidden text-xs text-stone-400 hover:text-stone-700 font-bold">◀ 뒤로</button>
+          <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+            <span>⏱️</span> <span id="categoryModalTimeTitle">00:00 기록</span>
+          </h3>
+        </div>
         <button onclick="closeCategoryModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
       </div>
 
-      <!-- 카테고리 옵션 버튼 목록 -->
-      <div class="grid grid-cols-2 gap-2 text-xs">
-        <button onclick="selectCategory('☀️ 아침 루틴', 'routine')" class="p-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-left flex items-center gap-1.5">
-          <span>☀️</span> 루틴/기상
+      <!-- 1단계: 대분류 카테고리 목록 -->
+      <div id="categoryStep1" class="grid grid-cols-2 gap-2 text-xs">
+        <button onclick="openSubCategory('routine')" class="p-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-left flex items-center justify-between">
+          <span>☀️ 일상</span><span>›</span>
         </button>
-        <button onclick="selectCategory('🥗 식사/티타임', 'meal')" class="p-2.5 rounded-xl border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-900 font-bold text-left flex items-center gap-1.5">
-          <span>🥗</span> 식사/간식
+        <button onclick="openSubCategory('focus')" class="p-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-left flex items-center justify-between">
+          <span>💻 집중/일</span><span>›</span>
         </button>
-        <button onclick="selectCategory('💻 집중/작업', 'focus')" class="p-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-left flex items-center gap-1.5">
-          <span>💻</span> 집중/업무
+        <button onclick="openSubCategory('meal')" class="p-2.5 rounded-xl border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-900 font-bold text-left flex items-center justify-between">
+          <span>🥗 식사</span><span>›</span>
         </button>
-        <button onclick="selectCategory('🧶 뜨개/취미', 'hobby')" class="p-2.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-900 font-bold text-left flex items-center gap-1.5">
-          <span>🧶</span> 취미(뜨개·독서)
+        <button onclick="openSubCategory('hobby')" class="p-2.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-900 font-bold text-left flex items-center justify-between">
+          <span>🧶 취미</span><span>›</span>
         </button>
-        <button onclick="selectCategory('📖 독서모임', 'bookclub')" class="p-2.5 rounded-xl border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold text-left flex items-center gap-1.5">
-          <span>📖</span> 독서모임
+        <!-- 독서모임은 상세 없이 원클릭 바로 등록! -->
+        <button onclick="selectDirect('달보드레', 'bookclub')" class="p-2.5 rounded-xl border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold text-left flex items-center justify-between">
+          <span>📖 독서모임</span><span class="text-[10px] text-indigo-500 font-normal">즉시등록</span>
         </button>
-        <button onclick="selectCategory('☕ 일기/자기관리', 'selfcare')" class="p-2.5 rounded-xl border border-[#dac9ba] bg-[#fdf8f5] hover:bg-[#f6eee7] text-[#5c493c] font-bold text-left flex items-center gap-1.5">
-          <span>☕</span> 일기/자기관리
+        <button onclick="openSubCategory('selfcare')" class="p-2.5 rounded-xl border border-[#dac9ba] bg-[#fdf8f5] hover:bg-[#f6eee7] text-[#5c493c] font-bold text-left flex items-center justify-between">
+          <span>☕ 자기관리</span><span>›</span>
         </button>
-        <button onclick="selectCategory('🏃 운동/산책', 'workout')" class="p-2.5 rounded-xl border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-900 font-bold text-left flex items-center gap-1.5 col-span-2">
-          <span>🏃</span> 운동/산책/스트레칭
+        <button onclick="openSubCategory('workout')" class="p-2.5 rounded-xl border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-900 font-bold text-left flex items-center justify-between col-span-2">
+          <span>🏃 운동</span><span>›</span>
         </button>
       </div>
 
-      <!-- 직접 입력 영역 -->
-      <div class="pt-2 border-t border-stone-100 flex gap-1.5">
-        <input type="text" id="categoryCustomInput" placeholder="직접 입력..." class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-stone-400">
-        <button onclick="selectCustomInput()" class="bg-stone-800 text-white font-bold text-xs px-3 rounded-xl shrink-0">등록</button>
+      <!-- 2단계: 상세 항목 선택 영역 -->
+      <div id="categoryStep2" class="hidden space-y-3">
+        <div class="text-[11px] font-bold text-stone-500 flex items-center gap-1" id="subCategoryHeader">
+          <!-- 선택된 대분류 제목 -->
+        </div>
+
+        <!-- 2~3글자 압축 상세 버튼 그리드 -->
+        <div id="subCategoryButtons" class="grid grid-cols-3 gap-2 text-xs">
+          <!-- 동적 생성 -->
+        </div>
+
+        <!-- 세부 내용 직접 입력 -->
+        <div class="pt-2 border-t border-stone-100 flex gap-1.5">
+          <input type="text" id="categoryCustomInput" placeholder="직접 입력..." class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-stone-400">
+          <button onclick="selectCustomSubInput()" class="bg-stone-800 text-white font-bold text-xs px-3 rounded-xl shrink-0">등록</button>
+        </div>
       </div>
 
       <!-- 비우기 버튼 -->
@@ -555,15 +573,44 @@
       custom: 'border-stone-300 bg-stone-200 text-stone-800 font-bold'
     };
 
+    // 2~3글자 압축 상세 카테고리 목록
+    const SUB_CATEGORIES = {
+      routine: {
+        title: '☀️ 일상 세부 항목',
+        items: ['기상', '출근준비', '샤워', '목욕', '취침준비', '정리']
+      },
+      focus: {
+        title: '💻 집중/일 세부 항목',
+        items: ['출근', '업무', '회의', '공부', '퇴근']
+      },
+      meal: {
+        title: '🥗 식사 세부 항목',
+        items: ['아침', '점심', '저녁', '간식', '커피', '외식']
+      },
+      hobby: {
+        title: '🧶 취미 세부 항목',
+        items: ['뜨개', '독서', '그림', '쇼핑']
+      },
+      selfcare: {
+        title: '☕ 자기관리 세부 항목',
+        items: ['일기', '명상', '스트레칭', '스킨케어']
+      },
+      workout: {
+        title: '🏃 운동 세부 항목',
+        items: ['산책', '러닝', '홈트', '헬스']
+      }
+    };
+
     let currentDate = new Date().toISOString().slice(0, 10);
     let calYear = new Date().getFullYear();
     let calMonth = new Date().getMonth();
     let timetableViewMode = 'grid';
     let db = null;
 
-    // 현재 선택한 블록 좌표
+    // 현재 선택한 블록 좌표 및 대분류 카테고리 상태
     let activeHourStr = null;
     let activeBlockIdx = null;
+    let currentSelectedCategoryKey = null;
 
     // 실시간 구독 리스너 해제용 변수
     let unsubscribeDay = null;
@@ -763,22 +810,47 @@
       }
     }
 
-    // 🎨 카테고리 모달 열기/닫기
+    // 🎨 카테고리 2단계 모달 로직
     function openCategoryModal(hourStr, blockIdx) {
       activeHourStr = hourStr;
       activeBlockIdx = blockIdx;
       const min = blockIdx * 10;
       const timeStr = `${hourStr}:${min === 0 ? '00' : min}`;
       document.getElementById('categoryModalTimeTitle').innerText = `${timeStr} 일정 등록`;
-      document.getElementById('categoryCustomInput').value = '';
+      showMainCategories();
       document.getElementById('categoryModal').classList.remove('hidden');
     }
 
-    function closeCategoryModal() {
-      document.getElementById('categoryModal').classList.add('hidden');
+    function showMainCategories() {
+      document.getElementById('categoryStep1').classList.remove('hidden');
+      document.getElementById('categoryStep2').classList.add('hidden');
+      document.getElementById('categoryBackBtn').classList.add('hidden');
+      currentSelectedCategoryKey = null;
     }
 
-    function selectCategory(text, categoryKey) {
+    function openSubCategory(categoryKey) {
+      currentSelectedCategoryKey = categoryKey;
+      const conf = SUB_CATEGORIES[categoryKey];
+      if (!conf) return;
+
+      document.getElementById('categoryStep1').classList.add('hidden');
+      document.getElementById('categoryStep2').classList.remove('hidden');
+      document.getElementById('categoryBackBtn').classList.remove('hidden');
+
+      document.getElementById('subCategoryHeader').innerText = conf.title;
+      document.getElementById('categoryCustomInput').value = '';
+
+      const btnContainer = document.getElementById('subCategoryButtons');
+      const style = CATEGORY_STYLES[categoryKey];
+
+      btnContainer.innerHTML = conf.items.map(item => `
+        <button onclick="selectDirect('${item}', '${categoryKey}')" class="p-2.5 rounded-xl border ${style} hover:opacity-85 text-center text-xs truncate transition-all">
+          ${item}
+        </button>
+      `).join('');
+    }
+
+    function selectDirect(text, categoryKey) {
       if (activeHourStr !== null && activeBlockIdx !== null) {
         setBlockData(activeHourStr, activeBlockIdx, text, categoryKey);
         saveDayData();
@@ -786,10 +858,14 @@
       }
     }
 
-    function selectCustomInput() {
+    function selectCustomSubInput() {
       const val = document.getElementById('categoryCustomInput').value.trim();
       if (!val) return;
-      selectCategory(val, 'custom');
+      selectDirect(val, currentSelectedCategoryKey || 'custom');
+    }
+
+    function closeCategoryModal() {
+      document.getElementById('categoryModal').classList.add('hidden');
     }
 
     function clearCurrentBlock() {
@@ -858,7 +934,7 @@
       let hour = now.getHours();
       if (hour < 7) hour = 7;
       const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
-      const routines = ["🚽화장실", "⚖️체중", "💊비타민", "🥗아침식사", "🎒외출준비"];
+      const routines = ["화장실", "체중", "비타민", "아침", "준비"];
       routines.forEach((r, idx) => {
         if (idx < 6) setBlockData(hourStr, idx, r, 'routine');
       });
@@ -901,9 +977,9 @@
       if (hour < 7) hour = 7;
       const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
       const block = Math.floor(now.getMinutes() / 10);
-      setBlockData(hourStr, block, "🧶뜨개질", 'hobby');
-      if (block + 1 < 6) setBlockData(hourStr, block + 1, "🧶뜨개질", 'hobby');
-      if (block + 2 < 6) setBlockData(hourStr, block + 2, "🧶뜨개질", 'hobby');
+      setBlockData(hourStr, block, "뜨개", 'hobby');
+      if (block + 1 < 6) setBlockData(hourStr, block + 1, "뜨개", 'hobby');
+      if (block + 2 < 6) setBlockData(hourStr, block + 2, "뜨개", 'hobby');
       saveDayData();
       if (timetableViewMode === 'card') renderCardTimeline();
     }
@@ -914,9 +990,9 @@
       if (hour < 7) hour = 7;
       const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
       const block = Math.floor(now.getMinutes() / 10);
-      setBlockData(hourStr, block, "📚독서", 'hobby');
-      if (block + 1 < 6) setBlockData(hourStr, block + 1, "📚독서", 'hobby');
-      if (block + 2 < 6) setBlockData(hourStr, block + 2, "📚독서", 'hobby');
+      setBlockData(hourStr, block, "독서", 'hobby');
+      if (block + 1 < 6) setBlockData(hourStr, block + 1, "독서", 'hobby');
+      if (block + 2 < 6) setBlockData(hourStr, block + 2, "독서", 'hobby');
       saveDayData();
       if (timetableViewMode === 'card') renderCardTimeline();
     }
@@ -1072,7 +1148,7 @@
       }
       document.getElementById('dailyMemo').value = data.memo || '';
 
-      // 타임테이블 복원 (이전 단순 텍스트 구조 호환 지원)
+      // 타임테이블 복원
       if (data.timetable) {
         Object.keys(data.timetable).forEach(k => {
           const [h, b] = k.split('_');
