@@ -72,7 +72,7 @@
           <div class="flex items-center gap-1.5">
             <select id="todayWeatherSelect" onchange="saveDayData()" class="bg-stone-50 border border-stone-200 rounded-lg text-[10px] px-2 py-0.5 text-stone-600 focus:outline-none cursor-pointer">
               <option value="">날씨 선택</option>
-              <option value="맑음 ☀️️">맑음 ☀️</option>
+              <option value="맑음 ☀️">맑음 ☀️</option>
               <option value="구름 조금 ⛅">구름 조금 ⛅</option>
               <option value="흐림 ☁️">흐림 ☁️</option>
               <option value="비 🌧️">비 🌧️</option>
@@ -91,11 +91,11 @@
         <button onclick="changeDate(1)" class="p-1.5 text-stone-400 hover:text-stone-700 font-bold">▶</button>
       </div>
 
-      <!-- ⭐ 오늘의 할 일 (Today's Tasks - 자동 이월 연동) -->
+      <!-- ⭐ 오늘의 할 일 (자동 이월 연동) -->
       <div class="bg-white border-2 border-amber-200/80 rounded-2xl p-3.5 shadow-xs">
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-            <span class="text-amber-500">⭐</span> 오늘의 할 일 (Today's Tasks)
+            <span class="text-amber-500">⭐</span> 오늘의 할 일
           </h3>
           <span class="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-medium" id="todayTaskCount">0건</span>
         </div>
@@ -111,7 +111,7 @@
         <div class="flex items-center justify-between mb-3 border-b border-stone-100 pb-2.5">
           <div>
             <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-              <span>⏱️</span> 10분 타임테이블 (07:00 ~ 24:00)
+              <span>⏱️</span> 타임테이블 (07:00 ~ 24:00)
             </h3>
             <p class="text-[10px] text-stone-400 mt-0.5">칸을 누르면 소요시간별로 한 번에 등록돼요</p>
           </div>
@@ -131,43 +131,49 @@
         <div id="timetableCardView" class="hidden space-y-2 max-h-72 overflow-y-auto pr-1"></div>
       </div>
 
-      <!-- 🌅 아침 루틴 -->
-      <div class="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-xs">
-        <div class="flex items-center justify-between mb-2">
+      <!-- ☀️ 아침 루틴 (저녁 루틴 틀과 통일 & 체크 시 자동 연동) -->
+      <div class="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-xs space-y-2.5">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-            <span class="text-amber-500">☀️️</span> 아침 50분 루틴
+            <span class="text-amber-500">☀️</span> 아침 루틴
           </h3>
           <button onclick="completeMorningRoutine()" class="text-[10px] bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap">
             ⚡ 루틴 일괄완료
           </button>
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-xs">
-          <label class="flex items-center gap-1.5 p-2 bg-stone-50 rounded-xl border border-stone-100 cursor-pointer">
-            <input type="checkbox" id="m_routine_1" onchange="saveDayData()" class="rounded text-amber-500">
-            <span class="text-[11px] whitespace-nowrap">🚽 화장실</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-2 bg-stone-50 rounded-xl border border-stone-100 cursor-pointer">
-            <input type="checkbox" id="m_routine_2" onchange="saveDayData()" class="rounded text-amber-500">
-            <span class="text-[11px] whitespace-nowrap">⚖️ 체중체크</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-2 bg-stone-50 rounded-xl border border-stone-100 cursor-pointer">
-            <input type="checkbox" id="m_routine_3" onchange="saveDayData()" class="rounded text-amber-500">
-            <span class="text-[11px] whitespace-nowrap">💊 비타민</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-2 bg-stone-50 rounded-xl border border-stone-100 cursor-pointer">
-            <input type="checkbox" id="m_routine_4" onchange="saveDayData()" class="rounded text-amber-500">
-            <span class="text-[11px] whitespace-nowrap">🥗 아침식사</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-2 bg-stone-50 rounded-xl border border-stone-100 cursor-pointer col-span-2 sm:col-span-1">
-            <input type="checkbox" id="m_routine_5" onchange="saveDayData()" class="rounded text-amber-500">
-            <span class="text-[11px] whitespace-nowrap">🎒 외출준비</span>
-          </label>
+
+        <div class="space-y-2 text-xs">
+          <!-- 기상·비움 -->
+          <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
+            <span class="text-[11px] font-bold text-stone-600">🌤️ 기상·비움</span>
+            <div class="flex items-center gap-2">
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="m_routine_1" onchange="onMorningCheckChange(1)"><span class="text-[11px]">화장실</span></label>
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="m_routine_water" onchange="onMorningCheckChange('water')"><span class="text-[11px]">미온수 한 잔</span></label>
+            </div>
+          </div>
+          <!-- 바디·건강 -->
+          <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
+            <span class="text-[11px] font-bold text-stone-600">⚖️ 바디·건강</span>
+            <div class="flex items-center gap-2">
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="m_routine_2" onchange="onMorningCheckChange(2)"><span class="text-[11px]">체중체크</span></label>
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="m_routine_3" onchange="onMorningCheckChange(3)"><span class="text-[11px]">비타민</span></label>
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="m_routine_4" onchange="onMorningCheckChange(4)"><span class="text-[11px]">아침식사</span></label>
+            </div>
+          </div>
+          <!-- 외출·출근 -->
+          <div class="p-2 bg-amber-50/50 rounded-xl border border-amber-100 flex flex-wrap items-center justify-between gap-1">
+            <span class="text-[11px] font-bold text-amber-800">🎒 외출·출근</span>
+            <div class="flex items-center gap-2">
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="m_routine_bed" onchange="onMorningCheckChange('bed')"><span class="text-[11px]">이부자리 정리</span></label>
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="m_routine_5" onchange="onMorningCheckChange(5)"><span class="text-[11px]">출근준비</span></label>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- 🌙 저녁 루틴 -->
-      <div class="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-xs">
-        <div class="flex items-center justify-between mb-2">
+      <!-- 🌙 저녁 루틴 (항목 세부 분리 & 체크 시 자동 연동) -->
+      <div class="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-xs space-y-2.5">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
             <span class="text-indigo-400">🌙</span> 저녁 루틴
           </h3>
@@ -180,25 +186,27 @@
         <div class="space-y-1.5 text-xs" id="eveningRoutineList">
           <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
             <span class="text-[11px] font-bold text-stone-600">🧹 정리·바디</span>
-            <div class="flex items-center gap-2">
-              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_clean" onchange="saveDayData()"><span class="text-[11px]">정리·설거지</span></label>
-              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_shower" onchange="saveDayData()"><span class="text-[11px]">샤워</span></label>
-              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_skin" onchange="saveDayData()"><span class="text-[11px]">스킨케어</span></label>
+            <div class="flex items-center gap-2 flex-wrap">
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_clean" onchange="onEveningCheckChange('clean')"><span class="text-[11px]">정리</span></label>
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_dish" onchange="onEveningCheckChange('dish')"><span class="text-[11px]">설거지</span></label>
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_shower" onchange="onEveningCheckChange('shower')"><span class="text-[11px]">샤워</span></label>
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_skin" onchange="onEveningCheckChange('skin')"><span class="text-[11px]">스킨케어</span></label>
             </div>
           </div>
           <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
             <span class="text-[11px] font-bold text-stone-600">🌿 반려·어항</span>
             <div class="flex items-center gap-2">
-              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_pet" onchange="saveDayData()"><span class="text-[11px]">냥냥타임</span></label>
-              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_plant" onchange="saveDayData()"><span class="text-[11px]">어항·화분</span></label>
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_pet" onchange="onEveningCheckChange('pet')"><span class="text-[11px]">냥냥타임</span></label>
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_fish" onchange="onEveningCheckChange('fish')"><span class="text-[11px]">어항</span></label>
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_plant" onchange="onEveningCheckChange('plant')"><span class="text-[11px]">화분</span></label>
             </div>
           </div>
           <div class="p-2 bg-indigo-50/50 rounded-xl border border-indigo-100 flex flex-wrap items-center justify-between gap-1">
             <span class="text-[11px] font-bold text-indigo-800" id="evening3Label">🧶 마무리</span>
             <div class="flex items-center gap-2" id="evening3Options">
-              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_read" onchange="saveDayData()"><span class="text-[11px]">독서</span></label>
-              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_knit" onchange="saveDayData()"><span class="text-[11px]">뜨개</span></label>
-              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_diary" onchange="saveDayData()"><span class="text-[11px]">일기</span></label>
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_read" onchange="onEveningCheckChange('read')"><span class="text-[11px]">독서</span></label>
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_knit" onchange="onEveningCheckChange('knit')"><span class="text-[11px]">뜨개</span></label>
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_diary" onchange="onEveningCheckChange('diary')"><span class="text-[11px]">일기</span></label>
             </div>
           </div>
         </div>
@@ -303,11 +311,11 @@
         </div>
       </div>
 
-      <!-- 🌿 데일리 오늘 해빗 체크리스트 -->
+      <!-- 🌿 오늘의 습관 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-            <span>🌿</span> 오늘의 습관 실천 (Daily Habits)
+            <span>🌿</span> 오늘의 습관
           </h3>
           <button onclick="switchTab('tracker')" class="text-[10px] text-sage-600 hover:text-sage-700 font-bold">
             트래커 전체보기 ↗
@@ -316,10 +324,10 @@
         <div id="dayHabitCheckList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
       </div>
 
-      <!-- 🧶 데일리 뜨개 & 📚 독서 카드 -->
+      <!-- 🧶 데일리 뜨개 & 📚 독서 카드 (스톱워치 타이머 장착) -->
       <div class="grid grid-cols-2 gap-3">
         <!-- 뜨개 위젯 -->
-        <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs flex flex-col justify-between">
+        <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs flex flex-col justify-between space-y-2">
           <div>
             <div class="flex items-center justify-between mb-1.5">
               <span class="text-xs font-bold text-rose-700 flex items-center gap-1">🧶 오늘의 뜨개</span>
@@ -335,13 +343,19 @@
               <button onclick="updateKnitRow(1)" class="w-6 h-6 rounded-lg bg-white border border-rose-200 font-bold text-rose-800 text-xs">+</button>
             </div>
           </div>
-          <button onclick="completeKnitSessionToTable()" class="mt-2 text-[10px] bg-rose-100 hover:bg-rose-200 text-rose-800 font-semibold py-1 rounded-lg w-full">
-            ⏱️ 뜨개 30분 등록
-          </button>
+          <!-- 스톱워치 타이머 버튼 -->
+          <div class="grid grid-cols-2 gap-1">
+            <button id="knitTimerBtn" onclick="toggleKnitTimer()" class="text-[10px] bg-rose-500 hover:bg-rose-600 text-white font-bold py-1.5 rounded-lg shadow-2xs">
+              시작 ▶
+            </button>
+            <button onclick="completeKnitSessionToTable()" class="text-[10px] bg-rose-100 hover:bg-rose-200 text-rose-800 font-semibold py-1.5 rounded-lg">
+              +30분
+            </button>
+          </div>
         </div>
 
         <!-- 독서 위젯 -->
-        <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs flex flex-col justify-between">
+        <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs flex flex-col justify-between space-y-2">
           <div>
             <div class="flex items-center justify-between mb-1.5">
               <span class="text-xs font-bold text-emerald-800 flex items-center gap-1">📚 오늘의 독서</span>
@@ -350,40 +364,46 @@
             <input type="text" id="bookCurrentTitle" placeholder="읽고 있는 책 제목..." onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded px-1.5 py-1 text-xs mb-2">
             <input type="text" id="bookTodayPages" placeholder="오늘 읽은 페이지 (p.12~45)" onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded px-1.5 py-1 text-xs">
           </div>
-          <button onclick="completeBookSessionToTable()" class="mt-2 text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-semibold py-1 rounded-lg w-full">
-            ⏱️ 독서 30분 등록
-          </button>
+          <!-- 스톱워치 타이머 버튼 -->
+          <div class="grid grid-cols-2 gap-1">
+            <button id="bookTimerBtn" onclick="toggleBookTimer()" class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg shadow-2xs">
+              시작 ▶
+            </button>
+            <button onclick="completeBookSessionToTable()" class="text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-semibold py-1.5 rounded-lg">
+              +30분
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- 📝 데일리 투두 & 스마트 반복 루틴 -->
+      <!-- 📝 데일리 투두 (모바일 삐져나옴 완벽 방지 2단 폼) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
             <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-              <span>📝</span> 데일리 투두 (Daily To-Do)
+              <span>📝</span> 데일리 투두
             </h3>
             <p class="text-[10px] text-stone-400 mt-0.5">매일/요일/월별 반복 일정을 놓치지 마세요</p>
           </div>
           <span class="text-[10px] text-sage-700 bg-sage-50 px-2 py-0.5 rounded-full font-medium" id="routineTodoCount">0건</span>
         </div>
 
-        <!-- 투두 등록 폼 -->
+        <!-- 투두 등록 폼 (상하 2단 구조로 모바일 튀어나옴 완벽 해결) -->
         <div class="space-y-2 bg-stone-50 p-2.5 rounded-xl border border-stone-200">
-          <div class="flex gap-1.5">
-            <input type="text" id="newRoutineTodoInput" placeholder="새로운 할 일 또는 고정 루틴..." class="flex-1 bg-white border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-400" onkeypress="if(event.key==='Enter') addRoutineTodo()">
-            <select id="routineTypeSelect" onchange="onRoutineTypeChange(this.value)" class="bg-white border border-stone-200 rounded-xl text-[11px] px-2 py-1 text-stone-700 font-medium cursor-pointer">
+          <input type="text" id="newRoutineTodoInput" placeholder="새로운 할 일 또는 고정 루틴..." class="w-full bg-white border border-stone-200 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-amber-400" onkeypress="if(event.key==='Enter') addRoutineTodo()">
+          <div class="flex items-center gap-1.5">
+            <select id="routineTypeSelect" onchange="onRoutineTypeChange(this.value)" class="flex-1 bg-white border border-stone-200 rounded-xl text-[11px] px-2 py-1.5 text-stone-700 font-medium cursor-pointer">
               <option value="none">오늘만</option>
               <option value="daily">매일</option>
               <option value="weekly">요일지정</option>
               <option value="monthly">매월 1일</option>
               <option value="quarterly">분기별 1일</option>
             </select>
-            <button onclick="addRoutineTodo()" class="bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs px-3 rounded-xl transition-colors shrink-0">추가</button>
+            <button onclick="addRoutineTodo()" class="bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs px-4 py-1.5 rounded-xl transition-colors shrink-0">추가</button>
           </div>
           <!-- 요일 다중 선택 칩 (weekly 선택 시) -->
           <div id="weeklyDaysSelector" class="hidden flex items-center gap-1 pt-1 overflow-x-auto text-[10px]">
-            <span class="text-stone-400 shrink-0 font-medium mr-1">반복 요일:</span>
+            <span class="text-stone-400 shrink-0 font-medium mr-1">반복:</span>
             <button type="button" onclick="toggleWeekDayChip(1)" id="wd_chip_1" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">월</button>
             <button type="button" onclick="toggleWeekDayChip(2)" id="wd_chip_2" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">화</button>
             <button type="button" onclick="toggleWeekDayChip(3)" id="wd_chip_3" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">수</button>
@@ -404,7 +424,6 @@
         <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs space-y-2">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-amber-900 flex items-center gap-1">👗 오늘의 OOTD</span>
-            <!-- 컬러 클립 뱃지 -->
             <div class="flex items-center gap-1">
               <label for="ootdColorInput" title="옷 대표 색상 지정" class="cursor-pointer flex items-center gap-1">
                 <span id="ootdColorBadge" class="w-4 h-4 rounded-full border border-stone-300 shadow-2xs inline-block bg-[#ecdcc9]"></span>
@@ -420,7 +439,6 @@
         <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs space-y-2">
           <span class="text-xs font-bold text-indigo-900 flex items-center gap-1">🎵 오늘의 노래</span>
           <div class="flex items-center gap-2">
-            <!-- 앨범아트 -->
             <img id="bgmCoverImg" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&auto=format&fit=crop&q=60" alt="BGM" class="w-10 h-10 rounded-lg object-cover shadow-2xs border border-stone-200 shrink-0">
             <div class="flex-1 min-w-0">
               <input type="text" id="bgmSearchInput" placeholder="곡명 검색 (Enter)..." class="w-full bg-stone-50 border border-stone-100 rounded-lg px-2 py-1 text-xs focus:outline-none truncate" onkeypress="if(event.key==='Enter') searchMusicTrack()">
@@ -430,7 +448,7 @@
         </div>
       </div>
 
-      <!-- 📝 한 줄 일기 & 밴드 일기 원클릭 복사 -->
+      <!-- 📖 한 줄 일기 & 밴드 일기 원클릭 복사 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <h3 class="text-xs font-bold text-stone-700">📖 한 줄 일기 & 감사한 일</h3>
@@ -441,7 +459,7 @@
         <textarea id="dailyMemo" placeholder="오늘 하루 감사한 일, 한 줄 일기, 사소한 생각..." onchange="saveDayData()" class="w-full h-20 bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-stone-400 resize-none"></textarea>
       </div>
 
-      <!-- 🐾 포근한 우측 하단 D-Day 바 -->
+      <!-- 🐾 우측 하단 D-Day 바 -->
       <div class="flex justify-end">
         <div class="inline-flex items-center gap-2 bg-warm-50 border border-stone-200 px-3 py-1.5 rounded-full text-[11px] text-stone-500 shadow-2xs">
           <span>🐾 여름이 <b class="text-stone-700" id="ddaySummer">D+0</b></span>
@@ -452,7 +470,7 @@
 
     </section>
 
-    <!-- 2. 캘린더 페이지 (VIEW: CALENDAR - 약속/휴가 & 알록달록 스탬프) -->
+    <!-- 2. 캘린더 페이지 (VIEW: CALENDAR) -->
     <section id="view-calendar" class="hidden space-y-4">
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div class="flex items-center justify-between mb-3 border-b border-stone-100 pb-2.5">
@@ -471,7 +489,7 @@
         <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
       </div>
 
-      <!-- 스마트 기념일 박스 (매년 자동 반복) -->
+      <!-- 기념일 박스 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
@@ -486,12 +504,12 @@
     <!-- 3. 트래커 페이지 (VIEW: TRACKER) -->
     <section id="view-tracker" class="hidden space-y-4">
       
-      <!-- 🎨 무드 트래커 -->
+      <!-- 무드 트래커 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div class="flex items-center justify-between mb-2 border-b border-stone-100 pb-2">
           <div>
             <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-              <span>🎨</span> 무드 트래커 (Mood Tracker)
+              <span>🎨</span> 무드 트래커
             </h3>
             <p class="text-[10px] text-stone-400 mt-0.5">매일의 마음 날씨를 채워요</p>
           </div>
@@ -504,12 +522,12 @@
         <div id="moodGrid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
       </div>
 
-      <!-- 🌿 해빗 트래커 (주간 ↔ 월간 뷰 토글 & 멈춤 관리) -->
+      <!-- 해빗 트래커 (텍스트 클릭 수정 및 톤다운 멈춤 버튼 적용) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
             <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-              <span>🌿</span> 해빗 트래커 (Habit Tracker)
+              <span>🌿</span> 해빗 트래커
             </h3>
             <p class="text-[10px] text-stone-400 mt-0.5">꾸준한 작은 습관의 힘</p>
           </div>
@@ -525,7 +543,7 @@
         <!-- 주간 뷰 -->
         <div id="habitWeekSection" class="space-y-2">
           <div class="flex items-center justify-between px-2 text-[10px] font-semibold text-stone-400">
-            <span>습관 이름</span>
+            <span>습관 이름 (클릭하여 수정)</span>
             <div class="flex gap-1 text-center font-mono">
               <span class="w-5">월</span><span class="w-5">화</span><span class="w-5">수</span><span class="w-5">목</span><span class="w-5">금</span><span class="w-5 text-sky-500">토</span><span class="w-5 text-rose-500">일</span>
             </div>
@@ -533,7 +551,7 @@
           <div id="habitTable" class="space-y-1.5 text-xs"></div>
         </div>
 
-        <!-- 월간 뷰 (선택 습관 캘린더) -->
+        <!-- 월간 뷰 -->
         <div id="habitMonthSection" class="hidden space-y-2.5">
           <div class="flex items-center justify-between bg-stone-50 p-2 rounded-xl border border-stone-100">
             <select id="habitSelectForMonth" onchange="renderHabitMonthGrid()" class="text-xs bg-white border border-stone-200 rounded-lg px-2 py-1 font-bold text-stone-700 cursor-pointer"></select>
@@ -556,12 +574,12 @@
         </div>
       </div>
 
-      <!-- 📚 독서 책장 -->
+      <!-- 독서 책장 -->
       <div id="bookArchiveSection" class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div class="flex items-center justify-between mb-3 border-b border-stone-100 pb-2">
           <div>
             <h3 class="font-bold text-stone-800 text-xs flex items-center gap-1.5">
-              <span>📚</span> 독서 책장 (My Library)
+              <span>📚</span> 독서 책장
             </h3>
             <p class="text-[10px] text-stone-400 mt-0.5">시작일 ~ 완독일 & 서평 아카이브</p>
           </div>
@@ -578,7 +596,7 @@
         <div id="bookshelfList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
       </div>
 
-      <!-- 🧶 뜨개 쇼룸 -->
+      <!-- 뜨개 쇼룸 -->
       <div id="knitShowroomSection" class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div class="flex items-center justify-between mb-3 border-b border-stone-100 pb-2">
           <div>
@@ -679,12 +697,12 @@
     </div>
   </div>
 
-  <!-- 🗓️ 캘린더 약속 / 연차·휴가 등록 모달 -->
+  <!-- 🗓️ 캘린더 약속 / 휴가 등록 모달 -->
   <div id="calendarEventModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
       <div class="flex items-center justify-between border-b border-stone-100 pb-2">
         <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-          <span>🗓️️</span> 캘린더 일정/휴가 등록
+          <span>🗓</span> 캘린더 일정/휴가 등록
         </h3>
         <button onclick="closeCalendarEventModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
       </div>
@@ -775,8 +793,12 @@
     let selectedDurationMinutes = 10;
     let currentSelectedCategoryKey = null;
 
-    let selectedWeeklyDays = [1, 2, 3, 4, 0]; // 기본: 월화수목일
+    let selectedWeeklyDays = [1, 2, 3, 4, 0];
     let calEventType = 'plan';
+
+    // 타이머 상태 변수
+    let knitTimerStartTime = null;
+    let bookTimerStartTime = null;
 
     let unsubscribeDay = null;
     let unsubscribeTasks = null;
@@ -805,7 +827,6 @@
       calculateDDays();
     });
 
-    // 1. Firebase 자동 초기화
     function initFirebase() {
       try {
         if (!firebase.apps.length) {
@@ -821,7 +842,6 @@
       }
     }
 
-    // 2. 탭 전환 & 숏컷
     function switchTab(tab, subAction) {
       ['day', 'calendar', 'tracker'].forEach(t => {
         document.getElementById(`view-${t}`).classList.add('hidden');
@@ -843,7 +863,6 @@
       }
     }
 
-    // 3. 날짜 변경 및 실시간 구독 갱신
     function onDateChanged(val) {
       currentDate = val;
       updateDateLabel();
@@ -877,13 +896,10 @@
         `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
     }
 
-    // 4. 오늘의 할 일 & 미완료 자동 이월 (Migration, '>')
+    // 오늘의 할 일 및 스마트 이월
     function subscribeTodayTasks(dateStr) {
       if (unsubscribeTasks) unsubscribeTasks();
-
-      // 전날 미완료 할 일 스마트 이월 처리
       migrateUnfinishedTasks(dateStr);
-
       renderTodayTasks(getTodayTasksLocal(dateStr));
 
       if (!db) return;
@@ -894,12 +910,12 @@
             saveTodayTasksLocal(dateStr, tasks);
             renderTodayTasks(tasks);
           }
-        }, err => console.error("할 일 구독 오류:", err));
+        }, err => console.error(err));
     }
 
     function migrateUnfinishedTasks(todayStr) {
       const all = JSON.parse(localStorage.getItem('mingle_today_tasks') || '{}');
-      if (all[todayStr] && all[todayStr].length > 0) return; // 이미 오늘 작성된 할 일이 있으면 패스
+      if (all[todayStr] && all[todayStr].length > 0) return;
 
       const parts = todayStr.split('-');
       const prevD = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10) - 1);
@@ -911,11 +927,7 @@
       const unfinished = prevTasks.filter(t => !t.done);
 
       if (unfinished.length > 0) {
-        const migrated = unfinished.map(t => ({
-          ...t,
-          id: Date.now() + Math.random(),
-          isMigrated: true
-        }));
+        const migrated = unfinished.map(t => ({ ...t, id: Date.now() + Math.random(), isMigrated: true }));
         all[todayStr] = migrated;
         localStorage.setItem('mingle_today_tasks', JSON.stringify(all));
         if (db) db.collection('today_tasks').doc(todayStr).set({ tasks: migrated }).catch(console.error);
@@ -983,7 +995,7 @@
       `).join('');
     }
 
-    // 5. 타임테이블 (소요 시간 다중 블록 지원)
+    // 타임테이블
     function setTimetableView(mode) {
       timetableViewMode = mode;
       if (mode === 'grid') {
@@ -1032,7 +1044,7 @@
     function openCategoryModal(hourStr, blockIdx) {
       activeHourStr = hourStr;
       activeBlockIdx = blockIdx;
-      setSessionDuration(10); // 기본 10분
+      setSessionDuration(10);
       const min = blockIdx * 10;
       const timeStr = `${hourStr}:${min === 0 ? '00' : min}`;
       document.getElementById('categoryModalTimeTitle').innerText = `${timeStr} 일정 등록`;
@@ -1068,7 +1080,6 @@
       `).join('');
     }
 
-    // 소요 시간에 맞춰 연속 블록 일괄 등록
     function selectDirect(text, categoryKey) {
       if (activeHourStr !== null && activeBlockIdx !== null) {
         const blocksCount = Math.max(1, Math.round(selectedDurationMinutes / 10));
@@ -1157,19 +1168,57 @@
       renderCardTimeline();
     }
 
-    // 6. 루틴 일괄 등록
-    function completeMorningRoutine() {
-      [1,2,3,4,5].forEach(i => { document.getElementById(`m_routine_${i}`).checked = true; });
+    // 아침 루틴 & 저녁 루틴 체크 시 타임테이블 자동 연동
+    function autoFillTimetableNow(text, category = 'routine') {
       const now = new Date();
-      let hour = now.getHours();
-      if (hour < 7) hour = 7;
-      const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
-      const routines = ["화장실", "체중", "비타민", "아침", "준비"];
-      routines.forEach((r, idx) => {
-        if (idx < 6) setBlockData(hourStr, idx, r, 'routine');
-      });
+      let h = now.getHours();
+      if (h < 7) h = 7;
+      if (h > 24) h = 24;
+      const hStr = h < 10 ? `0${h}` : `${h}`;
+      const b = Math.floor(now.getMinutes() / 10);
+      setBlockData(hStr, b, text, category);
       saveDayData();
       if (timetableViewMode === 'card') renderCardTimeline();
+    }
+
+    function onMorningCheckChange(key) {
+      const chk = document.getElementById(key === 1 ? 'm_routine_1' : key === 2 ? 'm_routine_2' : key === 3 ? 'm_routine_3' : key === 4 ? 'm_routine_4' : key === 5 ? 'm_routine_5' : key === 'water' ? 'm_routine_water' : 'm_routine_bed')?.checked;
+      if (chk) {
+        if (key === 4) autoFillTimetableNow('아침식사', 'meal');
+        else if (key === 5) autoFillTimetableNow('출근준비', 'routine');
+      }
+      saveDayData();
+    }
+
+    function onEveningCheckChange(key) {
+      const map = {
+        clean: { id: 'e_rot_clean', text: '정리', cat: 'routine' },
+        dish: { id: 'e_rot_dish', text: '설거지', cat: 'routine' },
+        shower: { id: 'e_rot_shower', text: '샤워', cat: 'routine' },
+        skin: { id: 'e_rot_skin', text: '스킨케어', cat: 'selfcare' },
+        pet: { id: 'e_rot_pet', text: '냥냥타임', cat: 'routine' },
+        fish: { id: 'e_rot_fish', text: '어항', cat: 'routine' },
+        plant: { id: 'e_rot_plant', text: '화분', cat: 'routine' },
+        club: { id: 'e_rot_club', text: '달보드레', cat: 'bookclub' },
+        read: { id: 'e_rot_read', text: '독서', cat: 'hobby' },
+        knit: { id: 'e_rot_knit', text: '뜨개', cat: 'hobby' },
+        diary: { id: 'e_rot_diary', text: '일기', cat: 'selfcare' }
+      };
+      const item = map[key];
+      if (item) {
+        const chk = document.getElementById(item.id)?.checked;
+        if (chk) autoFillTimetableNow(item.text, item.cat);
+      }
+      saveDayData();
+    }
+
+    function completeMorningRoutine() {
+      ['m_routine_1', 'm_routine_water', 'm_routine_2', 'm_routine_3', 'm_routine_4', 'm_routine_bed', 'm_routine_5'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = true;
+      });
+      autoFillTimetableNow('아침루틴', 'routine');
+      saveDayData();
     }
 
     function toggleBookClubMode() {
@@ -1179,16 +1228,16 @@
       if (isClub) {
         label.innerText = '📖 독서모임';
         opt.innerHTML = `
-          <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_club" onchange="saveDayData()"><span class="text-[11px] text-indigo-700 font-bold">달보드레</span></label>
-          <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_knit" onchange="saveDayData()"><span class="text-[11px]">뜨개</span></label>
-          <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_diary" onchange="saveDayData()"><span class="text-[11px]">일기</span></label>
+          <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_club" onchange="onEveningCheckChange('club')"><span class="text-[11px] text-indigo-700 font-bold">달보드레</span></label>
+          <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_knit" onchange="onEveningCheckChange('knit')"><span class="text-[11px]">뜨개</span></label>
+          <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_diary" onchange="onEveningCheckChange('diary')"><span class="text-[11px]">일기</span></label>
         `;
       } else {
         label.innerText = '🧶 마무리';
         opt.innerHTML = `
-          <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_read" onchange="saveDayData()"><span class="text-[11px]">독서</span></label>
-          <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_knit" onchange="saveDayData()"><span class="text-[11px]">뜨개</span></label>
-          <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_diary" onchange="saveDayData()"><span class="text-[11px]">일기</span></label>
+          <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_read" onchange="onEveningCheckChange('read')"><span class="text-[11px]">독서</span></label>
+          <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_knit" onchange="onEveningCheckChange('knit')"><span class="text-[11px]">뜨개</span></label>
+          <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" id="e_rot_diary" onchange="onEveningCheckChange('diary')"><span class="text-[11px]">일기</span></label>
         `;
       }
       saveDayData();
@@ -1201,33 +1250,62 @@
       saveDayData();
     }
 
+    // 뜨개 & 독서 실시간 스톱워치 타이머
+    function toggleKnitTimer() {
+      const btn = document.getElementById('knitTimerBtn');
+      if (!knitTimerStartTime) {
+        knitTimerStartTime = new Date();
+        btn.innerText = "종료 ⏹";
+        btn.className = "text-[10px] bg-rose-700 hover:bg-rose-800 text-white font-bold py-1.5 rounded-lg shadow-2xs animate-pulse";
+      } else {
+        const endTime = new Date();
+        const diffMins = Math.round((endTime - knitTimerStartTime) / (1000 * 60));
+        knitTimerStartTime = null;
+        btn.innerText = "시작 ▶";
+        btn.className = "text-[10px] bg-rose-500 hover:bg-rose-600 text-white font-bold py-1.5 rounded-lg shadow-2xs";
+
+        if (diffMins > 0) {
+          selectedDurationMinutes = diffMins;
+          selectDirect("뜨개", "hobby");
+          alert(`🧶 총 ${diffMins}분 동안 뜨개 완료! 타임테이블에 연속 기록되었어요 ✨`);
+        }
+      }
+    }
+
+    function toggleBookTimer() {
+      const btn = document.getElementById('bookTimerBtn');
+      if (!bookTimerStartTime) {
+        bookTimerStartTime = new Date();
+        btn.innerText = "종료 ⏹";
+        btn.className = "text-[10px] bg-emerald-800 hover:bg-emerald-900 text-white font-bold py-1.5 rounded-lg shadow-2xs animate-pulse";
+      } else {
+        const endTime = new Date();
+        const diffMins = Math.round((endTime - bookTimerStartTime) / (1000 * 60));
+        bookTimerStartTime = null;
+        btn.innerText = "시작 ▶";
+        btn.className = "text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg shadow-2xs";
+
+        if (diffMins > 0) {
+          selectedDurationMinutes = diffMins;
+          selectDirect("독서", "hobby");
+          alert(`📚 총 ${diffMins}분 동안 독서 완료! 타임테이블에 연속 기록되었어요 ✨`);
+        }
+      }
+    }
+
     function completeKnitSessionToTable() {
-      const now = new Date();
-      let hour = now.getHours();
-      if (hour < 7) hour = 7;
-      const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
-      const block = Math.floor(now.getMinutes() / 10);
-      setBlockData(hourStr, block, "뜨개", 'hobby');
-      if (block + 1 < 6) setBlockData(hourStr, block + 1, "뜨개", 'hobby');
-      if (block + 2 < 6) setBlockData(hourStr, block + 2, "뜨개", 'hobby');
-      saveDayData();
-      if (timetableViewMode === 'card') renderCardTimeline();
+      selectedDurationMinutes = 30;
+      selectDirect("뜨개", 'hobby');
+      alert("🧶 뜨개 30분이 타임테이블에 기록되었습니다!");
     }
 
     function completeBookSessionToTable() {
-      const now = new Date();
-      let hour = now.getHours();
-      if (hour < 7) hour = 7;
-      const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
-      const block = Math.floor(now.getMinutes() / 10);
-      setBlockData(hourStr, block, "독서", 'hobby');
-      if (block + 1 < 6) setBlockData(hourStr, block + 1, "독서", 'hobby');
-      if (block + 2 < 6) setBlockData(hourStr, block + 2, "독서", 'hobby');
-      saveDayData();
-      if (timetableViewMode === 'card') renderCardTimeline();
+      selectedDurationMinutes = 30;
+      selectDirect("독서", 'hobby');
+      alert("📚 독서 30분이 타임테이블에 기록되었습니다!");
     }
 
-    // 7. 데일리 투두 & 스마트 반복 (매일, 요일지정, 1일, 분기)
+    // 데일리 투두
     function onRoutineTypeChange(val) {
       const selector = document.getElementById('weeklyDaysSelector');
       if (val === 'weekly') {
@@ -1334,7 +1412,6 @@
       const dayData = getDayDataLocal(currentDate);
       const checks = dayData.routineChecks || {};
 
-      // 조건 매칭 필터링
       const activeRules = rules.filter(r => {
         if (r.type === 'none') return r.createdDate === currentDate;
         if (r.type === 'daily') return true;
@@ -1374,7 +1451,7 @@
       }).join('');
     }
 
-    // 8. OOTD 컬러 클립 & BGM 아이튠즈 검색
+    // OOTD 컬러 & 아이튠즈 음악 검색
     function onOotdColorChange(colorVal) {
       document.getElementById('ootdColorBadge').style.backgroundColor = colorVal;
       saveDayData();
@@ -1408,7 +1485,7 @@
         });
     }
 
-    // 9. 데일리 데이터 실시간 저장 및 UI 복원
+    // 데일리 데이터 저장 및 복원
     function subscribeDayData(dateStr) {
       if (unsubscribeDay) unsubscribeDay();
       applyDayDataToUI(getDayDataLocal(dateStr));
@@ -1465,12 +1542,22 @@
           info: document.getElementById('bgmInfoText')?.innerText || '',
           cover: document.getElementById('bgmCoverImg')?.src || ''
         },
-        m_routines: [1,2,3,4,5].map(i => document.getElementById(`m_routine_${i}`).checked),
+        morning: {
+          r1: document.getElementById('m_routine_1')?.checked || false,
+          water: document.getElementById('m_routine_water')?.checked || false,
+          r2: document.getElementById('m_routine_2')?.checked || false,
+          r3: document.getElementById('m_routine_3')?.checked || false,
+          r4: document.getElementById('m_routine_4')?.checked || false,
+          bed: document.getElementById('m_routine_bed')?.checked || false,
+          r5: document.getElementById('m_routine_5')?.checked || false
+        },
         evening: {
           clean: document.getElementById('e_rot_clean')?.checked || false,
+          dish: document.getElementById('e_rot_dish')?.checked || false,
           shower: document.getElementById('e_rot_shower')?.checked || false,
           skin: document.getElementById('e_rot_skin')?.checked || false,
           pet: document.getElementById('e_rot_pet')?.checked || false,
+          fish: document.getElementById('e_rot_fish')?.checked || false,
           plant: document.getElementById('e_rot_plant')?.checked || false,
           club: document.getElementById('e_rot_club')?.checked || false,
           read: document.getElementById('e_rot_read')?.checked || false,
@@ -1533,12 +1620,13 @@
         if (data.bgm.cover) document.getElementById('bgmCoverImg').src = data.bgm.cover;
       }
 
-      if (data.m_routines) {
-        data.m_routines.forEach((chk, idx) => {
-          const el = document.getElementById(`m_routine_${idx + 1}`);
-          if (el) el.checked = !!chk;
+      if (data.morning) {
+        ['1', 'water', '2', '3', '4', 'bed', '5'].forEach(k => {
+          const el = document.getElementById(`m_routine_${k}`);
+          if (el) el.checked = !!data.morning[`r${k}`] || !!data.morning[k];
         });
       }
+
       if (data.evening) {
         if (data.evening.isBookClub) {
           document.getElementById('bookClubToggle').checked = true;
@@ -1546,7 +1634,7 @@
         } else {
           document.getElementById('bookClubToggle').checked = false;
         }
-        ['clean', 'shower', 'skin', 'pet', 'plant', 'club', 'read', 'knit', 'diary'].forEach(k => {
+        ['clean', 'dish', 'shower', 'skin', 'pet', 'fish', 'plant', 'club', 'read', 'knit', 'diary'].forEach(k => {
           const el = document.getElementById(`e_rot_${k}`);
           if (el) el.checked = !!data.evening[k];
         });
@@ -1596,7 +1684,7 @@
       if (timetableViewMode === 'card') renderCardTimeline();
     }
 
-    // 10. 캘린더 (알록달록 스탬프 & 일정/휴가 띠지 바)
+    // 캘린더
     function changeCalMonth(delta) {
       calMonth += delta;
       if (calMonth < 0) { calMonth = 11; calYear--; }
@@ -1683,16 +1771,13 @@
         const dateKey = `${calYear}-${mStr}-${dStr}`;
         const record = allDays[dateKey];
 
-        // 1) 기념일 체크
         const isAnni = anniversaries.some(a => {
           const parts = a.date.split('-');
           return parseInt(parts[parts.length - 2], 10) === (calMonth + 1) && parseInt(parts[parts.length - 1], 10) === d;
         });
 
-        // 2) 일정 / 휴가 띠지 체크
         const dayEvents = events.filter(e => dateKey >= e.start && dateKey <= e.end);
 
-        // 3) 알록달록 스탬프 아이콘 모음
         let icons = '';
         if (isAnni) icons += '🎂';
         if (record?.weather) {
@@ -1706,11 +1791,9 @@
         if (record?.book?.title) icons += '📖';
         if (record?.bgm?.song) icons += '🎵';
 
-        // 4) 무드 & OOTD 컬러 도트
         const moodIcon = record?.mood && MOOD_META[record.mood] ? MOOD_META[record.mood].icon : '';
         const ootdDot = record?.ootd?.color ? `<span class="w-1.5 h-1.5 rounded-full inline-block border border-stone-200" style="background-color: ${record.ootd.color};"></span>` : '';
 
-        // 5) 이벤트 띠지 렌더링
         let eventBars = '';
         dayEvents.slice(0, 1).forEach(ev => {
           const barStyle = ev.type === 'vacation' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900';
@@ -1745,7 +1828,7 @@
       switchTab('day');
     }
 
-    // 11. 스마트 기념일
+    // 기념일
     function renderAnniversaries() {
       const list = document.getElementById('anniversaryList');
       const items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[{"name":"생일","date":"1994-10-04"}]');
@@ -1792,7 +1875,7 @@
       renderCalendar();
     }
 
-    // 12. 독서 책장 & 뜨개 쇼룸
+    // 도서 & 뜨개 아카이브
     function subscribeArchives() {
       renderBookShelf();
       renderKnittingShowroom();
@@ -1894,7 +1977,7 @@
       if (db) db.collection('knitting_showroom').add(newKnit).catch(console.error);
     }
 
-    // 13. 무드 트래커
+    // 무드 트래커
     function changeMoodMonth(delta) {
       moodMonth += delta;
       if (moodMonth < 0) { moodMonth = 11; moodYear--; }
@@ -1943,7 +2026,7 @@
       }
     }
 
-    // 14. 해빗 트래커
+    // 해빗 트래커 (텍스트 클릭 수정 및 톤다운 멈춤 버튼 적용)
     function subscribeHabitData() {
       renderHabits();
       renderDayHabitList();
@@ -2062,7 +2145,8 @@
         container.innerHTML = activeHabits.map(h => `
           <div class="flex items-center justify-between p-2 rounded-xl bg-stone-50 border border-stone-100 text-xs">
             <div class="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
-              <span class="font-medium text-stone-700 truncate text-[11px]">${h.name}</span>
+              <!-- 텍스트 클릭 시 바로 이름 수정 -->
+              <span onclick="editHabitName(${h.id})" class="font-medium text-stone-700 truncate text-[11px] cursor-pointer hover:text-amber-700" title="클릭하여 이름 수정">${h.name}</span>
               <button onclick="pauseHabit(${h.id})" title="잠시 멈춤/보관" class="text-stone-300 hover:text-stone-600 text-[10px]">⏸️</button>
               <button onclick="deleteHabit(${h.id})" title="완전 삭제" class="text-stone-300 hover:text-rose-500 text-[10px]">✕</button>
             </div>
@@ -2107,6 +2191,16 @@
       const logs = getHabitLogsLocal();
       habits.push({ id: Date.now(), name, paused: false });
       saveHabitsState(habits, logs);
+    }
+
+    function editHabitName(id) {
+      const habits = getHabitsLocal();
+      const target = habits.find(h => h.id === id);
+      if (!target) return;
+      const newName = prompt("수정할 습관 이름을 입력해주세요:", target.name);
+      if (!newName || !newName.trim()) return;
+      target.name = newName.trim();
+      saveHabitsState(habits, getHabitLogsLocal());
     }
 
     function pauseHabit(id) {
@@ -2199,7 +2293,7 @@
       }
     }
 
-    // 15. D-Day 매일 자동 계산 (안녕한 날 기준 다음 날 = 1일째)
+    // D-Day 자동 계산
     function calculateDDays() {
       const parts = currentDate.split('-');
       const todayZero = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
@@ -2216,7 +2310,7 @@
       if (elM) elM.innerText = `D+${diffMoon}`;
     }
 
-    // 16. 밴드 일기 1초 복사
+    // 밴드 일기 1초 복사
     function copyToBandDiary() {
       const parts = currentDate.split('-');
       const today = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
@@ -2248,7 +2342,6 @@ ${dateText}
       });
     }
 
-    // 17. 화면 이미지 다운로드
     function downloadAsImage() {
       const area = document.getElementById('captureArea');
       html2canvas(area, { scale: 2 }).then(canvas => {
