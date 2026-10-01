@@ -1187,25 +1187,34 @@
       `).join('');
     }
 
-    // 13. D-Day 및 밴드 일기 복사
-    function calculateDDays() {
-      // 기준일 기반 계산 (기존 설정 반영)
-      document.getElementById('ddaySummer').innerText = 'D+914';
-      document.getElementById('ddayMoon').innerText = 'D+438';
-    }
-
+    // 13. 밴드 일기 1초 복사 (칭구 전용 밴드 감성 양식)
     function copyToBandDiary() {
-      const data = getDayData();
-      const text = `[${currentDate} 밍글의 취향 일기]\n` +
-        `🌙 수면: ${data.health?.sleepBed || '-'} ~ ${data.health?.sleepWake || '-'}\n` +
-        `⚖️ 체중: ${data.health?.weight || '-'}kg\n` +
-        `🥗 점심: ${data.health?.meals?.[1]?.menu || '-'}\n` +
-        `🍲 저녁: ${data.health?.meals?.[2]?.menu || '-'}\n` +
-        `🧶 뜨개: ${data.knit?.project || '-'} (${data.knit?.rows || 0}단)\n` +
-        `📚 독서: ${data.book?.title || '-'} (${data.book?.pages || '-'})\n` +
-        `📝 일기: ${data.memo || '오늘도 편안한 하루!'}`;
-      navigator.clipboard.writeText(text).then(() => {
-        alert("오늘의 기록이 클립보드에 복사되었어요! 밴드에 바로 붙여넣기 해보세요 📋✨");
+      const today = new Date(currentDate);
+      const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+      const dateText = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${days[today.getDay()]}`;
+
+      // 여름이 & 달이 D-Day 실시간 계산
+      const cur = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const summerStart = new Date(2024, 2, 31);
+      const moonStart = new Date(2025, 6, 20);
+      const diffSummer = Math.floor((cur - summerStart) / (1000 * 60 * 60 * 24));
+      const diffMoon = Math.floor((cur - moonStart) / (1000 * 60 * 60 * 24));
+
+      // 밴드 일기 복사 텍스트
+      const bandText = 
+`#오늘의일기 
+
+${dateText}
+날씨 : 
+
+우리 여름이 안 아픈 지 ${diffSummer}일 째 되는 날 ♡
+우리 달이 천사된 지 ${diffMoon}일 째 되는 날 ♡`;
+
+      navigator.clipboard.writeText(bandText).then(() => {
+        alert("밴드 일기 양식이 복사되었어요! 밴드에 바로 붙여넣어 보세요 📋🤍");
+      }).catch(err => {
+        alert("복사 중 오류가 발생했습니다.");
+        console.error(err);
       });
     }
 
