@@ -65,16 +65,14 @@
       <div class="bg-white rounded-2xl p-3 border border-stone-200 shadow-xs flex items-center justify-between">
         <button onclick="changeDate(-1)" class="p-1.5 text-stone-400 hover:text-stone-700 font-bold">◀</button>
         <div class="text-center flex flex-col items-center gap-1.5">
-          <!-- 메인 날짜 및 요일 표시 (클릭 시 date picker) -->
           <div class="relative cursor-pointer">
             <span class="text-xs font-bold text-stone-800 hover:text-amber-800" id="currentDateLabel">2026년 10월 1일 (목)</span>
             <input type="date" id="currentDateInput" onchange="onDateChanged(this.value)" class="absolute inset-0 opacity-0 cursor-pointer w-full">
           </div>
-          <!-- 날씨 & 기분(무드) 선택 듀오 -->
           <div class="flex items-center gap-1.5">
             <select id="todayWeatherSelect" onchange="saveDayData()" class="bg-stone-50 border border-stone-200 rounded-lg text-[10px] px-2 py-0.5 text-stone-600 focus:outline-none cursor-pointer">
               <option value="">날씨 선택</option>
-              <option value="맑음 ☀️">맑음 ☀️</option>
+              <option value="맑음 ☀️️">맑음 ☀️</option>
               <option value="구름 조금 ⛅">구름 조금 ⛅</option>
               <option value="흐림 ☁️">흐림 ☁️</option>
               <option value="비 🌧️">비 🌧️</option>
@@ -93,7 +91,7 @@
         <button onclick="changeDate(1)" class="p-1.5 text-stone-400 hover:text-stone-700 font-bold">▶</button>
       </div>
 
-      <!-- ⭐ 오늘의 할 일 (Today's Tasks) -->
+      <!-- ⭐ 오늘의 할 일 (Today's Tasks - 자동 이월 연동) -->
       <div class="bg-white border-2 border-amber-200/80 rounded-2xl p-3.5 shadow-xs">
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
@@ -115,7 +113,7 @@
             <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
               <span>⏱️</span> 10분 타임테이블 (07:00 ~ 24:00)
             </h3>
-            <p class="text-[10px] text-stone-400 mt-0.5">칸을 누르면 카테고리별로 쏙 등록돼요</p>
+            <p class="text-[10px] text-stone-400 mt-0.5">칸을 누르면 소요시간별로 한 번에 등록돼요</p>
           </div>
           <div class="flex bg-stone-100 p-0.5 rounded-xl border border-stone-200 text-[11px]">
             <button id="viewBtnGrid" onclick="setTimetableView('grid')" class="px-2 py-1 rounded-lg font-bold bg-white text-stone-800 shadow-xs">모눈 뷰</button>
@@ -137,7 +135,7 @@
       <div class="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-xs">
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-            <span class="text-amber-500">☀️</span> 아침 50분 루틴
+            <span class="text-amber-500">☀️️</span> 아침 50분 루틴
           </h3>
           <button onclick="completeMorningRoutine()" class="text-[10px] bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap">
             ⚡ 루틴 일괄완료
@@ -229,7 +227,7 @@
           </div>
         </div>
 
-        <!-- 아침/점심/저녁 로그 -->
+        <!-- 식단 로그 -->
         <div class="space-y-2 text-xs">
           <!-- 아침 -->
           <div class="p-2.5 rounded-xl bg-warm-50 border border-stone-200 space-y-1.5">
@@ -305,7 +303,7 @@
         </div>
       </div>
 
-      <!-- 🌿 [신설] 데일리 오늘 해빗 체크 (식단 칸 바로 밑에 배치!) -->
+      <!-- 🌿 데일리 오늘 해빗 체크리스트 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
@@ -315,9 +313,7 @@
             트래커 전체보기 ↗
           </button>
         </div>
-        <div id="dayHabitCheckList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-          <!-- 오늘 날짜 기준 습관 체크 항목 동적 렌더링 -->
-        </div>
+        <div id="dayHabitCheckList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
       </div>
 
       <!-- 🧶 데일리 뜨개 & 📚 독서 카드 -->
@@ -360,10 +356,84 @@
         </div>
       </div>
 
-      <!-- 📝 고정 루틴 & 밴드 일기 원클릭 복사 -->
+      <!-- 📝 데일리 투두 & 스마트 반복 루틴 -->
+      <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+          <div>
+            <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+              <span>📝</span> 데일리 투두 (Daily To-Do)
+            </h3>
+            <p class="text-[10px] text-stone-400 mt-0.5">매일/요일/월별 반복 일정을 놓치지 마세요</p>
+          </div>
+          <span class="text-[10px] text-sage-700 bg-sage-50 px-2 py-0.5 rounded-full font-medium" id="routineTodoCount">0건</span>
+        </div>
+
+        <!-- 투두 등록 폼 -->
+        <div class="space-y-2 bg-stone-50 p-2.5 rounded-xl border border-stone-200">
+          <div class="flex gap-1.5">
+            <input type="text" id="newRoutineTodoInput" placeholder="새로운 할 일 또는 고정 루틴..." class="flex-1 bg-white border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-400" onkeypress="if(event.key==='Enter') addRoutineTodo()">
+            <select id="routineTypeSelect" onchange="onRoutineTypeChange(this.value)" class="bg-white border border-stone-200 rounded-xl text-[11px] px-2 py-1 text-stone-700 font-medium cursor-pointer">
+              <option value="none">오늘만</option>
+              <option value="daily">매일</option>
+              <option value="weekly">요일지정</option>
+              <option value="monthly">매월 1일</option>
+              <option value="quarterly">분기별 1일</option>
+            </select>
+            <button onclick="addRoutineTodo()" class="bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs px-3 rounded-xl transition-colors shrink-0">추가</button>
+          </div>
+          <!-- 요일 다중 선택 칩 (weekly 선택 시) -->
+          <div id="weeklyDaysSelector" class="hidden flex items-center gap-1 pt-1 overflow-x-auto text-[10px]">
+            <span class="text-stone-400 shrink-0 font-medium mr-1">반복 요일:</span>
+            <button type="button" onclick="toggleWeekDayChip(1)" id="wd_chip_1" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">월</button>
+            <button type="button" onclick="toggleWeekDayChip(2)" id="wd_chip_2" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">화</button>
+            <button type="button" onclick="toggleWeekDayChip(3)" id="wd_chip_3" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">수</button>
+            <button type="button" onclick="toggleWeekDayChip(4)" id="wd_chip_4" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">목</button>
+            <button type="button" onclick="toggleWeekDayChip(5)" id="wd_chip_5" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">금</button>
+            <button type="button" onclick="toggleWeekDayChip(6)" id="wd_chip_6" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">토</button>
+            <button type="button" onclick="toggleWeekDayChip(0)" id="wd_chip_0" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 font-bold">일</button>
+          </div>
+        </div>
+
+        <!-- 오늘자 데일리 투두 리스트 -->
+        <div id="routineTodoList" class="space-y-1.5 max-h-48 overflow-y-auto pr-0.5"></div>
+      </div>
+
+      <!-- 👗 오늘의 OOTD & 🎵 오늘의 노래 (2분할 미니 카드) -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- OOTD 위젯 -->
+        <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-amber-900 flex items-center gap-1">👗 오늘의 OOTD</span>
+            <!-- 컬러 클립 뱃지 -->
+            <div class="flex items-center gap-1">
+              <label for="ootdColorInput" title="옷 대표 색상 지정" class="cursor-pointer flex items-center gap-1">
+                <span id="ootdColorBadge" class="w-4 h-4 rounded-full border border-stone-300 shadow-2xs inline-block bg-[#ecdcc9]"></span>
+                <span class="text-[9px] text-stone-400 font-medium">컬러</span>
+              </label>
+              <input type="color" id="ootdColorInput" value="#ecdcc9" onchange="onOotdColorChange(this.value)" class="sr-only">
+            </div>
+          </div>
+          <input type="text" id="ootdTextInput" placeholder="아이보리 니트 + 데님..." onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:border-amber-300">
+        </div>
+
+        <!-- BGM 위젯 (아이튠즈 앨범아트 연동) -->
+        <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs space-y-2">
+          <span class="text-xs font-bold text-indigo-900 flex items-center gap-1">🎵 오늘의 노래</span>
+          <div class="flex items-center gap-2">
+            <!-- 앨범아트 -->
+            <img id="bgmCoverImg" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&auto=format&fit=crop&q=60" alt="BGM" class="w-10 h-10 rounded-lg object-cover shadow-2xs border border-stone-200 shrink-0">
+            <div class="flex-1 min-w-0">
+              <input type="text" id="bgmSearchInput" placeholder="곡명 검색 (Enter)..." class="w-full bg-stone-50 border border-stone-100 rounded-lg px-2 py-1 text-xs focus:outline-none truncate" onkeypress="if(event.key==='Enter') searchMusicTrack()">
+              <p id="bgmInfoText" class="text-[9px] text-stone-400 truncate mt-0.5">BGM을 검색해보세요</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 📝 한 줄 일기 & 밴드 일기 원클릭 복사 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-          <h3 class="text-xs font-bold text-stone-700">📝 TO-DO & 고정 루틴</h3>
+          <h3 class="text-xs font-bold text-stone-700">📖 한 줄 일기 & 감사한 일</h3>
           <button onclick="copyToBandDiary()" class="text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-700 px-2.5 py-1 rounded-lg font-semibold border border-stone-200">
             📋 밴드 일기 1초 복사
           </button>
@@ -382,12 +452,17 @@
 
     </section>
 
-    <!-- 2. 캘린더 페이지 (VIEW: CALENDAR) -->
+    <!-- 2. 캘린더 페이지 (VIEW: CALENDAR - 약속/휴가 & 알록달록 스탬프) -->
     <section id="view-calendar" class="hidden space-y-4">
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div class="flex items-center justify-between mb-3 border-b border-stone-100 pb-2.5">
           <button onclick="changeCalMonth(-1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">◀</button>
-          <h3 class="text-sm font-bold text-stone-800" id="calendarMonthTitle">2026년 10월</h3>
+          <div class="flex items-center gap-2">
+            <h3 class="text-sm font-bold text-stone-800" id="calendarMonthTitle">2026년 10월</h3>
+            <button onclick="openCalendarEventModal()" class="text-[10px] bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold px-2 py-0.5 rounded-lg">
+              + 일정/휴가
+            </button>
+          </div>
           <button onclick="changeCalMonth(1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">▶</button>
         </div>
         <div class="grid grid-cols-7 text-center text-xs font-semibold text-stone-400 mb-2">
@@ -411,14 +486,14 @@
     <!-- 3. 트래커 페이지 (VIEW: TRACKER) -->
     <section id="view-tracker" class="hidden space-y-4">
       
-      <!-- 🎨 무드 트래커 (월간 탐색 지원) -->
+      <!-- 🎨 무드 트래커 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div class="flex items-center justify-between mb-2 border-b border-stone-100 pb-2">
           <div>
             <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
               <span>🎨</span> 무드 트래커 (Mood Tracker)
             </h3>
-            <p class="text-[10px] text-stone-400 mt-0.5">매일의 기분 날씨를 차곡차곡 채워요</p>
+            <p class="text-[10px] text-stone-400 mt-0.5">매일의 마음 날씨를 채워요</p>
           </div>
           <div class="flex items-center gap-1 text-xs">
             <button onclick="changeMoodMonth(-1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">◀</button>
@@ -426,9 +501,7 @@
             <button onclick="changeMoodMonth(1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">▶</button>
           </div>
         </div>
-        <div id="moodGrid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1">
-          <!-- 무드 타일 동적 렌더링 -->
-        </div>
+        <div id="moodGrid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
       </div>
 
       <!-- 🌿 해빗 트래커 (주간 ↔ 월간 뷰 토글 & 멈춤 관리) -->
@@ -438,7 +511,7 @@
             <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
               <span>🌿</span> 해빗 트래커 (Habit Tracker)
             </h3>
-            <p class="text-[10px] text-stone-400 mt-0.5">꾸준한 작은 습관이 만드는 변화</p>
+            <p class="text-[10px] text-stone-400 mt-0.5">꾸준한 작은 습관의 힘</p>
           </div>
           <div class="flex items-center gap-1.5">
             <div class="flex bg-stone-100 p-0.5 rounded-xl border border-stone-200 text-[11px]">
@@ -449,9 +522,8 @@
           </div>
         </div>
 
-        <!-- 1) 주간 뷰 -->
+        <!-- 주간 뷰 -->
         <div id="habitWeekSection" class="space-y-2">
-          <!-- 요일 헤더 -->
           <div class="flex items-center justify-between px-2 text-[10px] font-semibold text-stone-400">
             <span>습관 이름</span>
             <div class="flex gap-1 text-center font-mono">
@@ -461,24 +533,20 @@
           <div id="habitTable" class="space-y-1.5 text-xs"></div>
         </div>
 
-        <!-- 2) 월간 뷰 (단일 습관 캘린더) -->
+        <!-- 월간 뷰 (선택 습관 캘린더) -->
         <div id="habitMonthSection" class="hidden space-y-2.5">
           <div class="flex items-center justify-between bg-stone-50 p-2 rounded-xl border border-stone-100">
-            <select id="habitSelectForMonth" onchange="renderHabitMonthGrid()" class="text-xs bg-white border border-stone-200 rounded-lg px-2 py-1 font-bold text-stone-700 cursor-pointer">
-              <!-- 진행 중인 습관 옵션 -->
-            </select>
+            <select id="habitSelectForMonth" onchange="renderHabitMonthGrid()" class="text-xs bg-white border border-stone-200 rounded-lg px-2 py-1 font-bold text-stone-700 cursor-pointer"></select>
             <div class="flex items-center gap-1 text-xs">
               <button onclick="changeHabitMonth(-1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">◀</button>
               <span class="font-bold text-stone-700 text-xs" id="habitMonthTitle">2026년 10월</span>
               <button onclick="changeHabitMonth(1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">▶</button>
             </div>
           </div>
-          <div id="habitMonthGrid" class="grid grid-cols-7 gap-1 text-center text-xs">
-            <!-- 선택 습관 1~말일 잔디 타일 -->
-          </div>
+          <div id="habitMonthGrid" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
         </div>
 
-        <!-- 3) 멈춤(보관)된 습관 접이식 목록 -->
+        <!-- 멈춘 습관 보관함 -->
         <div class="pt-2 border-t border-stone-100">
           <button onclick="togglePausedHabits()" class="text-[11px] text-stone-400 hover:text-stone-600 font-medium flex items-center gap-1">
             <span id="pausedHabitsToggleIcon">▶</span>
@@ -488,7 +556,7 @@
         </div>
       </div>
 
-      <!-- 📚 독서 책장 (My Cozy Library) -->
+      <!-- 📚 독서 책장 -->
       <div id="bookArchiveSection" class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div class="flex items-center justify-between mb-3 border-b border-stone-100 pb-2">
           <div>
@@ -510,7 +578,7 @@
         <div id="bookshelfList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
       </div>
 
-      <!-- 🧶 뜨개 쇼룸 (Knitting Archive & Showroom) -->
+      <!-- 🧶 뜨개 쇼룸 -->
       <div id="knitShowroomSection" class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div class="flex items-center justify-between mb-3 border-b border-stone-100 pb-2">
           <div>
@@ -530,7 +598,7 @@
 
   </main>
 
-  <!-- 하단 탭 바 (Day / Calendar / Tracker) -->
+  <!-- 하단 탭 바 -->
   <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 py-2 shadow-lg">
     <div class="max-w-md mx-auto grid grid-cols-3 text-center text-xs font-semibold">
       <button onclick="switchTab('day')" id="nav-day" class="text-stone-800 py-1 flex flex-col items-center gap-0.5 font-bold">
@@ -545,7 +613,7 @@
     </div>
   </nav>
 
-  <!-- 🎨 카테고리 2단계 모달 -->
+  <!-- 🎨 타임테이블 소요시간 + 카테고리 2단계 모달 -->
   <div id="categoryModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
       <div class="flex items-center justify-between border-b border-stone-100 pb-2">
@@ -558,7 +626,20 @@
         <button onclick="closeCategoryModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
       </div>
 
-      <div id="categoryStep1" class="grid grid-cols-2 gap-2 text-xs">
+      <!-- 소요 시간(블록 수) 선택기 -->
+      <div class="space-y-1">
+        <span class="text-[10px] text-stone-400 font-medium">소요 시간 일괄 등록:</span>
+        <div class="grid grid-cols-5 gap-1 text-[11px] font-mono">
+          <button type="button" onclick="setSessionDuration(10)" id="dur_10" class="py-1 rounded-lg border border-amber-300 bg-amber-100 text-amber-900 font-bold">10분</button>
+          <button type="button" onclick="setSessionDuration(20)" id="dur_20" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600">20분</button>
+          <button type="button" onclick="setSessionDuration(30)" id="dur_30" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600">30분</button>
+          <button type="button" onclick="setSessionDuration(40)" id="dur_40" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600">40분</button>
+          <button type="button" onclick="setSessionDuration(60)" id="dur_60" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600">60분</button>
+        </div>
+      </div>
+
+      <!-- 1단계: 대분류 -->
+      <div id="categoryStep1" class="grid grid-cols-2 gap-2 text-xs pt-1">
         <button onclick="openSubCategory('routine')" class="p-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-left flex items-center justify-between">
           <span>☀️ 일상</span><span>›</span>
         </button>
@@ -582,7 +663,8 @@
         </button>
       </div>
 
-      <div id="categoryStep2" class="hidden space-y-3">
+      <!-- 2단계: 소분류 -->
+      <div id="categoryStep2" class="hidden space-y-3 pt-1">
         <div class="text-[11px] font-bold text-stone-500 flex items-center gap-1" id="subCategoryHeader"></div>
         <div id="subCategoryButtons" class="grid grid-cols-3 gap-2 text-xs"></div>
         <div class="pt-2 border-t border-stone-100 flex gap-1.5">
@@ -594,6 +676,45 @@
       <button onclick="clearCurrentBlock()" class="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-500 font-semibold text-[11px] rounded-xl transition-colors">
         🗑️ 블록 비우기 (지우기)
       </button>
+    </div>
+  </div>
+
+  <!-- 🗓️ 캘린더 약속 / 연차·휴가 등록 모달 -->
+  <div id="calendarEventModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+          <span>🗓️️</span> 캘린더 일정/휴가 등록
+        </h3>
+        <button onclick="closeCalendarEventModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
+      </div>
+      <div class="space-y-2 text-xs">
+        <div>
+          <label class="text-[10px] text-stone-500 block mb-1">일정 구분</label>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button type="button" onclick="setCalEventType('plan')" id="calTypePlanBtn" class="py-1.5 rounded-xl border border-amber-300 bg-amber-100 text-amber-900 font-bold">약속/일정</button>
+            <button type="button" onclick="setCalEventType('vacation')" id="calTypeVacationBtn" class="py-1.5 rounded-xl border border-stone-200 bg-stone-50 text-stone-600">휴가/연차 바</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-[10px] text-stone-500 block mb-1">일정 내용</label>
+          <input type="text" id="calEventTitle" placeholder="예: 치과 예약, 제주도 여행" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">시작일</label>
+            <input type="date" id="calEventStart" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1 text-[11px]">
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">종료일</label>
+            <input type="date" id="calEventEnd" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1 text-[11px]">
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="saveCalendarEvent()" class="flex-1 py-2 bg-amber-400 hover:bg-amber-500 text-stone-900 font-bold text-xs rounded-xl">일정 저장</button>
+        <button onclick="closeCalendarEventModal()" class="py-2 px-3 bg-stone-100 text-stone-600 text-xs rounded-xl">취소</button>
+      </div>
     </div>
   </div>
 
@@ -629,7 +750,6 @@
       workout: { title: '🏃 운동 세부 항목', items: ['산책', '러닝', '홈트', '헬스'] }
     };
 
-    // 무드별 색상 & 이모지 테마
     const MOOD_META = {
       happy: { icon: '🥰', label: '최고', bg: 'bg-amber-100 border-amber-300 text-amber-900' },
       calm: { icon: '🌿', label: '평온', bg: 'bg-emerald-100 border-emerald-300 text-emerald-900' },
@@ -641,8 +761,6 @@
     let currentDate = new Date().toISOString().slice(0, 10);
     let calYear = new Date().getFullYear();
     let calMonth = new Date().getMonth();
-
-    // 트래커 탭 전용 탐색 월
     let moodYear = new Date().getFullYear();
     let moodMonth = new Date().getMonth();
     let habitYear = new Date().getFullYear();
@@ -654,13 +772,19 @@
 
     let activeHourStr = null;
     let activeBlockIdx = null;
+    let selectedDurationMinutes = 10;
     let currentSelectedCategoryKey = null;
+
+    let selectedWeeklyDays = [1, 2, 3, 4, 0]; // 기본: 월화수목일
+    let calEventType = 'plan';
 
     let unsubscribeDay = null;
     let unsubscribeTasks = null;
     let unsubscribeBooks = null;
     let unsubscribeKnits = null;
     let unsubscribeHabits = null;
+    let unsubscribeRoutines = null;
+    let unsubscribeCalEvents = null;
 
     window.addEventListener('DOMContentLoaded', () => {
       initFirebase();
@@ -672,6 +796,8 @@
       subscribeTodayTasks(currentDate);
       subscribeArchives();
       subscribeHabitData();
+      subscribeRoutineMaster();
+      subscribeCalendarEvents();
 
       renderCalendar();
       renderAnniversaries();
@@ -712,6 +838,8 @@
         } else if (subAction === 'book') {
           document.getElementById('bookArchiveSection').scrollIntoView({ behavior: 'smooth' });
         }
+      } else if (tab === 'calendar') {
+        renderCalendar();
       }
     }
 
@@ -722,6 +850,7 @@
       subscribeDayData(currentDate);
       subscribeTodayTasks(currentDate);
       renderDayHabitList();
+      renderDayRoutineTodos();
       calculateDDays();
     }
 
@@ -736,6 +865,7 @@
       subscribeDayData(currentDate);
       subscribeTodayTasks(currentDate);
       renderDayHabitList();
+      renderDayRoutineTodos();
       calculateDDays();
     }
 
@@ -747,22 +877,49 @@
         `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
     }
 
-    // 4. 오늘의 할 일 (실시간 onSnapshot)
+    // 4. 오늘의 할 일 & 미완료 자동 이월 (Migration, '>')
     function subscribeTodayTasks(dateStr) {
       if (unsubscribeTasks) unsubscribeTasks();
-      renderTodayTasks(getTodayTasksLocal(dateStr));
-      if (!db) return;
 
+      // 전날 미완료 할 일 스마트 이월 처리
+      migrateUnfinishedTasks(dateStr);
+
+      renderTodayTasks(getTodayTasksLocal(dateStr));
+
+      if (!db) return;
       unsubscribeTasks = db.collection('today_tasks').doc(dateStr)
         .onSnapshot((doc) => {
           if (doc.exists) {
             const tasks = doc.data().tasks || [];
             saveTodayTasksLocal(dateStr, tasks);
             renderTodayTasks(tasks);
-          } else {
-            renderTodayTasks([]);
           }
         }, err => console.error("할 일 구독 오류:", err));
+    }
+
+    function migrateUnfinishedTasks(todayStr) {
+      const all = JSON.parse(localStorage.getItem('mingle_today_tasks') || '{}');
+      if (all[todayStr] && all[todayStr].length > 0) return; // 이미 오늘 작성된 할 일이 있으면 패스
+
+      const parts = todayStr.split('-');
+      const prevD = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10) - 1);
+      const pmStr = (prevD.getMonth() + 1) < 10 ? `0${prevD.getMonth() + 1}` : `${prevD.getMonth() + 1}`;
+      const pdStr = prevD.getDate() < 10 ? `0${prevD.getDate()}` : `${prevD.getDate()}`;
+      const prevDateStr = `${prevD.getFullYear()}-${pmStr}-${pdStr}`;
+
+      const prevTasks = all[prevDateStr] || [];
+      const unfinished = prevTasks.filter(t => !t.done);
+
+      if (unfinished.length > 0) {
+        const migrated = unfinished.map(t => ({
+          ...t,
+          id: Date.now() + Math.random(),
+          isMigrated: true
+        }));
+        all[todayStr] = migrated;
+        localStorage.setItem('mingle_today_tasks', JSON.stringify(all));
+        if (db) db.collection('today_tasks').doc(todayStr).set({ tasks: migrated }).catch(console.error);
+      }
     }
 
     function getTodayTasksLocal(dateStr) {
@@ -817,14 +974,16 @@
         <div class="flex items-center justify-between p-1.5 rounded-lg bg-stone-50 border border-stone-100 text-xs">
           <label class="flex items-center gap-2 flex-1 cursor-pointer">
             <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodayTask(${idx})" class="rounded text-amber-500">
-            <span class="${t.done ? 'line-through text-stone-300' : 'text-stone-700 font-medium'}">${t.text}</span>
+            <span class="${t.done ? 'line-through text-stone-300' : 'text-stone-700 font-medium'}">
+              ${t.isMigrated ? '<span class="text-amber-600 font-bold mr-0.5" title="어제 이월된 할 일">&gt;</span>' : ''}${t.text}
+            </span>
           </label>
           <button onclick="deleteTodayTask(${idx})" class="text-stone-300 hover:text-stone-500 px-1 text-xs">✕</button>
         </div>
       `).join('');
     }
 
-    // 5. 타임테이블 초기화 & 모달
+    // 5. 타임테이블 (소요 시간 다중 블록 지원)
     function setTimetableView(mode) {
       timetableViewMode = mode;
       if (mode === 'grid') {
@@ -856,9 +1015,24 @@
       }
     }
 
+    function setSessionDuration(mins) {
+      selectedDurationMinutes = mins;
+      [10, 20, 30, 40, 60].forEach(m => {
+        const btn = document.getElementById(`dur_${m}`);
+        if (btn) {
+          if (m === mins) {
+            btn.className = 'py-1 rounded-lg border border-amber-300 bg-amber-100 text-amber-900 font-bold';
+          } else {
+            btn.className = 'py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600';
+          }
+        }
+      });
+    }
+
     function openCategoryModal(hourStr, blockIdx) {
       activeHourStr = hourStr;
       activeBlockIdx = blockIdx;
+      setSessionDuration(10); // 기본 10분
       const min = blockIdx * 10;
       const timeStr = `${hourStr}:${min === 0 ? '00' : min}`;
       document.getElementById('categoryModalTimeTitle').innerText = `${timeStr} 일정 등록`;
@@ -894,11 +1068,24 @@
       `).join('');
     }
 
+    // 소요 시간에 맞춰 연속 블록 일괄 등록
     function selectDirect(text, categoryKey) {
       if (activeHourStr !== null && activeBlockIdx !== null) {
-        setBlockData(activeHourStr, activeBlockIdx, text, categoryKey);
+        const blocksCount = Math.max(1, Math.round(selectedDurationMinutes / 10));
+        let startH = parseInt(activeHourStr, 10);
+        let startB = activeBlockIdx;
+
+        for (let i = 0; i < blocksCount; i++) {
+          let currH = startH + Math.floor((startB + i) / 6);
+          let currB = (startB + i) % 6;
+          if (currH > 24) break;
+          const hStr = currH < 10 ? `0${currH}` : `${currH}`;
+          setBlockData(hStr, currB, text, categoryKey);
+        }
+
         saveDayData();
         closeCategoryModal();
+        if (timetableViewMode === 'card') renderCardTimeline();
       }
     }
 
@@ -917,6 +1104,7 @@
         setBlockData(activeHourStr, activeBlockIdx, '', '');
         saveDayData();
         closeCategoryModal();
+        if (timetableViewMode === 'card') renderCardTimeline();
       }
     }
 
@@ -1039,7 +1227,188 @@
       if (timetableViewMode === 'card') renderCardTimeline();
     }
 
-    // 7. 데일리 데이터 실시간 동기화 & 무드 연동
+    // 7. 데일리 투두 & 스마트 반복 (매일, 요일지정, 1일, 분기)
+    function onRoutineTypeChange(val) {
+      const selector = document.getElementById('weeklyDaysSelector');
+      if (val === 'weekly') {
+        selector.classList.remove('hidden');
+        renderWeekDayChips();
+      } else {
+        selector.classList.add('hidden');
+      }
+    }
+
+    function toggleWeekDayChip(dayNum) {
+      const idx = selectedWeeklyDays.indexOf(dayNum);
+      if (idx > -1) {
+        if (selectedWeeklyDays.length > 1) selectedWeeklyDays.splice(idx, 1);
+      } else {
+        selectedWeeklyDays.push(dayNum);
+      }
+      renderWeekDayChips();
+    }
+
+    function renderWeekDayChips() {
+      [0, 1, 2, 3, 4, 5, 6].forEach(d => {
+        const chip = document.getElementById(`wd_chip_${d}`);
+        if (chip) {
+          if (selectedWeeklyDays.includes(d)) {
+            chip.className = 'px-2 py-1 rounded-lg border border-amber-300 bg-amber-100 text-amber-900 font-bold';
+          } else {
+            chip.className = 'px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium';
+          }
+        }
+      });
+    }
+
+    function subscribeRoutineMaster() {
+      renderDayRoutineTodos();
+      if (!db) return;
+      if (unsubscribeRoutines) unsubscribeRoutines();
+      unsubscribeRoutines = db.collection('routine_master').doc('list')
+        .onSnapshot(doc => {
+          if (doc.exists) {
+            localStorage.setItem('mingle_routine_rules', JSON.stringify(doc.data().rules || []));
+            renderDayRoutineTodos();
+          }
+        }, err => console.error(err));
+    }
+
+    function getRoutineRules() {
+      return JSON.parse(localStorage.getItem('mingle_routine_rules') || '[]');
+    }
+
+    function saveRoutineRules(rules) {
+      localStorage.setItem('mingle_routine_rules', JSON.stringify(rules));
+      renderDayRoutineTodos();
+      if (db) db.collection('routine_master').doc('list').set({ rules }).catch(console.error);
+    }
+
+    function addRoutineTodo() {
+      const input = document.getElementById('newRoutineTodoInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const type = document.getElementById('routineTypeSelect').value;
+      const rules = getRoutineRules();
+
+      const newRule = {
+        id: Date.now(),
+        text,
+        type,
+        days: type === 'weekly' ? [...selectedWeeklyDays] : null,
+        createdDate: currentDate
+      };
+
+      rules.push(newRule);
+      input.value = '';
+      saveRoutineRules(rules);
+    }
+
+    function deleteRoutineRule(id) {
+      let rules = getRoutineRules();
+      rules = rules.filter(r => r.id !== id);
+      saveRoutineRules(rules);
+    }
+
+    function toggleDayRoutineCheck(ruleId) {
+      const dayData = getDayDataLocal(currentDate);
+      if (!dayData.routineChecks) dayData.routineChecks = {};
+      dayData.routineChecks[ruleId] = !dayData.routineChecks[ruleId];
+      saveDayDataLocal(currentDate, dayData);
+      renderDayRoutineTodos();
+      if (db) db.collection('diary_days').doc(currentDate).set(dayData).catch(console.error);
+    }
+
+    function renderDayRoutineTodos() {
+      const container = document.getElementById('routineTodoList');
+      if (!container) return;
+
+      const parts = currentDate.split('-');
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      const dayOfWeek = d.getDay();
+      const dateNum = d.getDate();
+      const monthNum = d.getMonth() + 1;
+
+      const rules = getRoutineRules();
+      const dayData = getDayDataLocal(currentDate);
+      const checks = dayData.routineChecks || {};
+
+      // 조건 매칭 필터링
+      const activeRules = rules.filter(r => {
+        if (r.type === 'none') return r.createdDate === currentDate;
+        if (r.type === 'daily') return true;
+        if (r.type === 'weekly') return r.days && r.days.includes(dayOfWeek);
+        if (r.type === 'monthly') return dateNum === 1;
+        if (r.type === 'quarterly') return dateNum === 1 && [1, 4, 7, 10].includes(monthNum);
+        return false;
+      });
+
+      document.getElementById('routineTodoCount').innerText = `${activeRules.length}건`;
+
+      if (activeRules.length === 0) {
+        container.innerHTML = `<p class="text-[11px] text-stone-300 py-2 text-center">오늘 등록된 정기 투두가 없어요 🌿</p>`;
+        return;
+      }
+
+      const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+      container.innerHTML = activeRules.map(r => {
+        const isDone = !!checks[r.id];
+        let badge = '';
+        if (r.type === 'daily') badge = '<span class="text-[9px] bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.2 rounded-full font-bold">🔁 매일</span>';
+        else if (r.type === 'weekly') badge = `<span class="text-[9px] bg-sky-50 text-sky-800 border border-sky-200 px-1.5 py-0.2 rounded-full font-bold">📅 ${dayNames[dayOfWeek]}</span>`;
+        else if (r.type === 'monthly') badge = '<span class="text-[9px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 rounded-full font-bold">📆 1일</span>';
+        else if (r.type === 'quarterly') badge = '<span class="text-[9px] bg-indigo-50 text-indigo-800 border border-indigo-200 px-1.5 py-0.2 rounded-full font-bold">🪴 분기</span>';
+
+        return `
+          <div class="flex items-center justify-between p-1.5 rounded-lg bg-stone-50 border border-stone-100 text-xs">
+            <label class="flex items-center gap-1.5 flex-1 cursor-pointer min-w-0 pr-1">
+              <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleDayRoutineCheck(${r.id})" class="rounded text-amber-500">
+              <span class="${isDone ? 'line-through text-stone-300' : 'text-stone-700 font-medium'} truncate">${r.text}</span>
+              ${badge}
+            </label>
+            <button onclick="deleteRoutineRule(${r.id})" title="반복 삭제" class="text-stone-300 hover:text-stone-500 px-1 text-xs">✕</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 8. OOTD 컬러 클립 & BGM 아이튠즈 검색
+    function onOotdColorChange(colorVal) {
+      document.getElementById('ootdColorBadge').style.backgroundColor = colorVal;
+      saveDayData();
+    }
+
+    function searchMusicTrack() {
+      const q = document.getElementById('bgmSearchInput').value.trim();
+      if (!q) return;
+      document.getElementById('bgmInfoText').innerText = "음악 검색 중... 🎵";
+
+      fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&limit=1`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.results && data.results.length > 0) {
+            const track = data.results[0];
+            const coverUrl = track.artworkUrl100.replace('100x100bb', '300x300bb');
+            const info = `${track.trackName} - ${track.artistName}`;
+            
+            document.getElementById('bgmCoverImg').src = coverUrl;
+            document.getElementById('bgmInfoText').innerText = info;
+            document.getElementById('bgmSearchInput').value = track.trackName;
+
+            saveDayData();
+          } else {
+            document.getElementById('bgmInfoText').innerText = "검색 결과가 없어요 😢";
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          document.getElementById('bgmInfoText').innerText = "음악 정보를 불러오지 못했어요";
+        });
+    }
+
+    // 9. 데일리 데이터 실시간 저장 및 UI 복원
     function subscribeDayData(dateStr) {
       if (unsubscribeDay) unsubscribeDay();
       applyDayDataToUI(getDayDataLocal(dateStr));
@@ -1052,7 +1421,7 @@
             saveDayDataLocal(dateStr, data);
             applyDayDataToUI(data);
           }
-        }, err => console.error("일일 데이터 구독 오류:", err));
+        }, err => console.error(err));
     }
 
     function getDayDataLocal(dateStr) {
@@ -1081,9 +1450,21 @@
         }
       }
 
+      const existing = getDayDataLocal(currentDate);
+
       const data = {
+        ...existing,
         weather: document.getElementById('todayWeatherSelect')?.value || '',
         mood: document.getElementById('todayMoodSelect')?.value || '',
+        ootd: {
+          text: document.getElementById('ootdTextInput')?.value || '',
+          color: document.getElementById('ootdColorInput')?.value || '#ecdcc9'
+        },
+        bgm: {
+          song: document.getElementById('bgmSearchInput')?.value || '',
+          info: document.getElementById('bgmInfoText')?.innerText || '',
+          cover: document.getElementById('bgmCoverImg')?.src || ''
+        },
         m_routines: [1,2,3,4,5].map(i => document.getElementById(`m_routine_${i}`).checked),
         evening: {
           clean: document.getElementById('e_rot_clean')?.checked || false,
@@ -1127,7 +1508,6 @@
       saveDayDataLocal(currentDate, data);
       if (db) db.collection('diary_days').doc(currentDate).set(data).catch(console.error);
 
-      // 무드 트래커 및 캘린더 즉시 갱신
       renderMoodTracker();
       renderCalendar();
     }
@@ -1140,6 +1520,18 @@
 
       const moodEl = document.getElementById('todayMoodSelect');
       if (moodEl) moodEl.value = data.mood || '';
+
+      if (data.ootd) {
+        document.getElementById('ootdTextInput').value = data.ootd.text || '';
+        document.getElementById('ootdColorInput').value = data.ootd.color || '#ecdcc9';
+        document.getElementById('ootdColorBadge').style.backgroundColor = data.ootd.color || '#ecdcc9';
+      }
+
+      if (data.bgm) {
+        document.getElementById('bgmSearchInput').value = data.bgm.song || '';
+        document.getElementById('bgmInfoText').innerText = data.bgm.info || 'BGM을 검색해보세요';
+        if (data.bgm.cover) document.getElementById('bgmCoverImg').src = data.bgm.cover;
+      }
 
       if (data.m_routines) {
         data.m_routines.forEach((chk, idx) => {
@@ -1204,12 +1596,70 @@
       if (timetableViewMode === 'card') renderCardTimeline();
     }
 
-    // 8. 캘린더 & 스마트 기념일
+    // 10. 캘린더 (알록달록 스탬프 & 일정/휴가 띠지 바)
     function changeCalMonth(delta) {
       calMonth += delta;
       if (calMonth < 0) { calMonth = 11; calYear--; }
       if (calMonth > 11) { calMonth = 0; calYear++; }
       renderCalendar();
+    }
+
+    function subscribeCalendarEvents() {
+      renderCalendar();
+      if (!db) return;
+      if (unsubscribeCalEvents) unsubscribeCalEvents();
+      unsubscribeCalEvents = db.collection('calendar_events').doc('all')
+        .onSnapshot(doc => {
+          if (doc.exists) {
+            localStorage.setItem('mingle_cal_events', JSON.stringify(doc.data().events || []));
+            renderCalendar();
+          }
+        }, err => console.error(err));
+    }
+
+    function getCalendarEvents() {
+      return JSON.parse(localStorage.getItem('mingle_cal_events') || '[]');
+    }
+
+    function saveCalendarEvents(events) {
+      localStorage.setItem('mingle_cal_events', JSON.stringify(events));
+      renderCalendar();
+      if (db) db.collection('calendar_events').doc('all').set({ events }).catch(console.error);
+    }
+
+    function openCalendarEventModal() {
+      document.getElementById('calEventTitle').value = '';
+      document.getElementById('calEventStart').value = currentDate;
+      document.getElementById('calEventEnd').value = currentDate;
+      setCalEventType('plan');
+      document.getElementById('calendarEventModal').classList.remove('hidden');
+    }
+
+    function closeCalendarEventModal() {
+      document.getElementById('calendarEventModal').classList.add('hidden');
+    }
+
+    function setCalEventType(type) {
+      calEventType = type;
+      if (type === 'plan') {
+        document.getElementById('calTypePlanBtn').className = 'py-1.5 rounded-xl border border-amber-300 bg-amber-100 text-amber-900 font-bold';
+        document.getElementById('calTypeVacationBtn').className = 'py-1.5 rounded-xl border border-stone-200 bg-stone-50 text-stone-600';
+      } else {
+        document.getElementById('calTypeVacationBtn').className = 'py-1.5 rounded-xl border border-emerald-300 bg-emerald-100 text-emerald-900 font-bold';
+        document.getElementById('calTypePlanBtn').className = 'py-1.5 rounded-xl border border-stone-200 bg-stone-50 text-stone-600';
+      }
+    }
+
+    function saveCalendarEvent() {
+      const title = document.getElementById('calEventTitle').value.trim();
+      const start = document.getElementById('calEventStart').value;
+      const end = document.getElementById('calEventEnd').value || start;
+      if (!title || !start) return;
+
+      const events = getCalendarEvents();
+      events.push({ id: Date.now(), title, start, end, type: calEventType });
+      saveCalendarEvents(events);
+      closeCalendarEventModal();
     }
 
     function renderCalendar() {
@@ -1220,9 +1670,11 @@
       const firstDay = new Date(calYear, calMonth, 1).getDay();
       const lastDate = new Date(calYear, calMonth + 1, 0).getDate();
       const allDays = JSON.parse(localStorage.getItem('mingle_diary_days') || '{}');
+      const anniversaries = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
+      const events = getCalendarEvents();
 
       for (let i = 0; i < firstDay; i++) {
-        grid.innerHTML += `<div class="p-2 bg-stone-50/50 rounded-lg"></div>`;
+        grid.innerHTML += `<div class="p-1 bg-stone-50/40 rounded-xl min-h-[62px]"></div>`;
       }
 
       for (let d = 1; d <= lastDate; d++) {
@@ -1231,18 +1683,51 @@
         const dateKey = `${calYear}-${mStr}-${dStr}`;
         const record = allDays[dateKey];
 
-        let badges = '';
-        if (record) {
-          if (record.mood && MOOD_META[record.mood]) badges += MOOD_META[record.mood].icon;
-          if (record.health?.meals?.some(m => m.menu)) badges += '🥗';
-          if (record.knit?.rows > 0) badges += '🧶';
-          if (record.book?.title) badges += '📖';
+        // 1) 기념일 체크
+        const isAnni = anniversaries.some(a => {
+          const parts = a.date.split('-');
+          return parseInt(parts[parts.length - 2], 10) === (calMonth + 1) && parseInt(parts[parts.length - 1], 10) === d;
+        });
+
+        // 2) 일정 / 휴가 띠지 체크
+        const dayEvents = events.filter(e => dateKey >= e.start && dateKey <= e.end);
+
+        // 3) 알록달록 스탬프 아이콘 모음
+        let icons = '';
+        if (isAnni) icons += '🎂';
+        if (record?.weather) {
+          if (record.weather.includes('☀️')) icons += '☀️';
+          else if (record.weather.includes('⛅')) icons += '⛅';
+          else if (record.weather.includes('🌧️')) icons += '🌧️';
+          else if (record.weather.includes('❄️')) icons += '❄️';
+          else icons += '☁️';
         }
+        if (record?.knit?.rows > 0) icons += '🧶';
+        if (record?.book?.title) icons += '📖';
+        if (record?.bgm?.song) icons += '🎵';
+
+        // 4) 무드 & OOTD 컬러 도트
+        const moodIcon = record?.mood && MOOD_META[record.mood] ? MOOD_META[record.mood].icon : '';
+        const ootdDot = record?.ootd?.color ? `<span class="w-1.5 h-1.5 rounded-full inline-block border border-stone-200" style="background-color: ${record.ootd.color};"></span>` : '';
+
+        // 5) 이벤트 띠지 렌더링
+        let eventBars = '';
+        dayEvents.slice(0, 1).forEach(ev => {
+          const barStyle = ev.type === 'vacation' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900';
+          eventBars += `<div class="text-[8px] font-bold px-1 rounded truncate leading-tight mt-0.5 ${barStyle}">${ev.title}</div>`;
+        });
 
         grid.innerHTML += `
-          <div onclick="selectDateFromCal('${dateKey}')" class="p-1 min-h-[50px] bg-stone-50 hover:bg-amber-50 border border-stone-100 rounded-xl cursor-pointer flex flex-col justify-between">
-            <span class="text-[11px] font-bold text-stone-700">${d}</span>
-            <div class="text-[9px] tracking-tighter truncate">${badges}</div>
+          <div onclick="selectDateFromCal('${dateKey}')" class="p-1 min-h-[62px] bg-stone-50 hover:bg-amber-50/80 border border-stone-100 rounded-xl cursor-pointer flex flex-col justify-between transition-colors">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-stone-700">${d}</span>
+              <span class="text-[10px]">${moodIcon}</span>
+            </div>
+            ${eventBars}
+            <div class="flex items-center justify-between mt-auto pt-0.5">
+              <span class="text-[8px] tracking-tighter truncate">${icons}</span>
+              ${ootdDot}
+            </div>
           </div>
         `;
       }
@@ -1255,10 +1740,12 @@
       subscribeDayData(currentDate);
       subscribeTodayTasks(currentDate);
       renderDayHabitList();
+      renderDayRoutineTodos();
       calculateDDays();
       switchTab('day');
     }
 
+    // 11. 스마트 기념일
     function renderAnniversaries() {
       const list = document.getElementById('anniversaryList');
       const items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[{"name":"생일","date":"1994-10-04"}]');
@@ -1294,6 +1781,7 @@
       items.push({ name, date });
       localStorage.setItem('mingle_anniversaries', JSON.stringify(items));
       renderAnniversaries();
+      renderCalendar();
     }
 
     function deleteAnniversary(idx) {
@@ -1301,9 +1789,10 @@
       items.splice(idx, 1);
       localStorage.setItem('mingle_anniversaries', JSON.stringify(items));
       renderAnniversaries();
+      renderCalendar();
     }
 
-    // 9. 독서 책장 & 뜨개 쇼룸
+    // 12. 독서 책장 & 뜨개 쇼룸
     function subscribeArchives() {
       renderBookShelf();
       renderKnittingShowroom();
@@ -1405,7 +1894,7 @@
       if (db) db.collection('knitting_showroom').add(newKnit).catch(console.error);
     }
 
-    // 10. 무드 트래커 (월간 탐색 & 실데이터 매핑)
+    // 13. 무드 트래커
     function changeMoodMonth(delta) {
       moodMonth += delta;
       if (moodMonth < 0) { moodMonth = 11; moodYear--; }
@@ -1454,7 +1943,7 @@
       }
     }
 
-    // 11. 해빗 트래커 (실시간 구독, 주간/월간 뷰, 일일 체크리스트 연동, 멈춤 기능)
+    // 14. 해빗 트래커
     function subscribeHabitData() {
       renderHabits();
       renderDayHabitList();
@@ -1470,7 +1959,7 @@
             renderHabits();
             renderDayHabitList();
           }
-        }, err => console.error("해빗 구독 오류:", err));
+        }, err => console.error(err));
     }
 
     function getHabitsLocal() {
@@ -1536,7 +2025,6 @@
       saveHabitsState(habits, logs);
     }
 
-    // 데일리 페이지 하단 실천 리스트 렌더링
     function renderDayHabitList() {
       const container = document.getElementById('dayHabitCheckList');
       if (!container) return;
@@ -1568,7 +2056,6 @@
       const logs = getHabitLogsLocal();
       const weekDates = getWeekDates(currentDate);
 
-      // 주간 뷰 렌더링
       if (activeHabits.length === 0) {
         container.innerHTML = `<p class="text-xs text-stone-300 py-4 text-center">진행 중인 습관이 없어요 🌿</p>`;
       } else {
@@ -1593,7 +2080,6 @@
         `).join('');
       }
 
-      // 멈춤 보관함 렌더링
       document.getElementById('pausedHabitsCount').innerText = `${pausedHabits.length}`;
       const pausedContainer = document.getElementById('pausedHabitsList');
       if (pausedContainer) {
@@ -1658,7 +2144,6 @@
       icon.innerText = isHidden ? '▶' : '▼';
     }
 
-    // 단일 습관 월간 달력(잔디 타일) 탐색
     function populateHabitMonthSelect() {
       const select = document.getElementById('habitSelectForMonth');
       if (!select) return;
@@ -1714,16 +2199,14 @@
       }
     }
 
-    // 12. D-Day 매일 자동 계산 (안녕한 날 기준 다음 날 = 1일째)
+    // 15. D-Day 매일 자동 계산 (안녕한 날 기준 다음 날 = 1일째)
     function calculateDDays() {
       const parts = currentDate.split('-');
       const todayZero = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
 
-      // 여름이: 2024년 3월 30일 기준 (2 = 3월)
       const summerBase = new Date(2024, 2, 30);
       const diffSummer = Math.round((todayZero - summerBase) / (1000 * 60 * 60 * 24));
       
-      // 달이: 2025년 7월 19일 기준 (6 = 7월)
       const moonBase = new Date(2025, 6, 19);
       const diffMoon = Math.round((todayZero - moonBase) / (1000 * 60 * 60 * 24));
 
@@ -1733,7 +2216,7 @@
       if (elM) elM.innerText = `D+${diffMoon}`;
     }
 
-    // 13. 밴드 일기 1초 복사
+    // 16. 밴드 일기 1초 복사
     function copyToBandDiary() {
       const parts = currentDate.split('-');
       const today = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
@@ -1765,7 +2248,7 @@ ${dateText}
       });
     }
 
-    // 14. 화면 이미지(PNG) 다운로드
+    // 17. 화면 이미지 다운로드
     function downloadAsImage() {
       const area = document.getElementById('captureArea');
       html2canvas(area, { scale: 2 }).then(canvas => {
