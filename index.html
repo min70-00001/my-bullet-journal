@@ -74,7 +74,7 @@
               <option value="구름 조금 ⛅">구름 조금 ⛅</option>
               <option value="흐림 ☁️">흐림 ☁️</option>
               <option value="비 🌧️">비 🌧️</option>
-              <option value="눈 ❄️">눈 ❄️️</option>
+              <option value="눈 ❄️">눈 ❄️</option>
             </select>
           </div>
         </div>
@@ -105,21 +105,13 @@
             <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
               <span>⏱️</span> 10분 타임테이블 (07:00 ~ 24:00)
             </h3>
-            <p class="text-[10px] text-stone-400 mt-0.5">루틴과 일상을 기록해보세요</p>
+            <p class="text-[10px] text-stone-400 mt-0.5">칸을 누르면 카테고리 색상으로 바로 등록돼요</p>
           </div>
           <!-- 뷰 스위처 토글 -->
           <div class="flex bg-stone-100 p-0.5 rounded-xl border border-stone-200 text-[11px]">
             <button id="viewBtnGrid" onclick="setTimetableView('grid')" class="px-2 py-1 rounded-lg font-bold bg-white text-stone-800 shadow-xs">모눈 뷰</button>
             <button id="viewBtnCard" onclick="setTimetableView('card')" class="px-2 py-1 rounded-lg font-medium text-stone-500">카드 뷰</button>
           </div>
-        </div>
-
-        <!-- 지금 한 일 빠른 기록 버튼 -->
-        <div class="flex gap-1.5 mb-3">
-          <input type="text" id="quickActivityInput" placeholder="지금 한 일 기록..." class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-sage-300">
-          <button onclick="recordCurrentTimeToTable()" class="bg-sage-600 hover:bg-sage-700 text-white font-bold text-xs px-2.5 py-1.5 rounded-xl transition-colors whitespace-nowrap flex items-center gap-1 shrink-0">
-            <span>+</span><span>기록</span>
-          </button>
         </div>
 
         <!-- 1) 모눈 그리드 뷰 영역 -->
@@ -490,6 +482,54 @@
     </div>
   </nav>
 
+  <!-- 🎨 카테고리별 활동 선택 모달 -->
+  <div id="categoryModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+          <span>⏱️</span> <span id="categoryModalTimeTitle">00:00 기록</span>
+        </h3>
+        <button onclick="closeCategoryModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
+      </div>
+
+      <!-- 카테고리 옵션 버튼 목록 -->
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <button onclick="selectCategory('☀️ 아침 루틴', 'routine')" class="p-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-left flex items-center gap-1.5">
+          <span>☀️</span> 루틴/기상
+        </button>
+        <button onclick="selectCategory('🥗 식사/티타임', 'meal')" class="p-2.5 rounded-xl border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-900 font-bold text-left flex items-center gap-1.5">
+          <span>🥗</span> 식사/간식
+        </button>
+        <button onclick="selectCategory('💻 집중/작업', 'focus')" class="p-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-left flex items-center gap-1.5">
+          <span>💻</span> 집중/업무
+        </button>
+        <button onclick="selectCategory('🧶 뜨개/취미', 'hobby')" class="p-2.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-900 font-bold text-left flex items-center gap-1.5">
+          <span>🧶</span> 취미(뜨개·독서)
+        </button>
+        <button onclick="selectCategory('📖 독서모임', 'bookclub')" class="p-2.5 rounded-xl border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold text-left flex items-center gap-1.5">
+          <span>📖</span> 독서모임
+        </button>
+        <button onclick="selectCategory('☕ 일기/자기관리', 'selfcare')" class="p-2.5 rounded-xl border border-[#dac9ba] bg-[#fdf8f5] hover:bg-[#f6eee7] text-[#5c493c] font-bold text-left flex items-center gap-1.5">
+          <span>☕</span> 일기/자기관리
+        </button>
+        <button onclick="selectCategory('🏃 운동/산책', 'workout')" class="p-2.5 rounded-xl border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-900 font-bold text-left flex items-center gap-1.5 col-span-2">
+          <span>🏃</span> 운동/산책/스트레칭
+        </button>
+      </div>
+
+      <!-- 직접 입력 영역 -->
+      <div class="pt-2 border-t border-stone-100 flex gap-1.5">
+        <input type="text" id="categoryCustomInput" placeholder="직접 입력..." class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-stone-400">
+        <button onclick="selectCustomInput()" class="bg-stone-800 text-white font-bold text-xs px-3 rounded-xl shrink-0">등록</button>
+      </div>
+
+      <!-- 비우기 버튼 -->
+      <button onclick="clearCurrentBlock()" class="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-500 font-semibold text-[11px] rounded-xl transition-colors">
+        🗑️ 블록 비우기 (지우기)
+      </button>
+    </div>
+  </div>
+
   <!-- 핵심 자바스크립트 로직 -->
   <script>
     // 칭구의 Firebase 콘솔 설정 내장
@@ -503,11 +543,27 @@
       measurementId: "G-5TGYM6V8LQ"
     };
 
+    // 카테고리별 색상 테마 정의
+    const CATEGORY_STYLES = {
+      routine: 'border-amber-300 bg-amber-100 text-amber-900 font-bold',
+      meal: 'border-orange-300 bg-orange-100 text-orange-900 font-bold',
+      focus: 'border-emerald-300 bg-emerald-100 text-emerald-900 font-bold',
+      hobby: 'border-rose-300 bg-rose-100 text-rose-900 font-bold',
+      bookclub: 'border-indigo-300 bg-indigo-100 text-indigo-900 font-bold',
+      selfcare: 'border-[#dac9ba] bg-[#f0e6dd] text-[#5c493c] font-bold',
+      workout: 'border-sky-300 bg-sky-100 text-sky-900 font-bold',
+      custom: 'border-stone-300 bg-stone-200 text-stone-800 font-bold'
+    };
+
     let currentDate = new Date().toISOString().slice(0, 10);
     let calYear = new Date().getFullYear();
     let calMonth = new Date().getMonth();
     let timetableViewMode = 'grid';
     let db = null;
+
+    // 현재 선택한 블록 좌표
+    let activeHourStr = null;
+    let activeBlockIdx = null;
 
     // 실시간 구독 리스너 해제용 변수
     let unsubscribeDay = null;
@@ -598,7 +654,6 @@
     function subscribeTodayTasks(dateStr) {
       if (unsubscribeTasks) unsubscribeTasks();
 
-      // 우선 로컬 데이터로 즉시 화면 표시
       renderTodayTasks(getTodayTasksLocal(dateStr));
 
       if (!db) return;
@@ -702,51 +757,62 @@
         row.className = 'grid grid-cols-7 gap-1 items-center';
         row.innerHTML = `<span class="text-[10px] font-mono font-bold text-stone-400 text-center">${hourStr}</span>` +
           [0, 1, 2, 3, 4, 5].map(b => `
-            <button id="cell_${hourStr}_${b}" onclick="clickTimetableBlock('${hourStr}', ${b})" class="grid-cell rounded-md border border-stone-200 bg-stone-50 hover:border-amber-400 text-[9px] flex items-center justify-center p-0.5 truncate text-stone-600 font-medium"></button>
+            <button id="cell_${hourStr}_${b}" onclick="openCategoryModal('${hourStr}', ${b})" class="grid-cell rounded-md border border-stone-200 bg-stone-50 hover:border-amber-400 text-[9px] flex items-center justify-center p-0.5 truncate text-stone-600 font-medium"></button>
           `).join('');
         container.appendChild(row);
       }
     }
 
-    function clickTimetableBlock(hourStr, blockIdx) {
-      const cellId = `cell_${hourStr}_${blockIdx}`;
-      const currentText = document.getElementById(cellId).innerText || '';
-      const text = prompt(`${hourStr}:${blockIdx * 10}분에 진행한 일:`, currentText);
-      if (text !== null) {
-        setBlockData(hourStr, blockIdx, text);
+    // 🎨 카테고리 모달 열기/닫기
+    function openCategoryModal(hourStr, blockIdx) {
+      activeHourStr = hourStr;
+      activeBlockIdx = blockIdx;
+      const min = blockIdx * 10;
+      const timeStr = `${hourStr}:${min === 0 ? '00' : min}`;
+      document.getElementById('categoryModalTimeTitle').innerText = `${timeStr} 일정 등록`;
+      document.getElementById('categoryCustomInput').value = '';
+      document.getElementById('categoryModal').classList.remove('hidden');
+    }
+
+    function closeCategoryModal() {
+      document.getElementById('categoryModal').classList.add('hidden');
+    }
+
+    function selectCategory(text, categoryKey) {
+      if (activeHourStr !== null && activeBlockIdx !== null) {
+        setBlockData(activeHourStr, activeBlockIdx, text, categoryKey);
         saveDayData();
+        closeCategoryModal();
       }
     }
 
-    function setBlockData(hourStr, blockIdx, text) {
+    function selectCustomInput() {
+      const val = document.getElementById('categoryCustomInput').value.trim();
+      if (!val) return;
+      selectCategory(val, 'custom');
+    }
+
+    function clearCurrentBlock() {
+      if (activeHourStr !== null && activeBlockIdx !== null) {
+        setBlockData(activeHourStr, activeBlockIdx, '', '');
+        saveDayData();
+        closeCategoryModal();
+      }
+    }
+
+    function setBlockData(hourStr, blockIdx, text, category = 'custom') {
       const cell = document.getElementById(`cell_${hourStr}_${blockIdx}`);
       if (!cell) return;
       if (text) {
         cell.innerText = text;
-        cell.className = 'grid-cell rounded-md border border-amber-300 bg-amber-100 text-[9px] flex items-center justify-center p-0.5 truncate text-amber-900 font-bold';
+        cell.dataset.category = category;
+        const style = CATEGORY_STYLES[category] || CATEGORY_STYLES.custom;
+        cell.className = `grid-cell rounded-md border ${style} text-[9px] flex items-center justify-center p-0.5 truncate`;
       } else {
         cell.innerText = '';
+        cell.dataset.category = '';
         cell.className = 'grid-cell rounded-md border border-stone-200 bg-stone-50 hover:border-amber-400 text-[9px] flex items-center justify-center p-0.5 truncate text-stone-600 font-medium';
       }
-    }
-
-    function recordCurrentTimeToTable() {
-      const input = document.getElementById('quickActivityInput');
-      const text = input.value.trim();
-      if (!text) {
-        alert("기록할 내용을 입력해주세요!");
-        return;
-      }
-      const now = new Date();
-      let hour = now.getHours();
-      if (hour < 7) hour = 7;
-      if (hour > 24) hour = 24;
-      const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
-      const blockIdx = Math.floor(now.getMinutes() / 10);
-      setBlockData(hourStr, blockIdx, text);
-      input.value = '';
-      saveDayData();
-      if (timetableViewMode === 'card') renderCardTimeline();
     }
 
     function renderCardTimeline() {
@@ -762,13 +828,15 @@
         const [h, b] = k.split('_');
         const min = parseInt(b) * 10;
         const timeStr = `${h}:${min === 0 ? '00' : min}`;
+        const item = typeof blocks[k] === 'object' ? blocks[k] : { text: blocks[k], category: 'custom' };
+        const style = CATEGORY_STYLES[item.category] || CATEGORY_STYLES.custom;
         return `
-          <div class="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200 flex items-center justify-between text-xs">
+          <div class="p-2.5 rounded-xl border ${style} flex items-center justify-between text-xs">
             <div class="flex items-center gap-2">
-              <span class="font-mono font-bold text-amber-900 bg-amber-200/60 px-1.5 py-0.5 rounded text-[11px]">${timeStr}</span>
-              <span class="font-bold text-stone-800">${blocks[k]}</span>
+              <span class="font-mono font-bold px-1.5 py-0.5 rounded text-[11px] bg-white/70">${timeStr}</span>
+              <span class="font-bold">${item.text}</span>
             </div>
-            <button onclick="deleteBlockKey('${k}')" class="text-stone-300 hover:text-stone-500 text-xs px-1">✕</button>
+            <button onclick="deleteBlockKey('${k}')" class="opacity-60 hover:opacity-100 text-xs px-1">✕</button>
           </div>
         `;
       }).join('');
@@ -776,7 +844,7 @@
 
     function deleteBlockKey(k) {
       const [h, b] = k.split('_');
-      setBlockData(h, parseInt(b), '');
+      setBlockData(h, parseInt(b), '', '');
       saveDayData();
       renderCardTimeline();
     }
@@ -790,9 +858,9 @@
       let hour = now.getHours();
       if (hour < 7) hour = 7;
       const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
-      const routines = ["🚽화장실", "⚖️️체중", "💊비타민", "🥗아침식사", "🎒외출준비"];
+      const routines = ["🚽화장실", "⚖️체중", "💊비타민", "🥗아침식사", "🎒외출준비"];
       routines.forEach((r, idx) => {
-        if (idx < 6) setBlockData(hourStr, idx, r);
+        if (idx < 6) setBlockData(hourStr, idx, r, 'routine');
       });
       saveDayData();
       if (timetableViewMode === 'card') renderCardTimeline();
@@ -833,9 +901,9 @@
       if (hour < 7) hour = 7;
       const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
       const block = Math.floor(now.getMinutes() / 10);
-      setBlockData(hourStr, block, "🧶뜨개질");
-      if (block + 1 < 6) setBlockData(hourStr, block + 1, "🧶뜨개질");
-      if (block + 2 < 6) setBlockData(hourStr, block + 2, "🧶뜨개질");
+      setBlockData(hourStr, block, "🧶뜨개질", 'hobby');
+      if (block + 1 < 6) setBlockData(hourStr, block + 1, "🧶뜨개질", 'hobby');
+      if (block + 2 < 6) setBlockData(hourStr, block + 2, "🧶뜨개질", 'hobby');
       saveDayData();
       if (timetableViewMode === 'card') renderCardTimeline();
     }
@@ -846,9 +914,9 @@
       if (hour < 7) hour = 7;
       const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
       const block = Math.floor(now.getMinutes() / 10);
-      setBlockData(hourStr, block, "📚독서");
-      if (block + 1 < 6) setBlockData(hourStr, block + 1, "📚독서");
-      if (block + 2 < 6) setBlockData(hourStr, block + 2, "📚독서");
+      setBlockData(hourStr, block, "📚독서", 'hobby');
+      if (block + 1 < 6) setBlockData(hourStr, block + 1, "📚독서", 'hobby');
+      if (block + 2 < 6) setBlockData(hourStr, block + 2, "📚독서", 'hobby');
       saveDayData();
       if (timetableViewMode === 'card') renderCardTimeline();
     }
@@ -857,7 +925,6 @@
     function subscribeDayData(dateStr) {
       if (unsubscribeDay) unsubscribeDay();
 
-      // 로컬 데이터 즉시 화면 반영
       applyDayDataToUI(getDayDataLocal(dateStr));
 
       if (!db) return;
@@ -889,7 +956,12 @@
         const hourStr = h < 10 ? `0${h}` : `${h}`;
         for (let b = 0; b < 6; b++) {
           const cell = document.getElementById(`cell_${hourStr}_${b}`);
-          if (cell && cell.innerText) timetableData[`${hourStr}_${b}`] = cell.innerText;
+          if (cell && cell.innerText) {
+            timetableData[`${hourStr}_${b}`] = {
+              text: cell.innerText,
+              category: cell.dataset.category || 'custom'
+            };
+          }
         }
       }
 
@@ -1000,11 +1072,16 @@
       }
       document.getElementById('dailyMemo').value = data.memo || '';
 
-      // 타임테이블 복원
+      // 타임테이블 복원 (이전 단순 텍스트 구조 호환 지원)
       if (data.timetable) {
         Object.keys(data.timetable).forEach(k => {
           const [h, b] = k.split('_');
-          setBlockData(h, parseInt(b), data.timetable[k]);
+          const item = data.timetable[k];
+          if (typeof item === 'object') {
+            setBlockData(h, parseInt(b), item.text, item.category);
+          } else {
+            setBlockData(h, parseInt(b), item, 'custom');
+          }
         });
       }
 
@@ -1061,7 +1138,7 @@
       updateDateLabel();
       subscribeDayData(currentDate);
       subscribeTodayTasks(currentDate);
-      calculateDDDays();
+      calculateDDays();
       switchTab('day');
     }
 
@@ -1112,7 +1189,6 @@
 
     // 10. 독서 책장 & 뜨개 쇼룸 (실시간 onSnapshot 연동)
     function subscribeArchives() {
-      // 로컬 캐시 즉시 렌더링
       renderBookShelf();
       renderKnittingShowroom();
 
@@ -1247,7 +1323,7 @@
       const cur = new Date(currentDate);
       const todayZero = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate());
 
-      // 여름이: 2024년 3월 31일 기준 (JS 월은 0부터 시작)
+      // 여름이: 2024년 3월 31일 기준
       const summerBase = new Date(2024, 2, 31);
       const diffSummer = Math.round((todayZero - summerBase) / (1000 * 60 * 60 * 24));
       
@@ -1261,17 +1337,15 @@
       if (elM) elM.innerText = `D+${diffMoon}`;
     }
 
-    // 13. 밴드 일기 1초 복사 (선택한 날씨 자동 연동)
+    // 13. 밴드 일기 1초 복사
     function copyToBandDiary() {
       const today = new Date(currentDate);
       const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
       const dateText = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${days[today.getDay()]}`;
 
-      // 선택한 날씨 가져오기
       const data = getDayDataLocal(currentDate);
       const weatherText = data.weather ? `${data.weather}` : '';
 
-      // 여름이 & 달이 D-Day 실시간 계산
       const cur = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const summerStart = new Date(2024, 2, 31);
       const moonStart = new Date(2025, 6, 20);
