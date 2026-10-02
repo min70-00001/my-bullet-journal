@@ -1151,7 +1151,11 @@
 
         <!-- 표지 미리보기 & 핵심 메타 -->
         <div class="flex gap-3 items-center p-2 rounded-xl bg-stone-50 border border-stone-100">
-          <img id="bookPreviewCover" src="https://via.placeholder.com/60x85?text=Cover" class="w-12 h-16 object-cover rounded-md border border-stone-200 shadow-2xs">
+          <div id="bookPreviewBox" class="w-12 h-16 rounded-md border border-stone-200 shadow-2xs shrink-0 overflow-hidden bg-stone-100 flex flex-col items-center justify-center text-stone-400">
+            <span id="bookPreviewIcon" class="text-lg">📖</span>
+            <span id="bookPreviewText" class="text-[9px] font-medium mt-0.5">표지</span>
+            <img id="bookPreviewCover" src="" class="hidden w-full h-full object-cover">
+          </div>
           <div class="flex-1 space-y-1 min-w-0">
             <input type="text" id="bookInputTitle" placeholder="도서명" class="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-xs font-bold text-stone-800">
             <input type="text" id="bookInputAuthor" placeholder="저자 / 출판사" class="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-[11px] text-stone-600">
