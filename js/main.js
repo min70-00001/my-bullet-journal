@@ -90,8 +90,10 @@ const firebaseConfig = {
       </svg>
     `;
 
-    const REAL_TODAY_STR = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const REAL_TODAY_STR = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     let currentDate = REAL_TODAY_STR;
+
 
     let calYear = new Date().getFullYear();
     let calMonth = new Date().getMonth();
@@ -249,16 +251,22 @@ const firebaseConfig = {
     }
 
     function jumpToRealToday() {
-      currentDate = REAL_TODAY_STR;
-      document.getElementById('currentDateInput').value = currentDate;
-      updateDateLabel();
-      subscribeDayData(currentDate);
-      subscribeTodayTasks(currentDate);
-      renderDayHabitList();
-      renderDayRoutineTodos();
-      calculateDDays();
-      updateTodaySpecialBanner();
-    }
+  const now = new Date();
+  const realToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  currentDate = realToday;
+  
+  const dateInput = document.getElementById('currentDateInput');
+  if (dateInput) dateInput.value = currentDate;
+  
+  if (typeof updateDateLabel === 'function') updateDateLabel();
+  if (typeof subscribeDayData === 'function') subscribeDayData(currentDate);
+  if (typeof subscribeTodayTasks === 'function') subscribeTodayTasks(currentDate);
+  if (typeof renderDayHabitList === 'function') renderDayHabitList();
+  if (typeof renderDayRoutineTodos === 'function') renderDayRoutineTodos();
+  if (typeof calculateDDays === 'function') calculateDDays();
+  if (typeof updateTodaySpecialBanner === 'function') updateTodaySpecialBanner();
+}
+
 
     function updateDateLabel() {
       const parts = currentDate.split('-');
