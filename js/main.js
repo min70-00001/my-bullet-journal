@@ -3767,3 +3767,11 @@ function renderBookShelf() {
     `;
   }).join('');
 }
+
+// ⭐ 쩜오(0.5) 별점 계산 헬퍼 함수
+function getRatingStars(rating) {
+  const score = parseFloat(rating) || 5;
+  const fullStars = Math.floor(score);
+  const hasHalf = score % 1 !== 0;
+  return '⭐'.repeat(fullStars) + (hasHalf ? '✨' : '');
+}
