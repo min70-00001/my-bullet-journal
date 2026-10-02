@@ -3542,7 +3542,17 @@ function selectGoogleBook(title, author, cover, pageCount) {
   document.getElementById('bookInputAuthor').value = author;
   document.getElementById('bookInputTotalPage').value = pageCount || '';
   document.getElementById('bookCoverUrl').value = cover;
-  document.getElementById('bookPreviewCover').src = cover;
+  
+  const coverImg = document.getElementById('bookPreviewCover');
+  const icon = document.getElementById('bookPreviewIcon');
+  const text = document.getElementById('bookPreviewText');
+
+  if (cover && !cover.includes('placeholder')) {
+    coverImg.src = cover;
+    coverImg.classList.remove('hidden');
+    if (icon) icon.classList.add('hidden');
+    if (text) text.classList.add('hidden');
+  }
   document.getElementById('bookSearchResults').classList.add('hidden');
 }
 
@@ -3558,7 +3568,18 @@ function openBookModal() {
   document.getElementById('bookInputAuthor').value = '';
   document.getElementById('bookInputTotalPage').value = '';
   document.getElementById('bookCoverUrl').value = '';
-  document.getElementById('bookPreviewCover').src = 'https://via.placeholder.com/60x85?text=Cover';
+
+  // 기본 표지 박스로 초기화
+  const coverImg = document.getElementById('bookPreviewCover');
+  const icon = document.getElementById('bookPreviewIcon');
+  const text = document.getElementById('bookPreviewText');
+  if (coverImg) {
+    coverImg.src = '';
+    coverImg.classList.add('hidden');
+  }
+  if (icon) icon.classList.remove('hidden');
+  if (text) text.classList.remove('hidden');
+
   document.getElementById('bookInputStatus').value = 'reading';
   document.getElementById('bookInputStartDate').value = typeof currentDate !== 'undefined' ? currentDate : '';
   document.getElementById('bookInputEndDate').value = '';
@@ -3583,7 +3604,20 @@ function openBookEditModal(id) {
   document.getElementById('bookInputAuthor').value = book.author;
   document.getElementById('bookInputTotalPage').value = book.totalPage || '';
   document.getElementById('bookCoverUrl').value = book.cover || '';
-  document.getElementById('bookPreviewCover').src = book.cover || 'https://via.placeholder.com/60x85?text=Cover';
+  const coverImg = document.getElementById('bookPreviewCover');
+  const icon = document.getElementById('bookPreviewIcon');
+  const text = document.getElementById('bookPreviewText');
+  if (book.cover && !book.cover.includes('placeholder')) {
+    coverImg.src = book.cover;
+    coverImg.classList.remove('hidden');
+    if (icon) icon.classList.add('hidden');
+    if (text) text.classList.add('hidden');
+  } else {
+    coverImg.classList.add('hidden');
+    if (icon) icon.classList.remove('hidden');
+    if (text) text.classList.remove('hidden');
+  }
+
   document.getElementById('bookInputStatus').value = book.status || 'reading';
   document.getElementById('bookInputStartDate').value = book.startDate || '';
   document.getElementById('bookInputEndDate').value = book.endDate || '';
