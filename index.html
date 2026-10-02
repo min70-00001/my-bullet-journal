@@ -1176,8 +1176,17 @@
       </svg>
     `;
 
-    const REAL_TODAY_STR = new Date().toISOString().slice(0, 10);
-    let currentDate = REAL_TODAY_STR;
+    // 한국 시간(KST) 기준 로컬 날짜 문자열 생성 함수
+function getLocalTodayStr() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+const REAL_TODAY_STR = getLocalTodayStr();
+let currentDate = REAL_TODAY_STR;
 
     let calYear = new Date().getFullYear();
     let calMonth = new Date().getMonth();
@@ -2757,86 +2766,82 @@
     }
 
     function applyDayDataToUI(data) {
-      initTimetableGrid();
+  initTimetableGrid();
 
-      const weatherEl = document.getElementById('todayWeatherSelect');
-      if (weatherEl) weatherEl.value = data.weather || '';
+  // 데이터가 아예 없는 빈 날짜라면 입력폼들을 완전히 깨끗하게 초기화!
+  const safeData = data || {};
 
-      const moodEl = document.getElementById('todayMoodSelect');
-      if (moodEl) moodEl.value = data.mood || '';
+  if (document.getElementById('todayWeatherSelect')) document.getElementById('todayWeatherSelect').value = safeData.weather || '';
+  if (document.getElementById('todayMoodSelect')) document.getElementById('todayMoodSelect').value = safeData.mood || '';
+  
+  // OOTD 메모 및 색상 (이전 날짜 데이터가 상속되지 않도록 빈 값 처리)
+  if (document.getElementById('ootdTextInput')) document.getElementById('ootdTextInput').value = (safeData.ootd && safeData.ootd.text) || '';
+  if (document.getElementById('ootdColorInput')) {
+    const col = (safeData.ootd && safeData.ootd.color) || '#ecdcc9';
+    document.getElementById('ootdColorInput').value = col;
+    if (document.getElementById('ootdColorBadge')) document.getElementById('ootdColorBadge').style.backgroundColor = col;
+  }
+  initOotdDropdowns();
 
-      if (data.ootd) {
-        document.getElementById('ootdTextInput').value = data.ootd.text || '';
-        document.getElementById('ootdColorInput').value = data.ootd.color || '#ecdcc9';
-        document.getElementById('ootdColorBadge').style.backgroundColor = data.ootd.color || '#ecdcc9';
-      }
-      renderOotdChips();
+  // BGM 노래 정보
+  if (document.getElementById('bgmSearchInput')) document.getElementById('bgmSearchInput').value = (safeData.bgm && safeData.bgm.song) || '';
+  if (document.getElementById('bgmInfoText')) document.getElementById('bgmInfoText').innerText = (safeData.bgm && safeData.bgm.info) || 'BGM을 검색해보세요';
+  if (safeData.bgm && safeData.bgm.cover && document.getElementById('bgmCoverImg')) {
+    document.getElementById('bgmCoverImg').src = safeData.bgm.cover;
+  }
 
-      if (data.bgm) {
-        document.getElementById('bgmSearchInput').value = data.bgm.song || '';
-        document.getElementById('bgmInfoText').innerText = data.bgm.info || 'BGM을 검색해보세요';
-        if (data.bgm.cover) document.getElementById('bgmCoverImg').src = data.bgm.cover;
-      }
+  // 건강 & 식단 데이터 초기화
+  const health = safeData.health || {};
+  if (document.getElementById('sleepBedTime')) document.getElementById('sleepBedTime').value = health.sleepBed || '';
+  if (document.getElementById('sleepWakeTime')) document.getElementById('sleepWakeTime').value = health.sleepWake || '';
+  if (document.getElementById('todayWeight')) document.getElementById('todayWeight').value = health.weight || '';
 
-      if (data.health) {
-        document.getElementById('sleepBedTime').value = data.health.sleepBed || '';
-        document.getElementById('sleepWakeTime').value = data.health.sleepWake || '';
-        document.getElementById('todayWeight').value = data.health.weight || '';
+  const snacks = health.snacks || {};
+  if (document.getElementById('snackTime_am')) document.getElementById('snackTime_am').value = snacks.amTime || '';
+  if (document.getElementById('snackMenu_am')) document.getElementById('snackMenu_am').value = snacks.amMenu || '';
+  if (document.getElementById('snackTime_pm')) document.getElementById('snackTime_pm').value = snacks.pmTime || '';
+  if (document.getElementById('snackMenu_pm')) document.getElementById('snackMenu_pm').value = snacks.pmMenu || '';
+  if (document.getElementById('snackTime_night')) document.getElementById('snackTime_night').value = snacks.nightTime || '';
+  if (document.getElementById('snackMenu_night')) document.getElementById('snackMenu_night').value = snacks.nightMenu || '';
 
-        if (data.health.snacks) {
-          if (document.getElementById('snackTime_am')) document.getElementById('snackTime_am').value = data.health.snacks.amTime || '';
-          if (document.getElementById('snackMenu_am')) document.getElementById('snackMenu_am').value = data.health.snacks.amMenu || '';
-          if (document.getElementById('snackTime_pm')) document.getElementById('snackTime_pm').value = data.health.snacks.pmTime || '';
-          if (document.getElementById('snackMenu_pm')) document.getElementById('snackMenu_pm').value = data.health.snacks.pmMenu || '';
-          if (document.getElementById('snackTime_night')) document.getElementById('snackTime_night').value = data.health.snacks.nightTime || '';
-          if (document.getElementById('snackMenu_night')) document.getElementById('snackMenu_night').value = data.health.snacks.nightMenu || '';
-        }
+  const meals = health.meals || [];
+  [1, 2, 3].forEach(i => {
+    const m = meals[i - 1] || {};
+    if (document.getElementById(`mealTime_${i}`)) document.getElementById(`mealTime_${i}`).value = m.time || '';
+    if (document.getElementById(`sugarPost_${i}`)) document.getElementById(`sugarPost_${i}`).value = m.sugarPost || '';
+    if (document.getElementById(`mealMenu_${i}`)) document.getElementById(`mealMenu_${i}`).value = m.menu || '';
+    if (document.getElementById(`mealVege_${i}`)) document.getElementById(`mealVege_${i}`).checked = !!m.vege;
+    if (document.getElementById(`mealAcv_${i}`)) document.getElementById(`mealAcv_${i}`).checked = !!m.acv;
+    if (document.getElementById(`mealWalk_${i}`)) document.getElementById(`mealWalk_${i}`).checked = !!m.walk;
+    if (document.getElementById(`mealCond_${i}`)) document.getElementById(`mealCond_${i}`).value = m.cond || '';
+    if (i === 1 && document.getElementById('sugarFast')) document.getElementById('sugarFast').value = m.sugarFast || '';
+  });
 
-        if (data.health.meals) {
-          data.health.meals.forEach((m, idx) => {
-            const i = idx + 1;
-            document.getElementById(`mealTime_${i}`).value = m.time || '';
-            document.getElementById(`sugarPost_${i}`).value = m.sugarPost || '';
-            document.getElementById(`mealMenu_${i}`).value = m.menu || '';
-            if (document.getElementById(`mealVege_${i}`)) document.getElementById(`mealVege_${i}`).checked = !!m.vege;
-            if (document.getElementById(`mealAcv_${i}`)) document.getElementById(`mealAcv_${i}`).checked = !!m.acv;
-            if (document.getElementById(`mealWalk_${i}`)) document.getElementById(`mealWalk_${i}`).checked = !!m.walk;
-            document.getElementById(`mealCond_${i}`).value = m.cond || '';
-            if (i === 1) document.getElementById('sugarFast').value = m.sugarFast || '';
-          });
-        }
-      }
+  renderDrinkTracker(safeData);
 
-      renderDrinkTracker(data);
+  if (safeData.bookReading) {
+    updateDailyBookDropdown(safeData.bookReading.bookId);
+    if (document.getElementById('bookPageStart')) document.getElementById('bookPageStart').value = safeData.bookReading.pageStart || '';
+    if (document.getElementById('bookPageEnd')) document.getElementById('bookPageEnd').value = safeData.bookReading.pageEnd || '';
+    calculateReadPages();
+  } else {
+    updateDailyBookDropdown();
+    if (document.getElementById('bookPageStart')) document.getElementById('bookPageStart').value = '';
+    if (document.getElementById('bookPageEnd')) document.getElementById('bookPageEnd').value = '';
+  }
 
-      if (data.knit) {
-        document.getElementById('knitCurrentProject').value = data.knit.project || '';
-        document.getElementById('knitRowCount').innerText = data.knit.rows || '0';
-        if (document.getElementById('knitSectionTip')) document.getElementById('knitSectionTip').value = data.knit.tip || '';
-      }
-      if (data.book) {
-        document.getElementById('bookCurrentTitle').value = data.book.title || '';
-        document.getElementById('bookTodayPages').value = data.book.pages || '';
-      }
-      document.getElementById('dailyMemo').value = data.memo || '';
+  if (document.getElementById('dailyMemo')) document.getElementById('dailyMemo').value = safeData.memo || '';
 
-      if (data.timetable) {
-        Object.keys(data.timetable).forEach(k => {
-          const [h, b] = k.split('_');
-          const item = data.timetable[k];
-          if (typeof item === 'object') {
-            setBlockData(h, parseInt(b), item.text, item.category);
-          } else {
-            setBlockData(h, parseInt(b), item, 'custom');
-          }
-        });
-      }
+  // 타임테이블 초기화 및 복원
+  const timetable = safeData.timetable || {};
+  Object.keys(timetable).forEach(k => {
+    const [h, b] = k.split('_');
+    const item = timetable[k];
+    setBlockData(h, parseInt(b), typeof item === 'object' ? item.text : item, typeof item === 'object' ? item.category : 'custom', typeof item === 'object' ? (item.note || '') : '');
+  });
 
-      renderDynamicRoutines();
-      updateTodaySpecialBanner();
-
-      if (timetableViewMode === 'timeline') renderVerticalTimeline();
-    }
+  if (timetableViewMode === 'timeline') renderVerticalTimeline();
+}
 
     // 캘린더 약속 / 일정 & 클릭 수정
     function initCalEventCategoryButtons() {
