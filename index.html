@@ -125,12 +125,8 @@
   </div>
 
       <!-- 오늘의 특별 일정 & 교통 예매 리마인드 배너 -->
-      <div id="todaySpecialEventBanner" class="hidden bg-amber-50/90 border border-amber-200 rounded-2xl p-2.5 px-3 shadow-2xs flex items-center justify-between text-xs">
-        <div class="flex items-center gap-1.5 min-w-0">
-          <span class="text-amber-600 font-bold shrink-0">💌 오늘:</span>
-          <span id="todaySpecialEventText" class="font-bold text-amber-950 truncate"></span>
-        </div>
-        <span class="text-[10px] bg-white text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded-md shrink-0 font-semibold">알림</span>
+      <div id="todaySpecialEventBanner" class="hidden w-full mb-3 space-y-1.5">
+        <div id="todaySpecialEventText" class="w-full flex flex-col gap-1.5 items-start"></div>
       </div>
 
       <!-- 오늘의 할 일 (스크롤 없는 오가닉 높이 & 텍스트 터치 수정) -->
