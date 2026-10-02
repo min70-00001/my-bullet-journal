@@ -2205,55 +2205,119 @@ const firebaseConfig = {
       }).join('');
     }
 
-    function updateTodaySpecialBanner() {
-      const banner = document.getElementById('todaySpecialEventBanner');
-      const textEl = document.getElementById('todaySpecialEventText');
-      if (!banner || !textEl) return;
+    // ==========================================
+// 💌 오늘 배너: 기념일 / 일정 / 예매 3단 분리 & 탑승 완료 토글
+// ==========================================
 
-      const events = getCalendarEvents();
-      const d = new Date(currentDate);
-      const dayOfWeek = d.getDay();
+function updateTodaySpecialBanner() {
+  const banner = document.getElementById('todaySpecialEventBanner');
+  const textEl = document.getElementById('todaySpecialEventText');
+  if (!banner || !textEl) return;
 
-      const hitEvents = events.filter(e => {
-        if (e.skippedDates && e.skippedDates.includes(currentDate)) return false;
-        if (e.isRepeat) return e.repeatDays && e.repeatDays.includes(dayOfWeek);
-        return currentDate >= e.start && currentDate <= e.end;
-      });
+  const events = typeof getCalendarEvents === 'function' ? getCalendarEvents() : [];
+  const d = new Date(currentDate);
+  const dayOfWeek = d.getDay();
 
-      const tickets = getTicketsLocal().filter(t => t.date === currentDate);
-      const ticketIconMap = { bus: '🚌 버스', train: '🚅 기차', flight: '✈️ 비행기' };
+  // 1. 일반 일정
+  const hitEvents = events.filter(e => {
+    if (e.skippedDates && e.skippedDates.includes(currentDate)) return false;
+    if (e.isRepeat) return e.repeatDays && e.repeatDays.includes(dayOfWeek);
+    return currentDate >= e.start && currentDate <= e.end;
+  });
 
-      const anniversaries = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
-      const parts = currentDate.split('-');
-      const m = parseInt(parts[1], 10);
-      const dayNum = parseInt(parts[2], 10);
-      const mStr = m < 10 ? `0${m}` : `${m}`;
-      const dStr = dayNum < 10 ? `0${dayNum}` : `${dayNum}`;
-      const holidayName = KR_HOLIDAYS[`${mStr}-${dStr}`] || KR_HOLIDAYS[currentDate];
+  // 2. 예매 내역
+  const tickets = (typeof getTicketsLocal === 'function' ? getTicketsLocal() : []).filter(t => t.date === currentDate);
+  const ticketIconMap = { bus: '🚌 버스', train: '🚆 기차', flight: '✈️ 비행기' };
 
-      const hitAnni = anniversaries.find(a => {
-        const p = a.date.split('-');
-        return parseInt(p[p.length - 2], 10) === m && parseInt(p[p.length - 1], 10) === dayNum;
-      });
+  // 3. 기념일 & 공휴일
+  const anniversaries = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
+  const parts = currentDate.split('-');
+  const m = parseInt(parts[1], 10);
+  const dayNum = parseInt(parts[2], 10);
+  const mStr = m < 10 ? `0${m}` : `${m}`;
+  const dStr = dayNum < 10 ? `0${dayNum}` : `${dayNum}`;
 
-      const highlights = [];
-      if (holidayName) highlights.push(`🇰🇷 ${holidayName}`);
-      if (hitAnni) highlights.push(`🎂 ${hitAnni.name}`);
-      tickets.forEach(t => {
-        highlights.push(`${ticketIconMap[t.type]} ${t.time} ${t.depart}➔${t.arrive} (${t.seatMemo || '탑승'})`);
-      });
-      hitEvents.forEach(e => {
-        const catMeta = EVENT_CATEGORIES.find(c => c.key === e.category) || EVENT_CATEGORIES[6];
-        highlights.push(`${catMeta.icon} ${e.title}`);
-      });
+  const hitAnniv = anniversaries.filter(a => {
+    if (a.isSolar) return a.month === m && a.day === dayNum;
+    return false;
+  });
 
-      if (highlights.length > 0) {
-        textEl.innerText = highlights.join('  |  ');
-        banner.classList.remove('hidden');
-      } else {
-        banner.classList.add('hidden');
-      }
-    }
+  let holidayName = '';
+  if (typeof KR_HOLIDAYS !== 'undefined' && KR_HOLIDAYS[`${mStr}-${dStr}`]) {
+    holidayName = KR_HOLIDAYS[`${mStr}-${dStr}`];
+  } else if (typeof KR_HOLIDAYS !== 'undefined' && KR_HOLIDAYS[currentDate]) {
+    holidayName = KR_HOLIDAYS[currentDate];
+  }
+
+  // 로컬 완료 상태 불러오기
+  const completedTickets = JSON.parse(localStorage.getItem('mingle_completed_tickets') || '[]');
+
+  // 각 항목별 HTML 블록 생성
+  const blocks = [];
+
+  // A. 기념일 / 공휴일 (로즈 핑크 톤)
+  const annivTexts = [];
+  if (holidayName) annivTexts.push(`🇰🇷 ${holidayName}`);
+  hitAnniv.forEach(a => annivTexts.push(`🎉 ${a.name}`));
+  if (annivTexts.length > 0) {
+    blocks.push(`
+      <div class="flex items-center gap-1.5 bg-rose-50/80 border border-rose-200/80 px-2.5 py-1 rounded-xl text-[11px] text-rose-800 font-bold shadow-2xs">
+        <span>💌</span>
+        <span>${annivTexts.join(' · ')}</span>
+      </div>
+    `);
+  }
+
+  // B. 일반 일정 (웜 스톤 톤)
+  if (hitEvents.length > 0) {
+    const evText = hitEvents.map(e => e.title).join(', ');
+    blocks.push(`
+      <div class="flex items-center gap-1.5 bg-stone-50 border border-stone-200 px-2.5 py-1 rounded-xl text-[11px] text-stone-700 font-bold shadow-2xs">
+        <span>🗓️</span>
+        <span class="truncate">${evText}</span>
+      </div>
+    `);
+  }
+
+  // C. 교통/예매 내역 (스카이 블루 톤 & 탑승 완료 토글)
+  tickets.forEach(t => {
+    const isDone = completedTickets.includes(t.id);
+    const label = `${ticketIconMap[t.type] || '🎫'} ${t.time || ''} ${t.depart || ''}→${t.arrive || ''} (${t.status || '예매'})`;
+    
+    blocks.push(`
+      <div class="flex items-center justify-between gap-2 border px-2.5 py-1 rounded-xl text-[11px] transition-all shadow-2xs ${isDone ? 'bg-stone-50/60 border-stone-200 text-stone-400 line-through' : 'bg-sky-50 border-sky-200 text-sky-900 font-bold'}">
+        <span class="truncate">${label}</span>
+        <button onclick="toggleTicketComplete(${t.id}); event.stopPropagation();" class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-md border font-semibold ${isDone ? 'bg-white text-stone-400 border-stone-200' : 'bg-white text-sky-700 border-sky-300 hover:bg-sky-100'}">
+          ${isDone ? '탑승완료 취소' : '탑승완료 ✓'}
+        </button>
+      </div>
+    `);
+  });
+
+  // 표시할 게 하나도 없으면 숨김
+  if (blocks.length === 0) {
+    banner.classList.add('hidden');
+    return;
+  }
+
+  // 배너 표시 및 예쁜 카드 리스트로 렌더링
+  banner.classList.remove('hidden');
+  banner.className = 'w-full space-y-1.5 mb-2'; // 부모 배너 컨테이너 정돈
+  textEl.className = 'flex flex-col gap-1.5 w-full';
+  textEl.innerHTML = blocks.join('');
+}
+
+// 🎫 예매 탑승 완료 토글 도우미 함수
+function toggleTicketComplete(id) {
+  let list = JSON.parse(localStorage.getItem('mingle_completed_tickets') || '[]');
+  if (list.includes(id)) {
+    list = list.filter(item => item !== id);
+  } else {
+    list.push(id);
+  }
+  localStorage.setItem('mingle_completed_tickets', JSON.stringify(list));
+  updateTodaySpecialBanner();
+}
 
     // 캘린더 타일: 고정 높이 3단 정방형 스탬프 렌더러
     function renderCalendar() {
