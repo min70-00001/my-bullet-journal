@@ -222,13 +222,13 @@
         </div>
       </div>
 
-      <!-- 식단 & 🌜 밤간식 & 맞춤 음료 트래커 -->
+      <!-- 식단 & 🌜 밤간식 & 맞춤 음료 트래커 (애사비 스마트 자동연동) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between">
           <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
             <span>🥗</span> 식단 & 데일리 드링크
           </h3>
-          <!-- 밍글 맞춤 음료 트래커 -->
+          <!-- 밍글 맞춤 음료 트래커 (💧6 + 🍏2 + ☕1) -->
           <div class="flex items-center gap-1 bg-stone-50 px-2 py-1 rounded-xl border border-stone-200">
             <div id="drinkWaterDrops" class="flex gap-0.5 text-xs cursor-pointer" title="물 (200ml 단위)"></div>
             <span class="text-stone-300 text-[10px]">|</span>
@@ -254,7 +254,7 @@
           </div>
         </div>
 
-        <!-- 식단 + 오전/오후/밤간식 -->
+        <!-- 식단 + 오전/오후/밤간식 (돌출 완전 방지) -->
         <div class="space-y-2 text-xs">
           <!-- 아침 -->
           <div class="p-2.5 rounded-xl bg-warm-50 border border-stone-200 space-y-1.5">
@@ -364,14 +364,14 @@
         <div id="dayHabitCheckList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
       </div>
 
-      <!-- 오늘의 뜨개 & 독서 -->
+      <!-- 오늘의 뜨개 & 독서 (시간 소급 & 수동 입력) -->
       <div class="grid grid-cols-2 gap-3">
         <!-- 뜨개 위젯 -->
         <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs flex flex-col justify-between space-y-2">
           <div>
             <div class="flex items-center justify-between mb-1">
               <span class="text-xs font-bold text-rose-700 flex items-center gap-1">🧶 오늘의 뜨개</span>
-              <button onclick="switchTab('drawer', 'knit')" title="쇼룸 바로가기" class="text-[10px] text-stone-400 hover:text-stone-700 font-bold">쇼룸 ↗</button>
+              <button onclick="switchTab('hobby', 'knit')" title="쇼룸 바로가기" class="text-[10px] text-stone-400 hover:text-stone-700 font-bold">쇼룸 ↗</button>
             </div>
             <input type="text" id="knitCurrentProject" placeholder="진행 중 작품명..." onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded px-1.5 py-1 text-xs mb-1.5">
             <div class="flex items-center justify-between bg-rose-50/50 p-1.5 rounded-xl border border-rose-100">
@@ -385,10 +385,15 @@
             </div>
             <input type="text" id="knitSectionTip" placeholder="구간 메모 (코줄임 등)" onchange="saveDayData()" class="w-full bg-transparent border-b border-stone-200 py-0.5 text-[10px] text-stone-500 focus:outline-none mt-1">
           </div>
+          <!-- 퀵 추가 & 시간 직접 입력 -->
           <div class="space-y-1 pt-1">
             <div class="grid grid-cols-2 gap-1">
-              <button id="knitTimerBtn" onclick="toggleKnitTimer()" class="text-[10px] bg-rose-500 hover:bg-rose-600 text-white font-bold py-1.5 rounded-lg shadow-2xs">시작 ▶</button>
-              <button onclick="openManualTimeModal('뜨개', 'hobby')" class="text-[10px] bg-rose-50 hover:bg-rose-100 text-rose-800 font-semibold py-1.5 rounded-lg border border-rose-200">직접입력</button>
+              <button id="knitTimerBtn" onclick="toggleKnitTimer()" class="text-[10px] bg-rose-500 hover:bg-rose-600 text-white font-bold py-1.5 rounded-lg shadow-2xs">
+                시작 ▶
+              </button>
+              <button onclick="openManualTimeModal('뜨개', 'hobby')" class="text-[10px] bg-rose-50 hover:bg-rose-100 text-rose-800 font-semibold py-1.5 rounded-lg border border-rose-200">
+                직접입력
+              </button>
             </div>
             <div class="grid grid-cols-3 gap-0.5 text-[9px] font-mono">
               <button onclick="quickAddMinutes('뜨개', 'hobby', 10)" class="py-0.5 rounded bg-rose-50 text-rose-700 hover:bg-rose-100">+10분</button>
@@ -403,15 +408,20 @@
           <div>
             <div class="flex items-center justify-between mb-1">
               <span class="text-xs font-bold text-emerald-800 flex items-center gap-1">📚 오늘의 독서</span>
-              <button onclick="switchTab('drawer', 'book')" title="책장 바로가기" class="text-[10px] text-stone-400 hover:text-stone-700 font-bold">책장 ↗</button>
+              <button onclick="switchTab('hobby', 'book')" title="책장 바로가기" class="text-[10px] text-stone-400 hover:text-stone-700 font-bold">책장 ↗</button>
             </div>
             <input type="text" id="bookCurrentTitle" placeholder="읽고 있는 책 제목..." onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded px-1.5 py-1 text-xs mb-1.5">
             <input type="text" id="bookTodayPages" placeholder="오늘 읽은 페이지 (p.12~45)" onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded px-1.5 py-1 text-xs">
           </div>
+          <!-- 퀵 추가 & 시간 직접 입력 -->
           <div class="space-y-1 pt-1">
             <div class="grid grid-cols-2 gap-1">
-              <button id="bookTimerBtn" onclick="toggleBookTimer()" class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg shadow-2xs">시작 ▶</button>
-              <button onclick="openManualTimeModal('독서', 'hobby')" class="text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold py-1.5 rounded-lg border border-emerald-200">직접입력</button>
+              <button id="bookTimerBtn" onclick="toggleBookTimer()" class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg shadow-2xs">
+                시작 ▶
+              </button>
+              <button onclick="openManualTimeModal('독서', 'hobby')" class="text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold py-1.5 rounded-lg border border-emerald-200">
+                직접입력
+              </button>
             </div>
             <div class="grid grid-cols-3 gap-0.5 text-[9px] font-mono">
               <button onclick="quickAddMinutes('독서', 'hobby', 10)" class="py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100">+10분</button>
@@ -422,7 +432,7 @@
         </div>
       </div>
 
-      <!-- 데일리 TO-DO -->
+      <!-- 데일리 TO-DO (첫날/말일/분기 주기, 미니멀 파스텔 텍스트 뱃지, 스크롤 없는 오가닉 높이) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
@@ -457,10 +467,12 @@
             <button type="button" onclick="toggleWeekDayChip(0)" id="wd_chip_0" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">일</button>
           </div>
         </div>
+
+        <!-- 오가닉 높이 리스트 (스크롤 박멸) -->
         <div id="routineTodoList" class="space-y-1.5"></div>
       </div>
 
-      <!-- 🎵 오늘의 노래 -->
+      <!-- 🎵 오늘의 노래 (가로 슬림형 재배치) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs space-y-2">
         <span class="text-xs font-bold text-indigo-900 flex items-center gap-1">🎵 오늘의 노래</span>
         <div class="flex items-center gap-2.5">
@@ -472,7 +484,7 @@
         </div>
       </div>
 
-      <!-- 👗 오늘의 OOTD -->
+      <!-- 👗 오늘의 OOTD (가로 100% 쾌적한 노션 감성 스마트 옷장 칩 바) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <span class="text-xs font-bold text-amber-900 flex items-center gap-1">👗 오늘의 OOTD</span>
@@ -484,30 +496,38 @@
             <input type="color" id="ootdColorInput" value="#ecdcc9" onchange="onOotdColorChange(this.value)" class="sr-only">
           </div>
         </div>
+
+        <!-- 스마트 옷장 칩 그룹 (상의 / 하의 / 신발 / 가방) -->
         <div class="space-y-2 text-xs">
+          <!-- 상의 -->
           <div class="flex items-start gap-2">
             <span class="text-[11px] font-bold text-stone-500 shrink-0 mt-0.5 w-10">👕 상의</span>
             <div id="ootdChips_top" class="flex-1 flex flex-wrap gap-1 items-center"></div>
           </div>
+          <!-- 하의 -->
           <div class="flex items-start gap-2">
             <span class="text-[11px] font-bold text-stone-500 shrink-0 mt-0.5 w-10">👖 하의</span>
             <div id="ootdChips_bottom" class="flex-1 flex flex-wrap gap-1 items-center"></div>
           </div>
+          <!-- 신발 -->
           <div class="flex items-start gap-2">
             <span class="text-[11px] font-bold text-stone-500 shrink-0 mt-0.5 w-10">👟 신발</span>
             <div id="ootdChips_shoes" class="flex-1 flex flex-wrap gap-1 items-center"></div>
           </div>
+          <!-- 가방 -->
           <div class="flex items-start gap-2">
             <span class="text-[11px] font-bold text-stone-500 shrink-0 mt-0.5 w-10">👜 가방</span>
             <div id="ootdChips_bag" class="flex-1 flex flex-wrap gap-1 items-center"></div>
           </div>
         </div>
+
+        <!-- 오늘 착장 직접 메모 (글자 잘림 없이 100% 확장) -->
         <div class="pt-1 border-t border-stone-100">
           <input type="text" id="ootdTextInput" placeholder="오늘 착장 상세 메모 (예: 날씨가 쌀쌀해서 가디건 챙김)..." onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none">
         </div>
       </div>
 
-      <!-- 한 줄 일기 -->
+      <!-- 한 줄 일기 & 밴드 일기 복사 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <h3 class="text-xs font-bold text-stone-700">📖 한 줄 일기 & 감사한 일</h3>
@@ -529,7 +549,7 @@
 
     </section>
 
-    <!-- 2. 일정(캘린더) 페이지 (VIEW: CALENDAR) -->
+    <!-- 2. 캘린더 페이지 (VIEW: CALENDAR) -->
     <section id="view-calendar" class="hidden space-y-4">
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div class="flex items-center justify-between mb-3 border-b border-stone-100 pb-2.5">
@@ -548,55 +568,67 @@
         <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
       </div>
 
-      <!-- 예매 확인, 일정, 기념일 리스트 (기존 코드 유지) -->
+      <!-- 🎫 예매 확인 카드 (3단계 필터 + 단골 지명 퀵 칩) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-          <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>🎫</span> 예매 확인</h3>
-          <button onclick="openTicketModal()" class="text-[10px] bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 font-bold px-2 py-0.5 rounded-lg">+ 등록</button>
+          <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+            <span>🎫</span> 예매 확인
+          </h3>
+          <button onclick="openTicketModal()" class="text-[10px] bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 font-bold px-2 py-0.5 rounded-lg">
+            + 티켓 등록
+          </button>
         </div>
         <div class="flex gap-1 text-[11px] pb-1">
-          <button id="ticketFilter_7" onclick="setTicketFilter('7')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">임박 ⚡</button>
-          <button id="ticketFilter_30" onclick="setTicketFilter('30')" class="px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold">다가올 🌿</button>
+          <button id="ticketFilter_7" onclick="setTicketFilter('7')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">임박 ⚡ (7일)</button>
+          <button id="ticketFilter_30" onclick="setTicketFilter('30')" class="px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold">다가올 🌿 (D-30)</button>
           <button id="ticketFilter_all" onclick="setTicketFilter('all')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">전체보기 📖</button>
         </div>
         <div id="ticketReservationList" class="space-y-1.5 text-xs"></div>
       </div>
 
+      <!-- 📌 약속 & 일정 카드 (3단계 필터 + 코르크핀 헤더) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-          <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>📌</span> 약속 & 일정</h3>
+          <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+            <span>📌</span> 약속 & 일정
+          </h3>
           <button onclick="openCalendarEventModal()" class="text-[10px] bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold px-2 py-0.5 rounded-lg">+ 추가</button>
         </div>
         <div class="flex gap-1 text-[11px] pb-1">
-          <button id="eventFilter_7" onclick="setEventFilter('7')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">임박 ⚡</button>
-          <button id="eventFilter_30" onclick="setEventFilter('30')" class="px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold">다가올 🌿</button>
+          <button id="eventFilter_7" onclick="setEventFilter('7')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">임박 ⚡ (7일)</button>
+          <button id="eventFilter_30" onclick="setEventFilter('30')" class="px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold">다가올 🌿 (D-30)</button>
           <button id="eventFilter_all" onclick="setEventFilter('all')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">전체보기 📖</button>
         </div>
         <div id="upcomingEventsList" class="space-y-1.5 text-xs"></div>
       </div>
 
+      <!-- 🎂 기념일 & 이벤트 (3단계 실용 필터) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-          <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>🎂</span> 기념일 & 이벤트</h3>
+          <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+            <span>🎂</span> 기념일 & 이벤트
+          </h3>
           <button onclick="addAnniversaryPrompt()" class="text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-700 px-2 py-0.5 rounded font-semibold border border-stone-200">+ 추가</button>
         </div>
         <div class="flex gap-1 text-[11px] pb-1">
-          <button id="anniFilter_7" onclick="setAnniversaryFilter('7')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">임박 ⚡</button>
-          <button id="anniFilter_30" onclick="setAnniversaryFilter('30')" class="px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold">다가올 🌿</button>
+          <button id="anniFilter_7" onclick="setAnniversaryFilter('7')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">임박 ⚡ (7일)</button>
+          <button id="anniFilter_30" onclick="setAnniversaryFilter('30')" class="px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold">다가올 🌿 (D-30)</button>
           <button id="anniFilter_all" onclick="setAnniversaryFilter('all')" class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">전체보기 📖</button>
         </div>
         <div id="anniversaryList" class="space-y-1.5 text-xs"></div>
       </div>
     </section>
 
-    <!-- 3. 습관(트래커) 페이지 (VIEW: TRACKER) -->
+    <!-- 3. 트래커 페이지 (VIEW: TRACKER) -->
     <section id="view-tracker" class="hidden space-y-4">
       
-      <!-- 해빗 트래커 -->
+      <!-- 1순위: 해빗 트래커 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
-            <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>🌿</span> 해빗 트래커</h3>
+            <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+              <span>🌿</span> 해빗 트래커
+            </h3>
             <p class="text-[10px] text-stone-400 mt-0.5">꾸준한 작은 습관의 힘</p>
           </div>
           <div class="flex items-center gap-1.5">
@@ -639,11 +671,13 @@
         </div>
       </div>
 
-      <!-- 무드 트래커 -->
+      <!-- 2순위: 무드 트래커 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div class="flex items-center justify-between mb-2 border-b border-stone-100 pb-2">
           <div>
-            <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>🎨</span> 무드 트래커</h3>
+            <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+              <span>🎨</span> 무드 트래커
+            </h3>
             <p class="text-[10px] text-stone-400 mt-0.5">매일의 마음 날씨를 채워요</p>
           </div>
           <div class="flex items-center gap-1 text-xs">
@@ -655,11 +689,13 @@
         <div id="moodGrid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
       </div>
 
-      <!-- 루틴 진행도 트래커 -->
+      <!-- 3순위: 루틴 진행도 트래커 (줄바꿈 없는 한 줄 헤더 + ⭐ 타일) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-2.5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
-            <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>📊</span> 루틴 진행도</h3>
+            <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+              <span>📊</span> 루틴 진행도
+            </h3>
             <p class="text-[10px] text-stone-400 mt-0.5">매일의 아침·저녁 실천율</p>
           </div>
           <div class="flex items-center gap-1.5">
@@ -674,11 +710,13 @@
         <div id="routineProgressGrid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
       </div>
 
-      <!-- 건강 관리 달력 & 추이 통계 -->
+      <!-- 4순위: 건강 관리 달력 & 추이 통계 -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
-            <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>🩺</span> 건강 관리 달력 & 추이</h3>
+            <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+              <span>🩺</span> 건강 관리 달력 & 추이
+            </h3>
             <p class="text-[10px] text-stone-400 mt-0.5">체중 및 공복/식후 평균 혈당 트래킹</p>
           </div>
           <div class="flex items-center gap-1 text-xs">
@@ -689,88 +727,76 @@
         </div>
 
         <div class="grid grid-cols-3 gap-2 bg-stone-50 p-2 rounded-xl border border-stone-100 text-center text-xs">
-          <div><span class="text-[9px] text-stone-400 block">평균 체중</span><span class="font-bold text-stone-700 text-[11px]" id="healthAvgWeight">- kg</span></div>
-          <div><span class="text-[9px] text-stone-400 block">평균 공복혈당</span><span class="font-bold text-stone-700 text-[11px]" id="healthAvgSugarFast">-</span></div>
-          <div><span class="text-[9px] text-stone-400 block">평균 식후혈당</span><span class="font-bold text-stone-700 text-[11px]" id="healthAvgSugarPost">-</span></div>
+          <div>
+            <span class="text-[9px] text-stone-400 block">평균 체중</span>
+            <span class="font-bold text-stone-700 text-[11px]" id="healthAvgWeight">- kg</span>
+          </div>
+          <div>
+            <span class="text-[9px] text-stone-400 block">평균 공복혈당</span>
+            <span class="font-bold text-stone-700 text-[11px]" id="healthAvgSugarFast">-</span>
+          </div>
+          <div>
+            <span class="text-[9px] text-stone-400 block">평균 식후혈당</span>
+            <span class="font-bold text-stone-700 text-[11px]" id="healthAvgSugarPost">-</span>
+          </div>
         </div>
+
         <div id="healthCalendarGrid" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
       </div>
 
     </section>
 
-    <!-- 4. 서랍(가계부/독서/뜨개) 페이지 (VIEW: DRAWER) -->
-    <section id="view-drawer" class="hidden space-y-4">
+    <!-- 4. 취미 페이지 (VIEW: HOBBY) -->
+    <section id="view-hobby" class="hidden space-y-4">
       
-      <!-- 서랍 상단 서브 탭 -->
       <div class="bg-white p-1 rounded-2xl border border-stone-200 shadow-xs flex">
-        <button id="drawerSubTabBudget" onclick="setDrawerSubTab('budget')" class="flex-1 py-2 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 shadow-xs transition-all">
-          💰 가계부
+        <button id="hobbySubTabBook" onclick="setHobbySubTab('book')" class="flex-1 py-2 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 shadow-xs transition-all">
+          📚 독서 책장
         </button>
-        <button id="drawerSubTabBook" onclick="setDrawerSubTab('book')" class="flex-1 py-2 rounded-xl text-xs font-medium text-stone-500 transition-all">
-          📚 독서
-        </button>
-        <button id="drawerSubTabKnit" onclick="setDrawerSubTab('knit')" class="flex-1 py-2 rounded-xl text-xs font-medium text-stone-500 transition-all">
-          🧶 뜨개
+        <button id="hobbySubTabKnit" onclick="setHobbySubTab('knit')" class="flex-1 py-2 rounded-xl text-xs font-medium text-stone-500 transition-all">
+          🧶 뜨개 쇼룸
         </button>
       </div>
 
-      <!-- A. 가계부 모듈 (새로 추가됨!) -->
-      <div id="drawerBudgetModule" class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
+      <!-- A. 독서 책장 모듈 -->
+      <div id="hobbyBookModule" class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
-            <h3 class="font-bold text-stone-800 text-xs flex items-center gap-1.5"><span>💸</span> 이번 달 가계부</h3>
-            <p class="text-[10px] text-stone-400 mt-0.5">생활비 잔액 및 지출 내역</p>
-          </div>
-          <button onclick="openBudgetModal()" class="text-[10px] bg-stone-800 hover:bg-stone-900 text-white px-2.5 py-1.5 rounded-lg font-bold">
-            + 지출 기록
-          </button>
-        </div>
-        <!-- 생활비 요약 카드 -->
-        <div class="bg-stone-50 rounded-xl p-3 border border-stone-200 flex justify-between items-center">
-          <div>
-            <p class="text-[10px] text-stone-500 font-medium">남은 생활비</p>
-            <p class="text-lg font-bold text-stone-800 mt-0.5" id="budgetRemainingAmount">320,000 원</p>
-          </div>
-          <button class="text-[10px] text-stone-400 underline hover:text-stone-600 font-medium" onclick="openBudgetSettingModal()">예산 설정</button>
-        </div>
-        <!-- 가계부 리스트 -->
-        <div id="budgetList" class="space-y-2 max-h-96 overflow-y-auto pr-1 text-xs">
-          <!-- 기능 연결 전 임시 안내문 -->
-          <div class="text-center text-stone-400 py-6 text-[11px] border border-dashed border-stone-200 rounded-xl">
-            가계부 두뇌(자바스크립트)가 연결되면<br>이곳에 예쁜 지출 내역이 나타날 거예요! 🧾
-          </div>
-        </div>
-      </div>
-
-      <!-- B. 독서 책장 모듈 -->
-      <div id="drawerBookModule" class="hidden bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
-        <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-          <div>
-            <h3 class="font-bold text-stone-800 text-xs flex items-center gap-1.5"><span>📚</span> 독서 책장</h3>
+            <h3 class="font-bold text-stone-800 text-xs flex items-center gap-1.5">
+              <span>📚</span> 독서 책장
+            </h3>
             <p class="text-[10px] text-stone-400 mt-0.5">시작일 ~ 완독일 & 서평 아카이브</p>
           </div>
-          <button onclick="openBookModal()" class="text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-2.5 py-1.5 rounded-lg font-bold border border-emerald-200">
+          <button onclick="openBookModal()" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg font-bold border border-emerald-200">
             + 도서 등록
           </button>
         </div>
+
+        <!-- 가로 스크롤 장르 칩 바 -->
         <div class="flex gap-1 overflow-x-auto text-[11px] pb-1 hide-scrollbar">
           <button onclick="filterBooks('all')" class="px-2.5 py-1 rounded-full bg-stone-800 text-white font-medium whitespace-nowrap shrink-0">전체</button>
           <button onclick="filterBooks('소설·문학')" class="px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 font-medium whitespace-nowrap shrink-0">소설·문학</button>
           <button onclick="filterBooks('에세이·시')" class="px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 font-medium whitespace-nowrap shrink-0">에세이·시</button>
           <button onclick="filterBooks('인문·철학')" class="px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 font-medium whitespace-nowrap shrink-0">인문·철학</button>
+          <button onclick="filterBooks('과학·기술')" class="px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 font-medium whitespace-nowrap shrink-0">과학·기술</button>
+          <button onclick="filterBooks('경제·경영')" class="px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 font-medium whitespace-nowrap shrink-0">경제·경영</button>
           <button onclick="filterBooks('자기계발')" class="px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 font-medium whitespace-nowrap shrink-0">자기계발</button>
+          <button onclick="filterBooks('예술·취미')" class="px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 font-medium whitespace-nowrap shrink-0">예술·취미</button>
         </div>
+
         <div id="bookshelfList" class="space-y-2 max-h-96 overflow-y-auto pr-1"></div>
       </div>
 
-      <!-- C. 뜨개 쇼룸 모듈 -->
-      <div id="drawerKnitModule" class="hidden bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
+      <!-- B. 뜨개 쇼룸 모듈 -->
+      <div id="hobbyKnitModule" class="hidden bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
-            <h3 class="font-bold text-stone-800 text-xs flex items-center gap-1.5"><span>🧶</span> 뜨개 쇼룸 & 아카이브</h3>
+            <h3 class="font-bold text-stone-800 text-xs flex items-center gap-1.5">
+              <span>🧶</span> 뜨개 쇼룸 & 아카이브
+            </h3>
             <p class="text-[10px] text-stone-400 mt-0.5">편물 스펙, 사용 실, 바늘, 시작~완성일 기록</p>
           </div>
-          <button onclick="openKnitModal()" class="text-[10px] bg-rose-50 hover:bg-rose-100 text-rose-800 px-2.5 py-1.5 rounded-lg font-bold border border-rose-200">
+          <button onclick="openKnitModal()" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg font-bold border border-rose-200">
             + 작품 등록
           </button>
         </div>
@@ -781,63 +807,282 @@
 
   </main>
 
-  <!-- 하단 4단 탭 바 (이름 변경 완료!) -->
+  <!-- 하단 4단 탭 바 -->
   <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 py-2 shadow-lg">
     <div class="max-w-md mx-auto grid grid-cols-4 text-center text-xs font-semibold">
       <button onclick="switchTab('day')" id="nav-day" class="text-stone-800 py-1 flex flex-col items-center gap-0.5 font-bold">
-        <span class="text-base">📅</span><span>오늘</span>
+        <span class="text-base">📅</span><span>데일리</span>
       </button>
       <button onclick="switchTab('calendar')" id="nav-calendar" class="text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5">
-        <span class="text-base">🗓️</span><span>일정</span>
+        <span class="text-base">🗓️</span><span>캘린더</span>
       </button>
       <button onclick="switchTab('tracker')" id="nav-tracker" class="text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5">
-        <span class="text-base">📊</span><span>습관</span>
+        <span class="text-base">📊</span><span>트래커</span>
       </button>
-      <button onclick="switchTab('drawer')" id="nav-drawer" class="text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5">
-        <span class="text-base">🗄️</span><span>서랍</span>
+      <button onclick="switchTab('hobby')" id="nav-hobby" class="text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5">
+        <span class="text-base">🧶</span><span>취미</span>
       </button>
     </div>
   </nav>
 
-  <!-- 모달창들은 분할된 자바스크립트가 불러올 수 있도록 컨테이너만 남겨둠 -->
-  <div id="modal-container"></div>
+  <!-- 루틴 커스텀 관리 모달 -->
+  <div id="routineCustomModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl max-h-[88vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5" id="routineModalHeaderTitle">
+          <span>⚙️</span> 루틴 항목 설정
+        </h3>
+        <button onclick="closeRoutineCustomModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
+      </div>
 
-  <!-- 📁 분할된 자바스크립트 파일들 연결 (여기서부터 진짜 두뇌들이 연결될 거야!) -->
-  <script src="js/firebase.js"></script>
-  <script src="js/day.js"></script>
-  <script src="js/calendar.js"></script>
-  <script src="js/tracker.js"></script>
-  <script src="js/drawer.js"></script>
+      <!-- 상하 2단 새 루틴 추가 폼 -->
+      <div class="space-y-2 bg-stone-50 p-2.5 rounded-xl border border-stone-200 text-xs">
+        <input type="text" id="newRoutineCustomName" placeholder="새 루틴 이름 (예: 폼롤러 스트레칭)" class="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none">
+        <div class="flex items-center gap-1.5">
+          <select id="newRoutineCustomCat" class="flex-1 bg-white border border-stone-200 rounded-lg text-xs px-2 py-1.5 text-stone-700 cursor-pointer"></select>
+          <button onclick="addNewCustomRoutineItem()" class="bg-stone-800 text-white font-bold text-xs px-3 py-1.5 rounded-lg shrink-0">추가</button>
+        </div>
+      </div>
 
-  <!-- 화면이 뜨기 위한 아주 기본적인 껍데기 스크립트만 임시로 남겨둠 -->
-  <script>
-    function switchTab(tab, subAction) {
-      ['day', 'calendar', 'tracker', 'drawer'].forEach(t => {
-        document.getElementById(`view-${t}`).classList.add('hidden');
-        document.getElementById(`nav-${t}`).className = 'text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5';
-      });
-      document.getElementById(`view-${tab}`).classList.remove('hidden');
-      document.getElementById(`nav-${tab}`).className = 'text-stone-800 py-1 flex flex-col items-center gap-0.5 font-bold';
+      <!-- 카테고리 관리 토글 -->
+      <div class="flex items-center justify-between pt-1">
+        <span class="text-[10px] text-stone-400 font-medium">루틴 목록 (순서 변경 가능)</span>
+        <button onclick="toggleCategoryManagerSection()" class="text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-700 px-2 py-0.5 rounded-lg font-bold border border-stone-200">
+          📁 카테고리 관리
+        </button>
+      </div>
 
-      if (tab === 'drawer') {
-        if (subAction === 'knit') setDrawerSubTab('knit');
-        else if (subAction === 'book') setDrawerSubTab('book');
-        else setDrawerSubTab('budget');
-      }
-    }
+      <!-- 카테고리 편집 영역 -->
+      <div id="categoryManagerArea" class="hidden p-2 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2 text-xs">
+        <div class="text-[11px] font-bold text-amber-950 flex items-center justify-between">
+          <span>카테고리(그룹) 수정 및 추가</span>
+          <button onclick="promptAddNewCategory()" class="text-[10px] bg-white border border-amber-300 text-amber-900 px-1.5 py-0.5 rounded font-bold">+ 새 그룹</button>
+        </div>
+        <div id="categoryManagerList" class="space-y-1 max-h-32 overflow-y-auto pr-0.5"></div>
+      </div>
 
-    function setDrawerSubTab(type) {
-      ['budget', 'book', 'knit'].forEach(t => {
-        document.getElementById(`drawer${t.charAt(0).toUpperCase() + t.slice(1)}Module`).classList.add('hidden');
-        document.getElementById(`drawerSubTab${t.charAt(0).toUpperCase() + t.slice(1)}`).className = 'flex-1 py-2 rounded-xl text-xs font-medium text-stone-500 transition-all';
-      });
+      <!-- 루틴 목록 -->
+      <div class="flex-1 overflow-y-auto pr-1 space-y-2 text-xs" id="routineModalItemList"></div>
 
-      document.getElementById(`drawer${type.charAt(0).toUpperCase() + type.slice(1)}Module`).classList.remove('hidden');
-      
-      const activeColor = type === 'budget' ? 'bg-amber-100 text-amber-900' : (type === 'book' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900');
-      document.getElementById(`drawerSubTab${type.charAt(0).toUpperCase() + type.slice(1)}`).className = `flex-1 py-2 rounded-xl text-xs font-bold ${activeColor} shadow-xs transition-all`;
-    }
-  </script>
+      <button onclick="closeRoutineCustomModal()" class="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs rounded-xl">
+        완료
+      </button>
+    </div>
+  </div>
+
+  <!-- 타임테이블 소요시간 + 카테고리 모달 -->
+  <div id="categoryModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <div class="flex items-center gap-2">
+          <button id="categoryBackBtn" onclick="showMainCategories()" class="hidden text-xs text-stone-400 hover:text-stone-700 font-bold">◀ 뒤로</button>
+          <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+            <span>⏱️</span> <span id="categoryModalTimeTitle">00:00 기록</span>
+          </h3>
+        </div>
+        <button onclick="closeCategoryModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
+      </div>
+
+      <!-- 소요시간 선택기 -->
+      <div class="space-y-1">
+        <span class="text-[10px] text-stone-400 font-medium">소요 시간 일괄 등록:</span>
+        <div class="grid grid-cols-6 gap-1 text-[11px] font-mono">
+          <button type="button" onclick="setSessionDuration(10)" id="dur_10" class="py-1 rounded-lg border border-amber-300 bg-amber-100 text-amber-900 font-bold">10분</button>
+          <button type="button" onclick="setSessionDuration(20)" id="dur_20" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600">20분</button>
+          <button type="button" onclick="setSessionDuration(30)" id="dur_30" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600">30분</button>
+          <button type="button" onclick="setSessionDuration(40)" id="dur_40" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600">40분</button>
+          <button type="button" onclick="setSessionDuration(50)" id="dur_50" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600">50분</button>
+          <button type="button" onclick="setSessionDuration(60)" id="dur_60" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600">60분</button>
+        </div>
+      </div>
+
+      <div id="categoryStep1" class="grid grid-cols-2 gap-2 text-xs pt-1">
+        <button onclick="openSubCategory('routine')" class="p-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-left flex items-center justify-between">
+          <span>☀️ 일상</span><span>›</span>
+        </button>
+        <button onclick="openSubCategory('focus')" class="p-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-left flex items-center justify-between">
+          <span>💻 집중/일</span><span>›</span>
+        </button>
+        <button onclick="openSubCategory('meal')" class="p-2.5 rounded-xl border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-900 font-bold text-left flex items-center justify-between">
+          <span>🥗 식사</span><span>›</span>
+        </button>
+        <button onclick="openSubCategory('hobby')" class="p-2.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-900 font-bold text-left flex items-center justify-between">
+          <span>🧶 취미</span><span>›</span>
+        </button>
+        <button onclick="selectDirect('달보드레', 'bookclub')" class="p-2.5 rounded-xl border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold text-left flex items-center justify-between">
+          <span>📖 독서모임</span><span class="text-[10px] text-indigo-500 font-normal">즉시등록</span>
+        </button>
+        <button onclick="openSubCategory('selfcare')" class="p-2.5 rounded-xl border border-[#dac9ba] bg-[#fdf8f5] hover:bg-[#f6eee7] text-[#5c493c] font-bold text-left flex items-center justify-between">
+          <span>☕ 자기관리</span><span>›</span>
+        </button>
+        <button onclick="openSubCategory('workout')" class="p-2.5 rounded-xl border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-900 font-bold text-left flex items-center justify-between col-span-2">
+          <span>🏃 운동</span><span>›</span>
+        </button>
+      </div>
+
+      <div id="categoryStep2" class="hidden space-y-3 pt-1">
+        <div class="text-[11px] font-bold text-stone-500 flex items-center gap-1" id="subCategoryHeader"></div>
+        <div id="subCategoryButtons" class="grid grid-cols-3 gap-2 text-xs"></div>
+        <div class="pt-2 border-t border-stone-100 flex gap-1.5">
+          <input type="text" id="categoryCustomInput" placeholder="직접 입력..." class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-stone-400">
+          <button onclick="selectCustomSubInput()" class="bg-stone-800 text-white font-bold text-xs px-3 rounded-xl shrink-0">등록</button>
+        </div>
+      </div>
+
+      <button onclick="clearCurrentBlock()" class="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-500 font-semibold text-[11px] rounded-xl transition-colors">
+        🗑️ 블록 비우기 (지우기)
+      </button>
+    </div>
+  </div>
+
+  <!-- 캘린더 약속 / 일정 등록 & 수정 모달 (체크 초기화 & 예시 제거) -->
+  <div id="calendarEventModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5" id="calEventModalTitle">
+          <span>📌</span> 일정 / 약속 등록
+        </h3>
+        <button onclick="closeCalendarEventModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
+      </div>
+      <div class="space-y-2 text-xs">
+        <div>
+          <label class="text-[10px] text-stone-500 block mb-1">일정 구분 (우선순위 스탬프)</label>
+          <div class="grid grid-cols-3 gap-1 text-[11px]" id="calEventCategoryContainer"></div>
+        </div>
+        <div>
+          <label class="text-[10px] text-stone-500 block mb-1">일정 내용</label>
+          <input type="text" id="calEventTitle" placeholder="일정 내용을 입력하세요" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">시작일</label>
+            <input type="date" id="calEventStart" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1 text-[11px]">
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">종료일</label>
+            <input type="date" id="calEventEnd" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1 text-[11px]">
+          </div>
+        </div>
+        <!-- 요일 반복 (예시 제거 & 초기 체크 없음) -->
+        <div class="pt-1 border-t border-stone-100">
+          <label class="flex items-center gap-1.5 text-[11px] font-bold text-stone-700 cursor-pointer">
+            <input type="checkbox" id="calEventRepeatToggle" onchange="toggleCalEventRepeat(this.checked)" class="rounded text-amber-500">
+            <span>매주 요일 반복</span>
+          </label>
+          <div id="calEventRepeatDaysBox" class="hidden flex items-center gap-1 pt-1.5 overflow-x-auto text-[10px]">
+            <span class="text-stone-400 shrink-0 mr-1">반복요일:</span>
+            <button type="button" onclick="toggleCalRepeatDay(1)" id="crd_1" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">월</button>
+            <button type="button" onclick="toggleCalRepeatDay(2)" id="crd_2" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">화</button>
+            <button type="button" onclick="toggleCalRepeatDay(3)" id="crd_3" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">수</button>
+            <button type="button" onclick="toggleCalRepeatDay(4)" id="crd_4" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">목</button>
+            <button type="button" onclick="toggleCalRepeatDay(5)" id="crd_5" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">금</button>
+            <button type="button" onclick="toggleCalRepeatDay(6)" id="crd_6" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">토</button>
+            <button type="button" onclick="toggleCalRepeatDay(0)" id="crd_0" class="px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600">일</button>
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="saveCalendarEvent()" class="flex-1 py-2 bg-amber-400 hover:bg-amber-500 text-stone-900 font-bold text-xs rounded-xl">저장</button>
+        <button onclick="closeCalendarEventModal()" class="py-2 px-3 bg-stone-100 text-stone-600 text-xs rounded-xl">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🎫 예매 확인 (단골 지명 퀵 칩 & 즐겨찾기 탑재) -->
+  <div id="ticketModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5" id="ticketModalTitle">
+          <span>🎫</span> 승차권 / 예매 등록
+        </h3>
+        <button onclick="closeTicketModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
+      </div>
+      <div class="space-y-2 text-xs">
+        <div>
+          <label class="text-[10px] text-stone-500 block mb-1">교통수단</label>
+          <div class="grid grid-cols-3 gap-1">
+            <button type="button" onclick="selectTicketType('bus')" id="tt_btn_bus" class="py-1 rounded-lg border border-sky-300 bg-sky-100 text-sky-900 font-bold text-center">🚌 버스</button>
+            <button type="button" onclick="selectTicketType('train')" id="tt_btn_train" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600 text-center">🚅 기차</button>
+            <button type="button" onclick="selectTicketType('flight')" id="tt_btn_flight" class="py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600 text-center">✈️ 비행기</button>
+          </div>
+        </div>
+
+        <!-- 단골 지명 퀵 칩 바 -->
+        <div class="bg-stone-50 p-2 rounded-xl border border-stone-200 space-y-1">
+          <div class="flex items-center justify-between text-[10px] text-stone-500 font-medium">
+            <span>자주 가는 곳 (입력창 선택 후 터치):</span>
+            <button onclick="promptAddPlaceChip()" class="text-[10px] text-sky-700 font-bold">+ 추가</button>
+          </div>
+          <div id="favPlacesChipContainer" class="flex flex-wrap gap-1"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">출발지</label>
+            <input type="text" id="ticketDepartPlace" onfocus="activePlaceInputId = 'ticketDepartPlace'" placeholder="출발지 (직접입력)" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2 py-1.5 text-xs focus:outline-none">
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">도착지</label>
+            <input type="text" id="ticketArrivePlace" onfocus="activePlaceInputId = 'ticketArrivePlace'" placeholder="도착지 (직접입력)" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2 py-1.5 text-xs focus:outline-none">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">탑승 일자</label>
+            <input type="date" id="ticketDate" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1 text-[11px]">
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">출발 시각</label>
+            <input type="time" id="ticketTime" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1 text-[11px]">
+          </div>
+        </div>
+        <div>
+          <label class="text-[10px] text-stone-500 block mb-1">좌석 번호 & 메모</label>
+          <input type="text" id="ticketSeatMemo" placeholder="예: 3호차 11A, 우등 5번 좌석" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs">
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="saveTicketData()" class="flex-1 py-2 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-xl">티켓 저장</button>
+        <button onclick="closeTicketModal()" class="py-2 px-3 bg-stone-100 text-stone-600 text-xs rounded-xl">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 독서/뜨개 시간 직접 입력 모달 -->
+  <div id="manualTimeModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full space-y-3 shadow-xl">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+          <span>⏱️</span> <span id="manualTimeModalTitle">시간 직접 입력</span>
+        </h3>
+        <button onclick="closeManualTimeModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
+      </div>
+      <div class="space-y-2 text-xs">
+        <div>
+          <label class="text-[10px] text-stone-400 block mb-1">시작 시각</label>
+          <input type="time" id="manualStartTime" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1.5 text-xs">
+        </div>
+        <div>
+          <label class="text-[10px] text-stone-400 block mb-1">소요 시간</label>
+          <select id="manualDurationSelect" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1.5 text-xs">
+            <option value="10">10분</option>
+            <option value="20">20분</option>
+            <option value="30" selected>30분</option>
+            <option value="40">40분</option>
+            <option value="50">50분</option>
+            <option value="60">60분 (1시간)</option>
+            <option value="90">90분 (1시간 30분)</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="confirmManualTimeSave()" class="flex-1 py-2 bg-stone-800 text-white font-bold text-xs rounded-xl">타임테이블에 반영</button>
+        <button onclick="closeManualTimeModal()" class="py-2 px-3 bg-stone-100 text-stone-600 text-xs rounded-xl">취소</button>
+      </div>
+    </div>
+  </div>
+  
+<!-- 📁 거대한 통합 두뇌 파일 1개만 연결 -->
+  <script src="js/main.js"></script>
 </body>
 </html>
- 
