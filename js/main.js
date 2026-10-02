@@ -2483,7 +2483,7 @@ const firebaseConfig = {
             <span class="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold">${b.category || '기타'}</span>
           </div>
           <div class="text-[11px] text-stone-500">${b.author || '저자 미상'} | <b>${b.startDate || ''} ~ ${b.endDate || '읽는 중'}</b></div>
-          <div class="text-[11px] text-amber-500">${b.rating || '⭐⭐⭐⭐⭐'}</div>
+          <div class="text-[10px] text-amber-500 font-medium mt-1">${getRatingStars(b.rating)} <span class="text-stone-400 font-mono text-[9px]">(${parseFloat(b.rating || 5).toFixed(1)})</span></div>
           ${b.review ? `<p class="text-[11px] text-stone-600 bg-white p-2 rounded-lg border border-stone-100">${b.review}</p>` : ''}
         </div>
       `).join('');
