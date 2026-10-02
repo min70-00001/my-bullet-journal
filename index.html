@@ -753,20 +753,53 @@
 
     </section>
 
-    <!-- 4. 취미 페이지 (VIEW: HOBBY) -->
-    <section id="view-hobby" class="hidden space-y-4">
+    <!-- 4. 서랍 페이지 (VIEW: DRAWER - 가계부 / 독서 / 뜨개 통합) -->
+    <section id="view-drawer" class="hidden space-y-4">
       
+      <!-- 서랍 상단 3단 서브 탭 바 -->
       <div class="bg-white p-1 rounded-2xl border border-stone-200 shadow-xs flex">
-        <button id="hobbySubTabBook" onclick="setHobbySubTab('book')" class="flex-1 py-2 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 shadow-xs transition-all">
+        <button id="drawerSubTabBudget" onclick="setDrawerSubTab('budget')" class="flex-1 py-2 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 shadow-xs transition-all">
+          💰 가계부
+        </button>
+        <button id="drawerSubTabBook" onclick="setDrawerSubTab('book')" class="flex-1 py-2 rounded-xl text-xs font-medium text-stone-500 transition-all">
           📚 독서 책장
         </button>
-        <button id="hobbySubTabKnit" onclick="setHobbySubTab('knit')" class="flex-1 py-2 rounded-xl text-xs font-medium text-stone-500 transition-all">
+        <button id="drawerSubTabKnit" onclick="setDrawerSubTab('knit')" class="flex-1 py-2 rounded-xl text-xs font-medium text-stone-500 transition-all">
           🧶 뜨개 쇼룸
         </button>
       </div>
 
-      <!-- A. 독서 책장 모듈 -->
-      <div id="hobbyBookModule" class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
+      <!-- A. 감성 가계부 모듈 -->
+      <div id="drawerBudgetModule" class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+          <div>
+            <h3 class="font-bold text-stone-800 text-xs flex items-center gap-1.5">
+              <span>💸</span> 이번 달 가계부
+            </h3>
+            <p class="text-[10px] text-stone-400 mt-0.5">생활비 잔액 및 지출 내역</p>
+          </div>
+          <button onclick="openBudgetModal()" class="text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 px-2.5 py-1.5 rounded-lg font-bold border border-amber-200">
+            + 지출 기록
+          </button>
+        </div>
+
+        <!-- 남은 생활비 카드 -->
+        <div class="bg-warm-50 rounded-xl p-3.5 border border-stone-200 flex justify-between items-center">
+          <div>
+            <p class="text-[10px] text-stone-500 font-semibold">이번 달 남은 생활비</p>
+            <p class="text-xl font-extrabold text-stone-800 mt-0.5 tracking-tight" id="budgetRemainingAmount">500,000 원</p>
+          </div>
+          <button onclick="openBudgetSettingModal()" class="text-[11px] text-amber-800 bg-white border border-amber-200 px-2.5 py-1 rounded-lg font-bold shadow-2xs">
+            ⚙️ 예산 설정
+          </button>
+        </div>
+
+        <!-- 지출 리스트 컨테이너 -->
+        <div id="budgetList" class="space-y-2 max-h-96 overflow-y-auto pr-1 text-xs"></div>
+      </div>
+
+      <!-- B. 독서 책장 모듈 -->
+      <div id="drawerBookModule" class="hidden bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
             <h3 class="font-bold text-stone-800 text-xs flex items-center gap-1.5">
@@ -794,8 +827,8 @@
         <div id="bookshelfList" class="space-y-2 max-h-96 overflow-y-auto pr-1"></div>
       </div>
 
-      <!-- B. 뜨개 쇼룸 모듈 -->
-      <div id="hobbyKnitModule" class="hidden bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
+      <!-- C. 뜨개 쇼룸 모듈 -->
+      <div id="drawerKnitModule" class="hidden bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
             <h3 class="font-bold text-stone-800 text-xs flex items-center gap-1.5">
