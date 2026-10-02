@@ -1121,6 +1121,101 @@
       </div>
     </div>
   </div>
+
+  <!-- 📚 리더스 감성 도서 검색/등록/수정 통합 모달 -->
+  <div id="bookDetailModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl max-h-[90vh] overflow-y-auto">
+      
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 id="bookModalTitle" class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+          <span>📚</span> 도서 등록 & 상세
+        </h3>
+        <button onclick="closeBookDetailModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
+      </div>
+
+      <!-- 구글 북스 검색 바 (등록 시에만 표시) -->
+      <div id="bookSearchSection" class="space-y-1.5">
+        <label class="text-[10px] text-stone-500 font-semibold block">🔍 구글 도서 자동 검색</label>
+        <div class="flex gap-1.5">
+          <input type="text" id="bookSearchKeyword" placeholder="책 제목 또는 저자 입력" onkeydown="if(event.key==='Enter') searchGoogleBooks()" class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-400">
+          <button onclick="searchGoogleBooks()" class="px-3 py-1.5 bg-stone-800 text-white rounded-xl text-xs font-bold shrink-0">검색</button>
+        </div>
+        <!-- 검색 결과 리스트 (최대 5개 노출) -->
+        <div id="bookSearchResults" class="hidden space-y-1 max-h-40 overflow-y-auto border border-stone-100 rounded-xl p-1 bg-stone-50/50 text-[11px]"></div>
+      </div>
+
+      <!-- 기본 입력 폼 -->
+      <div class="space-y-2 text-xs">
+        <input type="hidden" id="bookEditId">
+        <input type="hidden" id="bookCoverUrl">
+
+        <!-- 표지 미리보기 & 핵심 메타 -->
+        <div class="flex gap-3 items-center p-2 rounded-xl bg-stone-50 border border-stone-100">
+          <img id="bookPreviewCover" src="https://via.placeholder.com/60x85?text=Cover" class="w-12 h-16 object-cover rounded-md border border-stone-200 shadow-2xs">
+          <div class="flex-1 space-y-1 min-w-0">
+            <input type="text" id="bookInputTitle" placeholder="도서명" class="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-xs font-bold text-stone-800">
+            <input type="text" id="bookInputAuthor" placeholder="저자 / 출판사" class="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-[11px] text-stone-600">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">독서 상태</label>
+            <select id="bookInputStatus" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2 py-1.5 text-xs text-stone-800 font-semibold cursor-pointer">
+              <option value="reading">📖 읽고 있는 책</option>
+              <option value="completed">🏆 완독한 책</option>
+              <option value="wish">🔖 읽고 싶은 책</option>
+              <option value="stopped">⏸️ 중단한 책</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">총 페이지 수 (p)</label>
+            <input type="number" id="bookInputTotalPage" placeholder="예: 320" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs font-mono">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">시작일</label>
+            <input type="date" id="bookInputStartDate" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1 text-[11px]">
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">완독일</label>
+            <input type="date" id="bookInputEndDate" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1 text-[11px]">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[10px] text-stone-500 block mb-1">나의 별점</label>
+          <select id="bookInputRating" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2 py-1.5 text-xs cursor-pointer">
+            <option value="5">⭐⭐⭐⭐⭐ (인생작)</option>
+            <option value="4">⭐⭐⭐⭐ (매우 좋음)</option>
+            <option value="3">⭐⭐⭐ (보통)</option>
+            <option value="2">⭐⭐ (아쉬움)</option>
+            <option value="1">⭐ (별로)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-[10px] text-stone-500 block mb-1">한 줄 서평 / 감상 메모</label>
+          <textarea id="bookInputReview" rows="2" placeholder="마음에 남는 생각이나 서평을 남겨보세요." class="w-full bg-stone-50 border border-stone-200 rounded-xl p-2 text-xs focus:outline-none focus:border-amber-400"></textarea>
+        </div>
+
+        <!-- 📜 독서 히스토리 타임라인 (수정 모드일 때만 표시) -->
+        <div id="bookHistorySection" class="hidden border-t border-stone-100 pt-2 space-y-1">
+          <label class="text-[10px] text-stone-500 font-semibold block">📜 독서 로그 히스토리</label>
+          <div id="bookHistoryList" class="space-y-1 max-h-32 overflow-y-auto bg-stone-50 p-2 rounded-xl text-[10px] text-stone-600"></div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2 border-t border-stone-100">
+        <button id="bookModalSaveBtn" onclick="saveBookMaster()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors">저장하기</button>
+        <button id="bookModalDeleteBtn" onclick="deleteCurrentBook()" class="hidden py-2 px-3 bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold rounded-xl">삭제</button>
+        <button onclick="closeBookDetailModal()" class="py-2 px-3 bg-stone-100 text-stone-600 text-xs rounded-xl">닫기</button>
+      </div>
+
+    </div>
+  </div>
   
 <!-- 📁 거대한 통합 두뇌 파일 1개만 연결 -->
   <script src="js/main.js"></script>
