@@ -1516,9 +1516,12 @@ const firebaseConfig = {
       saveDayData();
     }
 
-    // ==========================================
+// ==========================================
 // 👗 감성 스마트 OOTD & 옷장 모달 두뇌
 // ==========================================
+// 옛날 이름 호출 완벽 호환 브릿지 (초기 로딩 멈춤 방지!)
+window.renderOotdChips = function() { if (typeof renderOotd === 'function') renderOotd(); };
+window.loadOotd = function() { if (typeof renderOotd === 'function') renderOotd(); };
 
 // 자연어 컬러 사전 (이름만 쳐도 색상이 착!)
 const OOTD_COLOR_DICT = {
