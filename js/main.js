@@ -210,8 +210,10 @@ const firebaseConfig = {
     }
 
     function switchTab(tab, subAction) {
-  // 현재 보고 있는 탭을 기억 (새로고침해도 탭 유지)
-  localStorage.setItem('mingle_active_tab', tab);
+  if (!tab) tab = 'day';
+  try {
+    localStorage.setItem('mingle_active_tab', tab);
+  } catch(e) {}
 
   ['day', 'calendar', 'tracker', 'drawer'].forEach(t => {
     const view = document.getElementById(`view-${t}`);
@@ -226,20 +228,20 @@ const firebaseConfig = {
   if (activeNav) activeNav.className = 'text-stone-800 py-1 flex flex-col items-center gap-0.5';
 
   if (tab === 'tracker') {
-    renderHabits();
-    renderMoodTracker();
-    renderRoutineProgressTracker();
-    renderHealthTracker();
+    if (typeof renderHabits === 'function') renderHabits();
+    if (typeof renderMoodTracker === 'function') renderMoodTracker();
+    if (typeof renderRoutineProgressTracker === 'function') renderRoutineProgressTracker();
+    if (typeof renderHealthTracker === 'function') renderHealthTracker();
   } else if (tab === 'calendar') {
-    renderCalendar();
-    renderUpcomingEvents();
-    renderTicketList();
-    renderAnniversaries();
+    if (typeof renderCalendar === 'function') renderCalendar();
+    if (typeof renderUpcomingEvents === 'function') renderUpcomingEvents();
+    if (typeof renderTicketList === 'function') renderTicketList();
+    if (typeof renderAnniversaries === 'function') renderAnniversaries();
   } else if (tab === 'drawer') {
-    // 서랍 탭 진입 시: 가계부 등이 아닌 깔끔한 4단 서랍장 로비를 먼저 보여줌
-    if (typeof backToDrawerHub === 'function') {
-      backToDrawerHub();
-    }
+    // 서랍 로비로 들어갈 때는 가계부 display를 확실하게 none으로 숨김
+    const bMod = document.getElementById('drawerBudgetModule');
+    if (bMod) bMod.style.display = 'none';
+    if (typeof backToDrawerHub === 'function') backToDrawerHub();
   }
 }
 
