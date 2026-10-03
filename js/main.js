@@ -1516,34 +1516,275 @@ const firebaseConfig = {
       saveDayData();
     }
 
-    function renderOotdChips() {
-      const closet = getOotdCloset();
-      const dayData = getDayDataLocal(currentDate);
-      const selected = dayData.ootdSelected || {};
+    // ==========================================
+// 👗 감성 스마트 OOTD & 옷장 모달 두뇌
+// ==========================================
 
-      ['top', 'bottom', 'shoes', 'bag'].forEach(group => {
-        const container = document.getElementById(`ootdChips_${group}`);
-        if (!container) return;
-        const list = closet[group] || [];
+// 자연어 컬러 사전 (이름만 쳐도 색상이 착!)
+const OOTD_COLOR_DICT = {
+  '베이지': '#E8DCB8', '크림': '#FDFBF7', '아이보리': '#FFFFF0',
+  '화이트': '#FFFFFF', '블랙': '#2B2B2B', '차콜': '#4A4A4A',
+  '그레이': '#9E9E9E', '회색': '#9E9E9E', '먹색': '#4A4A4A',
+  '네이비': '#1B2A4A', '블루': '#4A90E2', '소라': '#A0C4E2',
+  '하늘': '#BCE0FD', '연청': '#A5C7E6', '중청': '#5C82A6', '진청': '#2C405A',
+  '핑크': '#F4B6C2', '분홍': '#F4B6C2', '로즈': '#E08594',
+  '레드': '#D32F2F', '빨강': '#D32F2F', '버건디': '#800020', '와인': '#722F37',
+  '그린': '#4CAF50', '초록': '#4CAF50', '카키': '#706E49', '민트': '#A8E6CF', '올리브': '#6B8E23',
+  '옐로우': '#FEE56A', '노랑': '#FEE56A', '버터': '#FDF0A6',
+  '오렌지': '#FF9800', '주황': '#FF9800', '브라운': '#8D6E63', '갈색': '#8D6E63', '카멜': '#C19A6B'
+};
 
-        container.innerHTML = list.map((item, idx) => {
-          const isSelected = selected[group] === item;
-          return `
-            <div class="inline-flex items-center rounded-lg border text-[11px] font-semibold transition-all ${isSelected ? 'bg-amber-800 text-white border-amber-900 shadow-2xs' : 'bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100'}">
-              <span onclick="toggleSelectOotdChip('${group}', '${item.replace(/'/g, "\\'")}')" class="px-2 py-0.5 cursor-pointer">${item}</span>
-              <button onclick="deleteOotdChip('${group}', ${idx})" class="pr-1.5 opacity-40 hover:opacity-100 text-[9px]">✕</button>
-            </div>
-          `;
-        }).join('') + `
-          <button onclick="promptAddOotdChip('${group}')" class="text-[10px] bg-white border border-dashed border-stone-300 text-stone-500 hover:text-stone-800 px-1.5 py-0.5 rounded-lg font-bold">+ 등록</button>
-        `;
-      });
+// 텍스트에서 색상 추출 도우미
+function detectClothColor(name) {
+  for (const [key, color] of Object.entries(OOTD_COLOR_DICT)) {
+    if (name.includes(key)) return color;
+  }
+  return '#E2E8F0'; // 기본 스톤 그레이
+}
+
+// 기본 옷장 데이터
+function getClosetData() {
+  const defaultCloset = {
+    top: [
+      { id: '1', name: '아이보리 셔츠', color: '#FFFFF0' },
+      { id: '2', name: '민트 브이넥 니트', color: '#A8E6CF' },
+      { id: '3', name: '화이트 반팔티', color: '#FFFFFF' }
+    ],
+    bottom: [
+      { id: '4', name: '연청 데님', color: '#A5C7E6' },
+      { id: '5', name: '블랙 슬랙스', color: '#2B2B2B' },
+      { id: '6', name: '베이지 코튼팬츠', color: '#E8DCB8' }
+    ],
+    shoes: [
+      { id: '7', name: '화이트 스니커즈', color: '#FFFFFF' },
+      { id: '8', name: '반스 체커보드', color: '#2B2B2B' },
+      { id: '9', name: '컨버스 로우', color: '#2B2B2B' }
+    ],
+    bag: [
+      { id: '10', name: '미피 네트백', color: '#E8DCB8' },
+      { id: '11', name: '블랙 백팩', color: '#2B2B2B' },
+      { id: '12', name: '캔버스 에코백', color: '#FFFFF0' }
+    ]
+  };
+  return JSON.parse(localStorage.getItem('mingle_closet_master')) || defaultCloset;
+}
+
+function saveClosetData(data) {
+  localStorage.setItem('mingle_closet_master', JSON.stringify(data));
+}
+
+let activeCategory = 'top';
+
+// 기존 호출 함수 호환용 연결
+function renderOotdChips() {
+  renderOotd();
+}
+
+// OOTD 화면 렌더링
+function renderOotd() {
+  const closet = getClosetData();
+  const dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : (window.currentDayData || {});
+  const dayOotd = dayData.ootd || { top: [], bottom: [], shoes: [], bag: [], memo: '', color: '#ecdcc9' };
+
+  ['top', 'bottom', 'shoes', 'bag'].forEach(cat => {
+    const container = document.getElementById(`ootdSelected_${cat}`);
+    if (!container) return;
+    container.innerHTML = '';
+
+    const selectedIds = dayOotd[cat] || [];
+    if (selectedIds.length === 0) {
+      container.innerHTML = '<span class="text-[10px] text-stone-300 italic">미선택</span>';
+      return;
     }
 
-    function onOotdColorChange(colorVal) {
-      document.getElementById('ootdColorBadge').style.backgroundColor = colorVal;
-      saveDayData();
+    selectedIds.forEach(id => {
+      const item = (closet[cat] || []).find(c => String(c.id) === String(id));
+      if (!item) return;
+
+      const chip = document.createElement('span');
+      chip.className = 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100/80 border border-stone-200 text-stone-700 shadow-2xs';
+      chip.innerHTML = `
+        <span class="w-2 h-2 rounded-full border border-stone-300 shrink-0" style="background-color: ${item.color || '#ddd'}"></span>
+        <span>${item.name}</span>
+        <button onclick="toggleSelectCloth('${cat}', '${item.id}'); event.stopPropagation();" class="text-stone-400 hover:text-stone-600 text-xs ml-0.5">×</button>
+      `;
+      container.appendChild(chip);
+    });
+  });
+
+  // 대표 컬러 반영
+  const badge = document.getElementById('ootdColorBadge');
+  const input = document.getElementById('ootdColorInput');
+  const currentColor = dayOotd.color || '#ecdcc9';
+  if (badge) badge.style.backgroundColor = currentColor;
+  if (input) input.value = currentColor;
+
+  // 메모 반영
+  const memoEl = document.getElementById('ootdMemoInput');
+  if (memoEl) memoEl.value = dayOotd.memo || '';
+}
+
+// 대표 색상 수동 변경
+function onOotdColorChange(color) {
+  let dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : (window.currentDayData || {});
+  if (!dayData.ootd) dayData.ootd = {};
+  dayData.ootd.color = color;
+  const badge = document.getElementById('ootdColorBadge');
+  if (badge) badge.style.backgroundColor = color;
+  if (typeof saveDayData === 'function') saveDayData();
+  if (typeof renderCalendar === 'function') renderCalendar();
+}
+
+// 착장 메모 저장
+function saveOotdMemo(memo) {
+  let dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : (window.currentDayData || {});
+  if (!dayData.ootd) dayData.ootd = {};
+  dayData.ootd.memo = memo;
+  if (typeof saveDayData === 'function') saveDayData();
+}
+
+// 옷장 모달 열기
+function openOotdClosetModal(category) {
+  activeCategory = category;
+  const catNames = { top: '👕 상의', bottom: '👖 하의', shoes: '👟 신발', bag: '👜 가방' };
+  const titleEl = document.getElementById('ootdModalTitle');
+  if (titleEl) titleEl.innerText = `${catNames[category]} 옷장 선택 & 관리`;
+
+  renderClosetModalList();
+  const modal = document.getElementById('ootdClosetModal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeOotdClosetModal() {
+  const modal = document.getElementById('ootdClosetModal');
+  if (modal) modal.classList.add('hidden');
+  renderOotd();
+}
+
+// 모달 안의 옷 리스트 렌더링
+function renderClosetModalList() {
+  const container = document.getElementById('ootdClosetList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const closet = getClosetData();
+  const list = closet[activeCategory] || [];
+  const dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : (window.currentDayData || {});
+  const dayOotd = dayData.ootd || {};
+  const selectedIds = dayOotd[activeCategory] || [];
+
+  if (list.length === 0) {
+    container.innerHTML = '<span class="text-[11px] text-stone-400 p-2">등록된 옷이 없어요. 위에서 추가해 보세요!</span>';
+    return;
+  }
+
+  list.forEach(item => {
+    const isSelected = selectedIds.map(String).includes(String(item.id));
+    const btn = document.createElement('div');
+    btn.className = `flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs border cursor-pointer transition-all ${
+      isSelected 
+        ? 'bg-amber-100 border-amber-300 font-bold text-amber-900 shadow-xs' 
+        : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
+    }`;
+    
+    btn.innerHTML = `
+      <span class="w-2.5 h-2.5 rounded-full border border-stone-300 shrink-0" style="background-color: ${item.color || '#ddd'}"></span>
+      <span onclick="editClothName('${item.id}', '${item.name}')" title="클릭하여 이름 수정">${item.name}</span>
+      <button onclick="deleteClothFromCloset('${item.id}'); event.stopPropagation();" class="text-stone-300 hover:text-rose-500 text-xs ml-1">×</button>
+    `;
+
+    btn.addEventListener('click', (e) => {
+      if (e.target.tagName !== 'BUTTON' && (e.target.tagName !== 'SPAN' || e.target.title !== '클릭하여 이름 수정')) {
+        toggleSelectCloth(activeCategory, item.id);
+      }
+    });
+
+    container.appendChild(btn);
+  });
+}
+
+// 오늘 착장 토글 선택 (상의 선택 시 달력 대표색도 자동 연동!)
+function toggleSelectCloth(category, id) {
+  let dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : (window.currentDayData || {});
+  if (!dayData.ootd) dayData.ootd = { top: [], bottom: [], shoes: [], bag: [] };
+  if (!dayData.ootd[category]) dayData.ootd[category] = [];
+
+  const strId = String(id);
+  let arr = dayData.ootd[category].map(String);
+
+  if (arr.includes(strId)) {
+    arr = arr.filter(x => x !== strId);
+  } else {
+    arr.push(strId);
+    
+    // 상의 선택 시 달력 대표 색상도 자동으로 착!
+    if (category === 'top') {
+      const closet = getClosetData();
+      const cloth = (closet.top || []).find(c => String(c.id) === strId);
+      if (cloth && cloth.color) {
+        dayData.ootd.color = cloth.color;
+      }
     }
+  }
+
+  dayData.ootd[category] = arr;
+  if (typeof saveDayData === 'function') saveDayData();
+  renderClosetModalList();
+  renderOotd();
+  if (typeof renderCalendar === 'function') renderCalendar();
+}
+
+// 새 옷 추가 (이름 속 자연어 색상 자동 감지!)
+function addNewClothToCloset() {
+  const input = document.getElementById('ootdNewClothInput');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) return;
+
+  const color = detectClothColor(name);
+  const closet = getClosetData();
+  if (!closet[activeCategory]) closet[activeCategory] = [];
+
+  const newId = String(Date.now());
+  closet[activeCategory].push({ id: newId, name, color });
+  saveClosetData(closet);
+
+  input.value = '';
+  toggleSelectCloth(activeCategory, newId);
+}
+
+// 옷 이름 수정
+function editClothName(id, oldName) {
+  const newName = prompt('옷 이름을 수정할까요?', oldName);
+  if (!newName || newName.trim() === '' || newName === oldName) return;
+
+  const closet = getClosetData();
+  const cloth = (closet[activeCategory] || []).find(c => String(c.id) === String(id));
+  if (cloth) {
+    cloth.name = newName.trim();
+    cloth.color = detectClothColor(newName.trim());
+    saveClosetData(closet);
+    renderClosetModalList();
+    renderOotd();
+  }
+}
+
+// 옷장 삭제
+function deleteClothFromCloset(id) {
+  if (!confirm('내 옷장에서 이 옷을 완전히 삭제할까요?')) return;
+  const closet = getClosetData();
+  closet[activeCategory] = (closet[activeCategory] || []).filter(c => String(c.id) !== String(id));
+  saveClosetData(closet);
+
+  let dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : (window.currentDayData || {});
+  if (dayData && dayData.ootd && dayData.ootd[activeCategory]) {
+    dayData.ootd[activeCategory] = dayData.ootd[activeCategory].filter(x => String(x) !== String(id));
+    if (typeof saveDayData === 'function') saveDayData();
+  }
+
+  renderClosetModalList();
+  renderOotd();
+}
 
     function searchMusicTrack() {
       const q = document.getElementById('bgmSearchInput').value.trim();
