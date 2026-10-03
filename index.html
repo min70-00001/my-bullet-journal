@@ -487,47 +487,50 @@
         </div>
       </div>
 
-      <!-- 👗 오늘의 OOTD (가로 100% 쾌적한 노션 감성 스마트 옷장 칩 바) -->
+            <!-- 👗 오늘의 OOTD (감성 4줄 착장 + 원터치 모달 연결) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <span class="text-xs font-bold text-amber-900 flex items-center gap-1">👗 오늘의 OOTD</span>
           <div class="flex items-center gap-1.5">
-            <label for="ootdColorInput" title="대표 색상" class="cursor-pointer flex items-center gap-1 bg-stone-50 px-2 py-0.5 rounded-lg border border-stone-200">
+            <!-- 대표 컬러 (클릭 시 직접 변경도 가능) -->
+            <label for="ootdColorInput" title="달력 대표 색상" class="cursor-pointer flex items-center gap-1 bg-stone-50 px-2 py-0.5 rounded-full border border-stone-200 hover:bg-stone-100 transition-colors">
               <span id="ootdColorBadge" class="w-3.5 h-3.5 rounded-full border border-stone-300 shadow-2xs inline-block bg-[#ecdcc9]"></span>
               <span class="text-[10px] text-stone-500 font-medium">대표 컬러</span>
             </label>
-            <input type="color" id="ootdColorInput" value="#ecdcc9" onchange="onOotdColorChange(this.value)" class="sr-only">
+            <input type="color" id="ootdColorInput" value="#ecdcc9" onchange="onOotdColorChange(this.value)" class="hidden">
           </div>
         </div>
 
-        <!-- 스마트 옷장 칩 그룹 (상의 / 하의 / 신발 / 가방) -->
+        <!-- 상의 / 하의 / 신발 / 가방 4줄 레이아웃 -->
         <div class="space-y-2 text-xs">
           <!-- 상의 -->
-          <div class="flex items-start gap-2">
-            <span class="text-[11px] font-bold text-stone-500 shrink-0 mt-0.5 w-10">👕 상의</span>
-            <div id="ootdChips_top" class="flex-1 flex flex-wrap gap-1 items-center"></div>
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-bold text-stone-500 shrink-0 w-11 flex items-center gap-1">👕 상의</span>
+            <div id="ootdSelected_top" class="flex-1 flex flex-wrap gap-1 items-center min-h-[26px]"></div>
+            <button onclick="openOotdClosetModal('top')" class="shrink-0 text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 px-2 py-1 rounded-lg font-medium transition-colors">+ 선택</button>
           </div>
           <!-- 하의 -->
-          <div class="flex items-start gap-2">
-            <span class="text-[11px] font-bold text-stone-500 shrink-0 mt-0.5 w-10">👖 하의</span>
-            <div id="ootdChips_bottom" class="flex-1 flex flex-wrap gap-1 items-center"></div>
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-bold text-stone-500 shrink-0 w-11 flex items-center gap-1">👖 하의</span>
+            <div id="ootdSelected_bottom" class="flex-1 flex flex-wrap gap-1 items-center min-h-[26px]"></div>
+            <button onclick="openOotdClosetModal('bottom')" class="shrink-0 text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 px-2 py-1 rounded-lg font-medium transition-colors">+ 선택</button>
           </div>
           <!-- 신발 -->
-          <div class="flex items-start gap-2">
-            <span class="text-[11px] font-bold text-stone-500 shrink-0 mt-0.5 w-10">👟 신발</span>
-            <div id="ootdChips_shoes" class="flex-1 flex flex-wrap gap-1 items-center"></div>
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-bold text-stone-500 shrink-0 w-11 flex items-center gap-1">👟 신발</span>
+            <div id="ootdSelected_shoes" class="flex-1 flex flex-wrap gap-1 items-center min-h-[26px]"></div>
+            <button onclick="openOotdClosetModal('shoes')" class="shrink-0 text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 px-2 py-1 rounded-lg font-medium transition-colors">+ 선택</button>
           </div>
           <!-- 가방 -->
-          <div class="flex items-start gap-2">
-            <span class="text-[11px] font-bold text-stone-500 shrink-0 mt-0.5 w-10">👜 가방</span>
-            <div id="ootdChips_bag" class="flex-1 flex flex-wrap gap-1 items-center"></div>
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-bold text-stone-500 shrink-0 w-11 flex items-center gap-1">👜 가방</span>
+            <div id="ootdSelected_bag" class="flex-1 flex flex-wrap gap-1 items-center min-h-[26px]"></div>
+            <button onclick="openOotdClosetModal('bag')" class="shrink-0 text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 px-2 py-1 rounded-lg font-medium transition-colors">+ 선택</button>
           </div>
         </div>
 
-        <!-- 오늘 착장 직접 메모 (글자 잘림 없이 100% 확장) -->
-        <div class="pt-1 border-t border-stone-100">
-          <input type="text" id="ootdTextInput" placeholder="오늘 착장 상세 메모 (예: 날씨가 쌀쌀해서 가디건 챙김)..." onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none">
-        </div>
+        <!-- 오늘 착장 메모 칸 -->
+        <input type="text" id="ootdMemoInput" placeholder="오늘 착장 메모 (예: 날씨가 쌀쌀해서 가디건 챙김)..." onchange="saveOotdMemo(this.value)" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs text-stone-700 placeholder-stone-400 focus:outline-none focus:border-amber-400">
       </div>
 
       <!-- 한 줄 일기 & 밴드 일기 복사 -->
@@ -1221,7 +1224,40 @@
 
     </div>
   </div>
-  
+    <!-- 👗 내 스마트 옷장 모달 (토글 선택 & 자연어 컬러 자동 인식) -->
+  <div id="ootdClosetModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3.5 shadow-xl">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 id="ootdModalTitle" class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+          <span>👗</span> 옷장 선택 & 관리
+        </h3>
+        <button onclick="closeOotdClosetModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
+      </div>
+
+      <!-- 새 옷 추가 바 (이름 치면 컬러 자동 감지!) -->
+      <div class="space-y-1">
+        <label class="text-[10px] text-stone-500 font-semibold block">✨ 새 옷 추가 (이름에 색상 단어를 넣으면 색깔이 쏙!)</label>
+        <div class="flex gap-1.5">
+          <input type="text" id="ootdNewClothInput" placeholder="예: 베이지 코튼팬츠, 소라 셔츠" onkeydown="if(event.key==='Enter') addNewClothToCloset()" class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-400">
+          <button onclick="addNewClothToCloset()" class="px-3 py-1.5 bg-stone-800 text-white rounded-xl text-xs font-bold shrink-0">추가</button>
+        </div>
+      </div>
+
+      <!-- 내 옷 목록 (터치하면 오늘 착장에 토글 선택, 길게/수정 버튼으로 이름 수정) -->
+      <div class="space-y-1.5">
+        <div class="flex justify-between items-center text-[10px] text-stone-400">
+          <span>터치: 오늘 착장 선택/해제</span>
+          <span>수정: 이름 클릭</span>
+        </div>
+        <div id="ootdClosetList" class="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-2 bg-stone-50/70 border border-stone-100 rounded-xl min-h-[70px]"></div>
+      </div>
+
+      <div class="pt-2 border-t border-stone-100 flex justify-end">
+        <button onclick="closeOotdClosetModal()" class="w-full py-2 bg-stone-800 text-white font-bold text-xs rounded-xl shadow-xs">선택 완료</button>
+      </div>
+    </div>
+  </div>
+
 <!-- 📁 거대한 통합 두뇌 파일 1개만 연결 -->
   <script src="js/main.js"></script>
 </body>
