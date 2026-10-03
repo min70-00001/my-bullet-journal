@@ -142,6 +142,18 @@ const firebaseConfig = {
     let unsubscribeRoutineDef = null;
 
     window.addEventListener('DOMContentLoaded', () => {
+  // 1. 최우선 탭 & 서랍 복원 (다른 초기화 에러에 영향받지 않도록 맨 위에 배치)
+  try {
+    const savedTab = localStorage.getItem('mingle_active_tab') || 'day';
+    if (typeof switchTab === 'function') switchTab(savedTab);
+    const bMod = document.getElementById('drawerBudgetModule');
+    const hub = document.getElementById('drawerHubGrid');
+    if (hub && !hub.classList.contains('hidden') && bMod) {
+      bMod.classList.add('hidden');
+    }
+  } catch (e) {
+    console.warn("탭 복원 예외:", e);
+  }
       initFirebase();
       document.getElementById('currentDateInput').value = currentDate;
       updateDateLabel();
