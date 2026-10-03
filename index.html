@@ -761,38 +761,50 @@
     <!-- 4. 서랍 페이지 (VIEW: DRAWER - 가계부 / 독서 / 뜨개 통합) -->
     <section id="view-drawer" class="hidden space-y-4">
       
-              <!-- 4칸 감성 서랍장 로비 허브 -->
-    <div id="drawerHubGrid" class="grid grid-cols-2 gap-3 mb-4">
-      <button onclick="enterDrawerSub('note')" class="p-4 bg-white border border-stone-200 rounded-2xl shadow-xs text-left hover:bg-stone-50 transition flex flex-col justify-between h-28">
-        <span class="text-2xl">📝</span>
-        <div>
-          <div class="font-bold text-stone-800 text-sm">메모장 서랍</div>
-          <div class="text-[11px] text-stone-400">아이디어 & 체크리스트</div>
+    <!-- 진짜 4단 감성 서랍장 로비 허브 (1열 수직 서랍장) -->
+    <div id="drawerHubGrid" class="flex flex-col gap-2.5 mb-4 max-w-md mx-auto">
+      <button onclick="enterDrawerSub('note')" class="p-3.5 bg-white border border-stone-200 rounded-2xl shadow-xs text-left hover:bg-stone-50 transition flex items-center justify-between group">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl p-1.5 bg-stone-50 rounded-xl">📝</span>
+          <div>
+            <div class="font-bold text-stone-800 text-sm">메모장</div>
+            <div class="text-[11px] text-stone-400">아이디어 & 체크리스트</div>
+          </div>
         </div>
+        <span class="text-stone-300 group-hover:text-stone-500 transition text-sm pr-1">›</span>
       </button>
 
-      <button onclick="enterDrawerSub('budget')" class="p-4 bg-white border border-stone-200 rounded-2xl shadow-xs text-left hover:bg-stone-50 transition flex flex-col justify-between h-28">
-        <span class="text-2xl">💰</span>
-        <div>
-          <div class="font-bold text-stone-800 text-sm">가계부 서랍</div>
-          <div class="text-[11px] text-stone-400">지출 & 예산 관리</div>
+      <button onclick="enterDrawerSub('budget')" class="p-3.5 bg-white border border-stone-200 rounded-2xl shadow-xs text-left hover:bg-stone-50 transition flex items-center justify-between group">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl p-1.5 bg-stone-50 rounded-xl">💰</span>
+          <div>
+            <div class="font-bold text-stone-800 text-sm">가계부</div>
+            <div class="text-[11px] text-stone-400">지출 & 예산 관리</div>
+          </div>
         </div>
+        <span class="text-stone-300 group-hover:text-stone-500 transition text-sm pr-1">›</span>
       </button>
 
-      <button onclick="enterDrawerSub('book')" class="p-4 bg-white border border-stone-200 rounded-2xl shadow-xs text-left hover:bg-stone-50 transition flex flex-col justify-between h-28">
-        <span class="text-2xl">📚</span>
-        <div>
-          <div class="font-bold text-stone-800 text-sm">책장 서랍</div>
-          <div class="text-[11px] text-stone-400">독서 기록 & 별점</div>
+      <button onclick="enterDrawerSub('book')" class="p-3.5 bg-white border border-stone-200 rounded-2xl shadow-xs text-left hover:bg-stone-50 transition flex items-center justify-between group">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl p-1.5 bg-stone-50 rounded-xl">📚</span>
+          <div>
+            <div class="font-bold text-stone-800 text-sm">독서 책장</div>
+            <div class="text-[11px] text-stone-400">독서 기록 & 별점</div>
+          </div>
         </div>
+        <span class="text-stone-300 group-hover:text-stone-500 transition text-sm pr-1">›</span>
       </button>
 
-      <button onclick="enterDrawerSub('knit')" class="p-4 bg-white border border-stone-200 rounded-2xl shadow-xs text-left hover:bg-stone-50 transition flex flex-col justify-between h-28">
-        <span class="text-2xl">🧶</span>
-        <div>
-          <div class="font-bold text-stone-800 text-sm">쇼룸 서랍</div>
-          <div class="text-[11px] text-stone-400">뜨개 작품 & 프로젝트</div>
+      <button onclick="enterDrawerSub('knit')" class="p-3.5 bg-white border border-stone-200 rounded-2xl shadow-xs text-left hover:bg-stone-50 transition flex items-center justify-between group">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl p-1.5 bg-stone-50 rounded-xl">🧶</span>
+          <div>
+            <div class="font-bold text-stone-800 text-sm">뜨개 쇼룸</div>
+            <div class="text-[11px] text-stone-400">뜨개 작품 & 프로젝트</div>
+          </div>
         </div>
+        <span class="text-stone-300 group-hover:text-stone-500 transition text-sm pr-1">›</span>
       </button>
     </div>
 
