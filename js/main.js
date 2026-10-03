@@ -3558,6 +3558,13 @@ function renderBudgetDashboard() {
   const remainingEl = document.getElementById('budgetRemainingAmount');
   if (!container) return;
 
+  // 서랍 로비(4단 서랍장)에 있을 때는 가계부 화면 강제 노출 방지
+  const hub = document.getElementById('drawerHubGrid');
+  const budgetMod = document.getElementById('drawerBudgetModule');
+  if (hub && !hub.classList.contains('hidden') && budgetMod) {
+    budgetMod.classList.add('hidden');
+  }
+
   const budgetData = getBudgetMaster();
   const currentMonthStr = currentDate.slice(0, 7);
 
