@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+    <script>
+    window.onerror = function(msg, url, line, col, error) {
+      alert("🚨 에러 범인 발견!\n\n줄 번호: " + line + "번 줄\n내용: " + msg);
+      return false;
+    };
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>밍글로그 (Mingle Log)</title>
