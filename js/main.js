@@ -3460,25 +3460,55 @@ function switchTab(tab, subAction) {
 }
 
 // 2. 서랍장 내부 서브 탭 전환
-function setDrawerSubTab(type) {
-  ['budget', 'book', 'knit'].forEach(t => {
+// 서랍장 세부 화면 진입 (메모장/가계부/책장/쇼룸)
+function enterDrawerSub(type) {
+  const hub = document.getElementById('drawerHubGrid');
+  const backBar = document.getElementById('drawerBackBar');
+  const titleElem = document.getElementById('drawerCurrentTitle');
+
+  if (hub) hub.classList.add('hidden');
+  if (backBar) {
+    backBar.classList.remove('hidden');
+    backBar.classList.add('flex');
+  }
+
+  const titles = {
+    note: '📝 메모장 서랍',
+    budget: '💰 가계부 서랍',
+    book: '📚 책장 서랍',
+    knit: '🧶 쇼룸 서랍'
+  };
+  if (titleElem) titleElem.textContent = titles[type] || '';
+
+  ['note', 'budget', 'book', 'knit'].forEach(t => {
     const mod = document.getElementById(`drawer${t.charAt(0).toUpperCase() + t.slice(1)}Module`);
-    const btn = document.getElementById(`drawerSubTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
     if (mod) mod.classList.add('hidden');
-    if (btn) btn.className = 'flex-1 py-2 rounded-xl text-xs font-medium text-stone-500 transition-all';
   });
 
   const targetMod = document.getElementById(`drawer${type.charAt(0).toUpperCase() + type.slice(1)}Module`);
-  const targetBtn = document.getElementById(`drawerSubTab${type.charAt(0).toUpperCase() + type.slice(1)}`);
-  
   if (targetMod) targetMod.classList.remove('hidden');
-  
-  const activeColor = type === 'budget' ? 'bg-amber-100 text-amber-900' : (type === 'book' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900');
-  if (targetBtn) targetBtn.className = `flex-1 py-2 rounded-xl text-xs font-bold ${activeColor} shadow-xs transition-all`;
 
-  if (type === 'budget') renderBudgetDashboard();
+  if (type === 'note' && typeof renderNoteCards === 'function') renderNoteCards();
+  else if (type === 'budget') renderBudgetDashboard();
   else if (type === 'book' && typeof renderBookShelf === 'function') renderBookShelf();
   else if (type === 'knit' && typeof renderKnittingShowroom === 'function') renderKnittingShowroom();
+}
+
+// 4칸 서랍장 메인 허브로 돌아가기
+function backToDrawerHub() {
+  const hub = document.getElementById('drawerHubGrid');
+  const backBar = document.getElementById('drawerBackBar');
+
+  if (hub) hub.classList.remove('hidden');
+  if (backBar) {
+    backBar.classList.add('hidden');
+    backBar.classList.remove('flex');
+  }
+
+  ['note', 'budget', 'book', 'knit'].forEach(t => {
+    const mod = document.getElementById(`drawer${t.charAt(0).toUpperCase() + t.slice(1)}Module`);
+    if (mod) mod.classList.add('hidden');
+  });
 }
 
 // 3. 가계부 마스터 데이터
