@@ -142,21 +142,14 @@ const firebaseConfig = {
     let unsubscribeRoutineDef = null;
 
     window.addEventListener('DOMContentLoaded', () => {
-  // 1. 초기 렌더링 완료 후 마지막 기억된 탭 강제 복원 (0.1초 딜레이)
+  // 탭 복원 테스트용 알림창
   setTimeout(() => {
-    try {
-      const savedTab = localStorage.getItem('mingle_active_tab') || 'day';
-      if (typeof switchTab === 'function') switchTab(savedTab);
-      const bMod = document.getElementById('drawerBudgetModule');
-      const hub = document.getElementById('drawerHubGrid');
-      if (hub && !hub.classList.contains('hidden') && bMod) {
-        bMod.style.display = 'none';
-        bMod.classList.add('hidden');
-      }
-    } catch (e) {
-      console.warn("탭 복원 예외:", e);
+    const saved = localStorage.getItem('mingle_active_tab');
+    alert("저장된 탭 값: " + saved);
+    if (saved && typeof switchTab === 'function') {
+      switchTab(saved);
     }
-  }, 100);
+  }, 300);
       initFirebase();
       document.getElementById('currentDateInput').value = currentDate;
       updateDateLabel();
