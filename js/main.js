@@ -1951,12 +1951,20 @@ function deleteClothFromCloset(id) {
       const moodEl = document.getElementById('todayMoodSelect');
       if (moodEl) moodEl.value = data.mood || '';
 
-      if (data.ootd) {
-        document.getElementById('ootdTextInput').value = data.ootd.text || '';
-        document.getElementById('ootdColorInput').value = data.ootd.color || '#ecdcc9';
-        document.getElementById('ootdColorBadge').style.backgroundColor = data.ootd.color || '#ecdcc9';
-      }
-      renderOotdChips();
+    if (data.ootd) {
+      const oldOotdInput = document.getElementById('ootdTextInput');
+      if (oldOotdInput) oldOotdInput.value = data.ootd.text || '';
+      
+      const oColorInput = document.getElementById('ootdColorInput');
+      if (oColorInput) oColorInput.value = data.ootd.color || '#ecdcc9';
+      
+      const oColorBadge = document.getElementById('ootdColorBadge');
+      if (oColorBadge) oColorBadge.style.backgroundColor = data.ootd.color || '#ecdcc9';
+
+      const oMemoInput = document.getElementById('ootdMemoInput');
+      if (oMemoInput) oMemoInput.value = data.ootd.memo || '';
+    }
+    if (typeof renderOotd === 'function') renderOotd();
 
       if (data.bgm) {
         document.getElementById('bgmSearchInput').value = data.bgm.song || '';
