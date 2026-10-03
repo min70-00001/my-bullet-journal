@@ -166,6 +166,20 @@ const firebaseConfig = {
       renderRoutineProgressTracker();
       renderHealthTracker();
       calculateDDays();
+      // 이전 접속 날짜 및 활성 탭 복원
+  const savedDate = localStorage.getItem('mingle_active_date');
+  if (savedDate && typeof loadDayData === 'function') {
+    currentDate = savedDate;
+    const dateInput = document.getElementById('currentDateInput');
+    if (dateInput) dateInput.value = currentDate;
+    if (typeof updateDateLabel === 'function') updateDateLabel();
+    loadDayData(currentDate);
+  }
+
+  // 서랍 화면 초기화 및 이전 접속 탭 복원
+  if (typeof backToDrawerHub === 'function') backToDrawerHub();
+  const savedTab = localStorage.getItem('mingle_active_tab') || 'day';
+  switchTab(savedTab);
     });
 
     function initFirebase() {
