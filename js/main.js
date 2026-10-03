@@ -184,28 +184,38 @@ const firebaseConfig = {
     }
 
     function switchTab(tab, subAction) {
-      ['day', 'calendar', 'tracker', 'hobby'].forEach(t => {
-        document.getElementById(`view-${t}`).classList.add('hidden');
-        document.getElementById(`nav-${t}`).className = 'text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5';
-      });
-      document.getElementById(`view-${tab}`).classList.remove('hidden');
-      document.getElementById(`nav-${tab}`).className = 'text-stone-800 py-1 flex flex-col items-center gap-0.5 font-bold';
+  // 현재 보고 있는 탭을 기억 (새로고침해도 탭 유지)
+  localStorage.setItem('mingle_active_tab', tab);
 
-      if (tab === 'tracker') {
-        renderHabits();
-        renderMoodTracker();
-        renderRoutineProgressTracker();
-        renderHealthTracker();
-      } else if (tab === 'calendar') {
-        renderCalendar();
-        renderUpcomingEvents();
-        renderTicketList();
-        renderAnniversaries();
-      } else if (tab === 'hobby') {
-        if (subAction === 'knit') setHobbySubTab('knit');
-        else setHobbySubTab('book');
-      }
+  ['day', 'calendar', 'tracker', 'drawer'].forEach(t => {
+    const view = document.getElementById(`view-${t}`);
+    const nav = document.getElementById(`nav-${t}`);
+    if (view) view.classList.add('hidden');
+    if (nav) nav.className = 'text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5';
+  });
+
+  const activeView = document.getElementById(`view-${tab}`);
+  const activeNav = document.getElementById(`nav-${tab}`);
+  if (activeView) activeView.classList.remove('hidden');
+  if (activeNav) activeNav.className = 'text-stone-800 py-1 flex flex-col items-center gap-0.5';
+
+  if (tab === 'tracker') {
+    renderHabits();
+    renderMoodTracker();
+    renderRoutineProgressTracker();
+    renderHealthTracker();
+  } else if (tab === 'calendar') {
+    renderCalendar();
+    renderUpcomingEvents();
+    renderTicketList();
+    renderAnniversaries();
+  } else if (tab === 'drawer') {
+    // 서랍 탭 진입 시: 가계부 등이 아닌 깔끔한 4단 서랍장 로비를 먼저 보여줌
+    if (typeof backToDrawerHub === 'function') {
+      backToDrawerHub();
     }
+  }
+}
 
     function setHobbySubTab(type) {
       if (type === 'book') {
