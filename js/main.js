@@ -92,7 +92,7 @@ const firebaseConfig = {
 
     const now = new Date();
     const REAL_TODAY_STR = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    let currentDate = REAL_TODAY_STR;
+    let currentDate = localStorage.getItem('mingle_last_view_date') || REAL_TODAY_STR;
 
 
     let calYear = new Date().getFullYear();
@@ -240,6 +240,8 @@ const firebaseConfig = {
       const mStr = (d.getMonth() + 1) < 10 ? `0${d.getMonth() + 1}` : `${d.getMonth() + 1}`;
       const dStr = d.getDate() < 10 ? `0${d.getDate()}` : `${d.getDate()}`;
       currentDate = `${d.getFullYear()}-${mStr}-${dStr}`;
+            localStorage.setItem('mingle_last_view_date', currentDate);
+
       document.getElementById('currentDateInput').value = currentDate;
       updateDateLabel();
       subscribeDayData(currentDate);
@@ -254,7 +256,8 @@ const firebaseConfig = {
   const now = new Date();
   const realToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   currentDate = realToday;
-  
+      localStorage.setItem('mingle_last_view_date', currentDate);
+
   const dateInput = document.getElementById('currentDateInput');
   if (dateInput) dateInput.value = currentDate;
   
