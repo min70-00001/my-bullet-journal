@@ -2250,7 +2250,7 @@ function updateTodaySpecialBanner() {
   }
 
   // 로컬 완료 상태 불러오기
-  const completedTickets = JSON.parse(localStorage.getItem('mingle_completed_tickets') || '[]');
+    const completedTickets = JSON.parse(localStorage.getItem('mingle_completed_tickets') || '[]').map(String);
 
   // 각 항목별 HTML 블록 생성
   const blocks = [];
@@ -2287,7 +2287,7 @@ function updateTodaySpecialBanner() {
     blocks.push(`
       <div class="flex items-center justify-between gap-2 border px-2.5 py-1 rounded-xl text-[11px] transition-all shadow-2xs ${isDone ? 'bg-stone-50/60 border-stone-200 text-stone-400 line-through' : 'bg-sky-50 border-sky-200 text-sky-900 font-bold'}">
         <span class="truncate">${label}</span>
-        <button onclick="toggleTicketComplete(${t.id}); event.stopPropagation();" class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-md border font-semibold ${isDone ? 'bg-white text-stone-400 border-stone-200' : 'bg-white text-sky-700 border-sky-300 hover:bg-sky-100'}">
+        <button onclick="toggleTicketComplete('${t.id}'); event.stopPropagation();" class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-md border font-semibold ${isDone ? 'bg-white text-stone-400 border-stone-200' : 'bg-white text-sky-700 border-sky-300 hover:bg-sky-100'}">
           ${isDone ? '탑승완료 취소' : '탑승완료 ✓'}
         </button>
       </div>
@@ -2307,16 +2307,21 @@ function updateTodaySpecialBanner() {
   textEl.innerHTML = blocks.join('');
 }
 
-// 🎫 예매 탑승 완료 토글 도우미 함수
+// 🎫 예매 탑승 완료 토글 도우미 함수 (문자열 타입 완벽 호환)
 function toggleTicketComplete(id) {
-  let list = JSON.parse(localStorage.getItem('mingle_completed_tickets') || '[]');
-  if (list.includes(id)) {
-    list = list.filter(item => item !== id);
+  const strId = String(id);
+  let list = JSON.parse(localStorage.getItem('mingle_completed_tickets') || '[]').map(String);
+  
+  if (list.includes(strId)) {
+    list = list.filter(item => item !== strId);
   } else {
-    list.push(id);
+    list.push(strId);
   }
+  
   localStorage.setItem('mingle_completed_tickets', JSON.stringify(list));
-  updateTodaySpecialBanner();
+  if (typeof updateTodaySpecialBanner === 'function') {
+    updateTodaySpecialBanner();
+  }
 }
 
     // 캘린더 타일: 고정 높이 3단 정방형 스탬프 렌더러
