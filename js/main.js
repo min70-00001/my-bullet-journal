@@ -142,14 +142,15 @@ const firebaseConfig = {
     let unsubscribeRoutineDef = null;
 
     window.addEventListener('DOMContentLoaded', () => {
-  // 탭 복원 테스트용 알림창
+  // 이전 접속 탭 안전 복원
   setTimeout(() => {
-    const saved = localStorage.getItem('mingle_active_tab');
-    alert("저장된 탭 값: " + saved);
-    if (saved && typeof switchTab === 'function') {
-      switchTab(saved);
-    }
-  }, 300);
+    try {
+      const saved = localStorage.getItem('mingle_active_tab');
+      if (saved && typeof switchTab === 'function') {
+        switchTab(saved);
+      }
+    } catch (e) {}
+  }, 100);
       initFirebase();
       document.getElementById('currentDateInput').value = currentDate;
       updateDateLabel();
