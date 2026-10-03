@@ -921,18 +921,18 @@
   <!-- 하단 4단 탭 바 -->
   <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 py-2 shadow-lg">
     <div class="max-w-md mx-auto grid grid-cols-4 text-center text-xs font-semibold">
-      <button onclick="switchTab('day')" id="nav-day" class="text-stone-800 py-1 flex flex-col items-center gap-0.5 font-bold">
-        <span class="text-base">📅</span><span>오늘</span>
-      </button>
-      <button onclick="switchTab('calendar')" id="nav-calendar" class="text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5">
-        <span class="text-base">🗓️</span><span>일정</span>
-      </button>
-      <button onclick="switchTab('tracker')" id="nav-tracker" class="text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5">
-        <span class="text-base">📊</span><span>습관</span>
-      </button>
-      <button onclick="switchTab('drawer')" id="nav-drawer" class="text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5">
-        <span class="text-base">🗄️</span><span>서랍</span>
-      </button>
+        <button onclick="localStorage.setItem('mingle_active_tab','day');switchTab('day')" id="nav-day" class="text-stone-800 py-1 flex flex-col items-center gap-0.5">
+          <span class="text-base">📅</span><span>오늘</span>
+        </button>
+        <button onclick="localStorage.setItem('mingle_active_tab','calendar');switchTab('calendar')" id="nav-calendar" class="text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5">
+          <span class="text-base">🗓️</span><span>일정</span>
+        </button>
+        <button onclick="localStorage.setItem('mingle_active_tab','tracker');switchTab('tracker')" id="nav-tracker" class="text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5">
+          <span class="text-base">📊</span><span>습관</span>
+        </button>
+        <button onclick="localStorage.setItem('mingle_active_tab','drawer');switchTab('drawer')" id="nav-drawer" class="text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5">
+          <span class="text-base">🗄️</span><span>서랍</span>
+        </button>
     </div>
   </nav>
 
