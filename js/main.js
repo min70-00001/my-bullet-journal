@@ -2418,22 +2418,23 @@ function deleteClothFromCloset(id) {
       saveTicketsLocal(tickets);
     }
 
-    function renderTicketList() {
-      const container = document.getElementById('ticketReservationList');
-      if (!container) return;
-      const tickets = getTicketsLocal();
-      const now = new Date(REAL_TODAY_STR);
+  const now = new Date(REAL_TODAY_STR);
 
-      const futureTickets = tickets.filter(t => t.date >= REAL_TODAY_STR);
-      futureTickets.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  // 날짜+시간 순 정렬 (전체보기일 때 과거 내역도 정렬되어 나옴)
+  tickets.sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
 
-      const filtered = futureTickets.filter(t => {
-        const tDate = new Date(t.date);
-        const diff = Math.ceil((tDate - now) / (1000 * 60 * 60 * 24));
-        if (ticketFilterMode === '7') return diff <= 7;
-        if (ticketFilterMode === '30') return diff <= 30;
-        return true;
-      });
+  const filtered = tickets.filter(t => {
+    const tDate = new Date(t.date);
+    const diff = Math.ceil((tDate - now) / (1000 * 60 * 60 * 24));
+
+    if (ticketFilterMode === '7') {
+      return t.date >= REAL_TODAY_STR && diff <= 7;
+    }
+    if (ticketFilterMode === '30') {
+      return t.date >= REAL_TODAY_STR && diff <= 30;
+    }
+    return true; // 전체보기('all')는 과거 티켓까지 전부 노출!
+  });
 
       if (filtered.length === 0) {
         container.innerHTML = `<p class="text-[11px] text-stone-300 py-3 text-center">해당 기간에 예매된 승차권이 없어요 🌿</p>`;
@@ -2474,17 +2475,43 @@ function deleteClothFromCloset(id) {
       const events = getCalendarEvents();
       const now = new Date(REAL_TODAY_STR);
 
-      const futureEvents = events.filter(e => e.isRepeat || e.end >= REAL_TODAY_STR);
-      futureEvents.sort((a, b) => a.start.localeCompare(b.start));
+  // 날짜순 오름차순 정렬 (과거부터 미래 순으로 깔끔하게 정렬)
+  events.sort((a, b) => (a.start || '').localeCompare(b.start || ''));
 
-      const filtered = futureEvents.filter(e => {
-        if (e.isRepeat) return true;
-        const startD = new Date(e.start);
-        const diff = Math.ceil((startD - now) / (1000 * 60 * 60 * 24));
-        if (eventFilterMode === '7') return diff <= 7;
-        if (eventFilterMode === '30') return diff <= 30;
-        return true;
+  // 7일 이내 다가올 일정이 있으면 기본 필터를 '7'로 스마트 전환
+  if (typeof eventFilterMode !== 'undefined') {
+    const hasUrgent = events.some(e => {
+      if (e.isRepeat) return false;
+      const startD = new Date(e.start);
+      const diff = Math.ceil((startD - now) / (1000 * 60 * 60 * 24));
+      return (e.end || e.start) >= REAL_TODAY_STR && diff <= 7;
+    });
+
+    if (hasUrgent && eventFilterMode === '30') {
+      eventFilterMode = '7';
+      ['7', '30', 'all'].forEach(m => {
+        const btn = document.getElementById(`eventFilter_${m}`);
+        if (btn) {
+          if (m === '7') btn.className = 'px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold';
+          else btn.className = 'px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold';
+        }
       });
+    }
+  }
+
+  const filtered = events.filter(e => {
+    if (e.isRepeat) return true;
+    const startD = new Date(e.start);
+    const diff = Math.ceil((startD - now) / (1000 * 60 * 60 * 24));
+
+    if (eventFilterMode === '7') {
+      return (e.end || e.start) >= REAL_TODAY_STR && diff <= 7;
+    }
+    if (eventFilterMode === '30') {
+      return (e.end || e.start) >= REAL_TODAY_STR && diff <= 30;
+    }
+    return true; // 전체보기('all')는 과거에 끝난 일정도 다이어리처럼 전부 노출!
+  });
 
       if (filtered.length === 0) {
         container.innerHTML = `<p class="text-[11px] text-stone-300 py-3 text-center">해당 기간에 예정된 약속이나 일정이 없어요 🌿</p>`;
@@ -2770,6 +2797,97 @@ function toggleTicketComplete(id) {
       renderAnniversaries();
     }
 
+// --- 기념일 모달 및 관리 로직 ---
+let editingAnnivId = null;
+
+function openAnnivModal(id = null) {
+  editingAnnivId = id;
+  const modal = document.getElementById('annivModal');
+  const title = document.getElementById('annivModalTitle');
+  const nameInput = document.getElementById('annivInputName');
+  const dateInput = document.getElementById('annivInputDate');
+  
+  if (!modal) return;
+
+  if (id) {
+    if (title) title.innerHTML = '🎂 <span>기념일 수정</span>';
+    const items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
+    const target = items.find(item => String(item.id) === String(id));
+    if (target) {
+      nameInput.value = target.name || '';
+      dateInput.value = target.date || '';
+      const radios = document.getElementsByName('annivCategory');
+      radios.forEach(r => { r.checked = (r.value === (target.category || '생일')); });
+    }
+  } else {
+    if (title) title.innerHTML = '🎂 <span>기념일 & 이벤트 등록</span>';
+    nameInput.value = '';
+    dateInput.value = '';
+    const radios = document.getElementsByName('annivCategory');
+    if (radios.length > 0) radios[0].checked = true;
+  }
+  modal.classList.remove('hidden');
+}
+
+// 기존 프롬프트 함수 호환용 (혹시 남아있어도 에러 안 나게 방어!)
+function addAnniversaryPrompt() {
+  openAnnivModal();
+}
+
+function closeAnnivModal() {
+  const modal = document.getElementById('annivModal');
+  if (modal) modal.classList.add('hidden');
+  editingAnnivId = null;
+}
+
+function saveAnniversaryFromModal() {
+  const nameInput = document.getElementById('annivInputName');
+  const dateInput = document.getElementById('annivInputDate');
+  const name = nameInput ? nameInput.value.trim() : '';
+  const date = dateInput ? dateInput.value : '';
+  
+  if (!name) return alert('기념일 이름을 입력해 주세요.');
+  if (!date) return alert('날짜를 선택해 주세요.');
+
+  let category = '생일';
+  const radios = document.getElementsByName('annivCategory');
+  radios.forEach(r => { if (r.checked) category = r.value; });
+
+  let items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
+
+  if (editingAnnivId) {
+    items = items.map(item => {
+      if (String(item.id) === String(editingAnnivId)) {
+        return { ...item, name, date, category };
+      }
+      return item;
+    });
+  } else {
+    items.push({
+      id: Date.now(),
+      name,
+      date,
+      category
+    });
+  }
+
+  localStorage.setItem('mingle_anniversaries', JSON.stringify(items));
+  closeAnnivModal();
+  renderAnniversaries();
+  if (typeof renderCalendar === 'function') renderCalendar();
+  if (typeof updateTodaySpecialBanner === 'function') updateTodaySpecialBanner();
+}
+
+function deleteAnniversary(id) {
+  if (!confirm('이 기념일을 삭제할까요?')) return;
+  let items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
+  items = items.filter(a => String(a.id) !== String(id));
+  localStorage.setItem('mingle_anniversaries', JSON.stringify(items));
+  renderAnniversaries();
+  if (typeof renderCalendar === 'function') renderCalendar();
+  if (typeof updateTodaySpecialBanner === 'function') updateTodaySpecialBanner();
+}
+
 function renderAnniversaries() {
   const list = document.getElementById('anniversaryList');
   if (!list) return;
@@ -2779,12 +2897,24 @@ function renderAnniversaries() {
 
   const processed = items.map(item => {
     const orig = new Date(item.date);
+    const origYear = orig.getFullYear();
     let next = new Date(now.getFullYear(), orig.getMonth(), orig.getDate());
-    if (next < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+    
+    // 올해 기념일이 이미 지났는지 체크
+    const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (next < todayZero) {
       next.setFullYear(now.getFullYear() + 1);
     }
-    const diff = Math.ceil((next - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / (1000 * 60 * 60 * 24));
+    const diff = Math.ceil((next - todayZero) / (1000 * 60 * 60 * 24));
     
+    // n주년 / n번째 계산
+    const currentAnnivYear = next.getFullYear();
+    const yearsCount = currentAnnivYear - origYear;
+    let countBadge = '';
+    if (!isNaN(yearsCount) && yearsCount > 0) {
+      countBadge = item.category === '생일' ? `${yearsCount + 1}번째` : `${yearsCount}주년`;
+    }
+
     // YY-MM-DD (요일) 포맷팅
     const yy = String(next.getFullYear()).slice(-2);
     const mm = String(next.getMonth() + 1).padStart(2, '0');
@@ -2792,34 +2922,24 @@ function renderAnniversaries() {
     const dayOfWeek = dayNames[next.getDay()];
     const dateFormatted = `${yy}-${mm}-${dd} (${dayOfWeek})`;
 
+    const catIcon = item.category === '기념일' ? '💖' : (item.category === '이벤트' ? '🎉' : '🎂');
+
     return { 
       ...item, 
       diff, 
-      dateFormatted 
+      dateFormatted,
+      countBadge,
+      catIcon
     };
   });
 
   processed.sort((a, b) => a.diff - b.diff);
 
-  // 7일 이내 일정이 있으면 임박(7) 필터로 스마트 전환
-  if (typeof anniversaryFilterMode !== 'undefined') {
-    const hasUrgent = processed.some(i => i.diff <= 7);
-    if (hasUrgent && anniversaryFilterMode === '30') {
-      anniversaryFilterMode = '7';
-      ['7', '30', 'all'].forEach(m => {
-        const btn = document.getElementById(`annivFilter_${m}`);
-        if (btn) {
-          if (m === '7') btn.className = 'px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold';
-          else btn.className = 'px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold';
-        }
-      });
-    }
-  }
-
   const filtered = processed.filter(item => {
+    if (typeof anniversaryFilterMode === 'undefined') return true;
     if (anniversaryFilterMode === '7') return item.diff <= 7;
     if (anniversaryFilterMode === '30') return item.diff <= 30;
-    return true; // 전체보기는 지난 기록이나 먼 미래도 모두 노출
+    return true; // 전체보기
   });
 
   if (filtered.length === 0) {
@@ -2827,8 +2947,7 @@ function renderAnniversaries() {
     return;
   }
 
-  list.innerHTML = filtered.map((item, idx) => {
-    // D-0인 경우 예쁜 '오늘' 뱃지, 아니면 기존 D-day 표시
+  list.innerHTML = filtered.map(item => {
     const badgeText = item.diff === 0 ? '오늘' : `D-${item.diff}`;
     const badgeStyle = item.diff === 0 
       ? 'bg-rose-500 text-white animate-pulse' 
@@ -2836,14 +2955,14 @@ function renderAnniversaries() {
 
     return `
       <div class="p-2 rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-between text-xs">
-        <div onclick="editAnniversary(${idx})" class="cursor-pointer hover:text-amber-800 flex-1 flex items-center gap-2">
-          <span class="font-bold text-stone-800">🎂 ${item.name}</span>
+        <div onclick="openAnnivModal('${item.id}')" class="cursor-pointer hover:text-amber-800 flex-1 flex items-center gap-1.5 flex-wrap">
+          <span class="font-bold text-stone-800">${item.catIcon} ${item.name}</span>
+          ${item.countBadge ? `<span class="px-1.5 py-0.2 text-[10px] rounded-md bg-stone-200/70 text-stone-600 font-medium">${item.countBadge}</span>` : ''}
           <span class="text-[11px] text-stone-400 font-normal">${item.dateFormatted}</span>
-          ${typeof EDIT_SVG_ICON !== 'undefined' ? EDIT_SVG_ICON : ''}
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <span class="font-bold px-2 py-0.5 rounded-full text-[10px] ${badgeStyle}">${badgeText}</span>
-          <button onclick="deleteAnniversary(${item.id})" class="text-stone-300 hover:text-stone-500 text-xs">✕</button>
+          <button onclick="deleteAnniversary('${item.id}')" class="text-stone-300 hover:text-stone-500 text-xs">✕</button>
         </div>
       </div>
     `;
