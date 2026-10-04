@@ -41,18 +41,19 @@ const firebaseConfig = {
     ];
 
     const CATEGORY_STYLES = {
-      routine: 'border-amber-300 bg-amber-100 text-amber-900 font-bold',
-      meal: 'border-orange-300 bg-orange-100 text-orange-900 font-bold',
-      focus: 'border-emerald-300 bg-emerald-100 text-emerald-900 font-bold',
-      hobby: 'border-rose-300 bg-rose-100 text-rose-900 font-bold',
-      bookclub: 'border-indigo-300 bg-indigo-100 text-indigo-900 font-bold',
-      selfcare: 'border-[#dac9ba] bg-[#f0e6dd] text-[#5c493c] font-bold',
-      workout: 'border-sky-300 bg-sky-100 text-sky-900 font-bold',
-      custom: 'border-stone-300 bg-stone-200 text-stone-800 font-bold'
-      event: 'border-rose-300 bg-rose-100 text-rose-900 font-bold',
-      pet: 'border-amber-300 bg-amber-100 text-amber-900 font-bold',
-      etc: 'border-stone-300 bg-stone-100 text-stone-800 font-bold'
-    };
+  routine: 'border-amber-300 bg-amber-100 text-amber-900 font-bold',
+  meal: 'border-orange-300 bg-orange-100 text-orange-900 font-bold',
+  focus: 'border-emerald-300 bg-emerald-100 text-emerald-900 font-bold',
+  hobby: 'border-rose-300 bg-rose-100 text-rose-900 font-bold',
+  bookclub: 'border-indigo-300 bg-indigo-100 text-indigo-900 font-bold',
+  selfcare: 'border-[#dac9ba] bg-[#f0e6dd] text-[#5c493c] font-bold',
+  workout: 'border-sky-300 bg-sky-100 text-sky-900 font-bold',
+  custom: 'border-stone-300 bg-stone-200 text-stone-800 font-bold',
+  event: 'border-rose-300 bg-rose-100 text-rose-900 font-bold',
+  pet: 'border-amber-300 bg-amber-100 text-amber-900 font-bold',
+  etc: 'border-stone-300 bg-stone-100 text-stone-800 font-bold'
+};
+
 
     const TIMELINE_MARKER_STYLES = {
       routine: 'border-l-4 border-amber-400 bg-amber-50/90 text-amber-950',
