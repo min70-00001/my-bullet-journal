@@ -40,7 +40,7 @@ const firebaseConfig = {
       { key: 'etc', label: '기타약속', icon: '⭐', bg: 'bg-rose-100 text-rose-900 border-rose-300' }
     ];
 
-    const CATEGORY_STYLES = {
+const CATEGORY_STYLES = {
   routine: 'border-amber-300 bg-amber-100 text-amber-900 font-bold',
   meal: 'border-orange-300 bg-orange-100 text-orange-900 font-bold',
   focus: 'border-emerald-300 bg-emerald-100 text-emerald-900 font-bold',
@@ -50,11 +50,12 @@ const firebaseConfig = {
   workout: 'border-sky-300 bg-sky-100 text-sky-900 font-bold',
   custom: 'border-stone-300 bg-stone-200 text-stone-800 font-bold',
   event: 'border-rose-300 bg-rose-100 text-rose-900 font-bold',
-  pet: 'border-amber-300 bg-amber-100 text-amber-900 font-bold',
+  dog: 'border-amber-400 bg-amber-100 text-amber-950 font-bold',
+  cat: 'border-purple-300 bg-purple-100 text-purple-900 font-bold',
   etc: 'border-stone-300 bg-stone-100 text-stone-800 font-bold'
 };
 
-    const TIMELINE_MARKER_STYLES = {
+const TIMELINE_MARKER_STYLES = {
   routine: 'border-l-4 border-amber-400 bg-amber-50/90 text-amber-950',
   meal: 'border-l-4 border-orange-400 bg-orange-50/90 text-orange-950',
   focus: 'border-l-4 border-emerald-400 bg-emerald-50/90 text-emerald-950',
@@ -64,19 +65,21 @@ const firebaseConfig = {
   workout: 'border-l-4 border-sky-400 bg-sky-50/90 text-sky-950',
   custom: 'border-l-4 border-stone-400 bg-stone-100 text-stone-800',
   event: 'border-l-4 border-rose-400 bg-rose-50/90 text-rose-950',
-  pet: 'border-l-4 border-amber-400 bg-amber-50/90 text-amber-950',
+  dog: 'border-l-4 border-amber-400 bg-amber-50/90 text-amber-950',
+  cat: 'border-l-4 border-purple-400 bg-purple-50/90 text-purple-950',
   etc: 'border-l-4 border-stone-400 bg-stone-50/90 text-stone-900'
 };
 
-    const SUB_CATEGORIES = {
-  routine: { title: '☀️️ 일상 세부 항목', items: ['기상', '출근준비', '샤워', '목욕', '취침준비', '정리'] },
+const SUB_CATEGORIES = {
+  routine: { title: '☀ 일상 세부 항목', items: ['기상', '출근준비', '샤워', '목욕', '취침준비', '정리'] },
   focus: { title: '💻 집중/일 세부 항목', items: ['출근', '업무', '회의', '공부', '퇴근'] },
   meal: { title: '🥗 식사 세부 항목', items: ['아침', '점심', '저녁', '간식', '커피', '외식'] },
   hobby: { title: '🎨 취미 세부 항목', items: ['뜨개', '독서', '그림', '쇼핑'] },
   selfcare: { title: '🌿 자기관리 세부 항목', items: ['일기', '명상', '스트레칭', '스킨케어'] },
   workout: { title: '🏃 운동 세부 항목', items: ['산책', '러닝', '홈트', '헬스'] },
   event: { title: '🎉 이벤트 세부 항목', items: ['약속', '생일', '외출', '모임', '파티'] },
-  pet: { title: '🐾 멍냥 세부 항목', items: ['사료', '간식', '놀아주기', '빗질/케어', '병원/약'] },
+  dog: { title: '🐶 멍멍 세부 항목', items: ['산책', '사료', '간식', '놀아주기', '배변/케어', '병원'] },
+  cat: { title: '🐱 냥냥 세부 항목', items: ['사료', '간식', '사냥놀이', '화장실청소', '빗질', '병원'] },
   etc: { title: '💭 기타 세부 항목', items: ['자유기록', '돌발', '정리', '기타'] }
 };
 
