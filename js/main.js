@@ -2447,31 +2447,47 @@ function renderTicketList() {
 
       const iconMap = { bus: '🚌 버스', train: '🚅 기차', flight: '✈️ 비행기' };
 
-      container.innerHTML = filtered.map(t => {
-        const tDate = new Date(t.date);
-        const diff = Math.ceil((tDate - now) / (1000 * 60 * 60 * 24));
-        const ddayText = diff === 0 ? "오늘 출발" : `D-${diff}`;
+  container.innerHTML = filtered.map(t => {
+    const tDate = new Date(t.date);
+    const diff = Math.ceil((tDate - todayObj) / (1000 * 60 * 60 * 24));
+    const isPast = diff < 0;
 
-        return `
-          <div class="p-2.5 rounded-xl border border-sky-200 bg-sky-50/60 flex items-center justify-between text-xs transition-colors">
-            <div onclick="openTicketModal(${t.id})" class="min-w-0 pr-2 flex-1 cursor-pointer hover:opacity-80" title="클릭하여 예매 정보 수정">
-              <div class="flex items-center gap-1.5">
-                <span class="font-bold text-sky-950">${iconMap[t.type]} ${t.depart} ➔ ${t.arrive}</span>
-                <span class="text-[9px] bg-white text-sky-800 border border-sky-200 px-1 rounded font-bold">${t.time}</span>
-              </div>
-              <div class="text-[10px] text-stone-500 mt-0.5 flex items-center gap-1">
-                <span>${t.date} ${t.seatMemo ? `| <b>${t.seatMemo}</b>` : ''}</span>
-                ${EDIT_SVG_ICON}
-              </div>
-            </div>
-            <div class="flex items-center gap-1.5 shrink-0">
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${diff === 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-sky-200 text-sky-900'}">${ddayText}</span>
-              <button onclick="deleteTicketData(${t.id})" class="text-stone-300 hover:text-rose-500 text-xs px-1">✕</button>
-            </div>
-          </div>
-        `;
-      }).join('');
+    // 디데이 뱃지: 오늘이면 '오늘 출발', 미래면 'D-day', 과거는 뱃지 없이 깔끔하게!
+    let badgeHtml = '';
+    if (diff === 0) {
+      badgeHtml = '<span class="font-bold px-2 py-0.5 rounded-full text-[10px] bg-rose-500 text-white animate-pulse">오늘 출발</span>';
+    } else if (diff > 0) {
+      const badgeColor = diff <= 7 ? 'text-rose-600 bg-rose-50' : 'text-sky-600 bg-sky-50';
+      badgeHtml = `<span class="font-bold px-2 py-0.5 rounded-full text-[10px] ${badgeColor}">D-${diff}</span>`;
+    } else {
+      // 지난 티켓은 D--1 대신 깔끔하고 단정한 연회색 텍스트로!
+      badgeHtml = '<span class="text-[10px] text-stone-400 font-medium">지난 일정</span>';
     }
+
+    // 카드 스타일: 지난 일정은 살짝 은은하게 톤다운
+    const cardBg = isPast 
+      ? 'border-stone-200 bg-stone-50/70 text-stone-400 opacity-60' 
+      : 'border-sky-200 bg-sky-50/60 text-stone-700';
+
+    return `
+      <div class="p-2.5 rounded-xl border ${cardBg} flex items-center justify-between text-xs transition-all">
+        <div onclick="openTicketModal(${t.id})" class="min-w-0 pr-2 flex-1 cursor-pointer hover:opacity-80">
+          <div class="font-bold flex items-center gap-1.5 flex-wrap">
+            <span>${iconMap[t.type] || '🎫'} ${t.depart || ''} → ${t.arrive || ''}</span>
+            ${t.time ? `<span class="text-[10px] px-1.5 py-0.2 rounded-md bg-white/80 border border-stone-200 font-normal">${t.time}</span>` : ''}
+          </div>
+          <div class="text-[11px] text-stone-400 mt-0.5">
+            ${t.date}${t.seatMemo ? ` · ${t.seatMemo}` : ''}
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          ${badgeHtml}
+          <button onclick="deleteTicketData(${t.id})" class="text-stone-300 hover:text-stone-500 text-xs">✕</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+ }
 
     function renderUpcomingEvents() {
       const container = document.getElementById('upcomingEventsList');
