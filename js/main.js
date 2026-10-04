@@ -49,6 +49,9 @@ const firebaseConfig = {
       selfcare: 'border-[#dac9ba] bg-[#f0e6dd] text-[#5c493c] font-bold',
       workout: 'border-sky-300 bg-sky-100 text-sky-900 font-bold',
       custom: 'border-stone-300 bg-stone-200 text-stone-800 font-bold'
+      event: 'border-rose-300 bg-rose-100 text-rose-900 font-bold',
+      pet: 'border-amber-300 bg-amber-100 text-amber-900 font-bold',
+      etc: 'border-stone-300 bg-stone-100 text-stone-800 font-bold'
     };
 
     const TIMELINE_MARKER_STYLES = {
@@ -59,8 +62,11 @@ const firebaseConfig = {
       bookclub: 'border-l-4 border-indigo-400 bg-indigo-50/90 text-indigo-950',
       selfcare: 'border-l-4 border-[#b89b82] bg-[#fdf9f5] text-[#5c493c]',
       workout: 'border-l-4 border-sky-400 bg-sky-50/90 text-sky-950',
-      custom: 'border-l-4 border-stone-400 bg-stone-100 text-stone-800'
-    };
+      custom: 'border-l-4 border-stone-400 bg-stone-100 text-stone-800',
+      event: 'border-l-4 border-rose-400 bg-rose-50/90 text-rose-950',
+      pet: 'border-l-4 border-amber-400 bg-amber-50/90 text-amber-950',
+      etc: 'border-l-4 border-stone-400 bg-stone-50/90 text-stone-900',
+  };
 
     const SUB_CATEGORIES = {
       routine: { title: '☀️ 일상 세부 항목', items: ['기상', '출근준비', '샤워', '목욕', '취침준비', '정리'] },
@@ -69,7 +75,10 @@ const firebaseConfig = {
       hobby: { title: '🧶 취미 세부 항목', items: ['뜨개', '독서', '그림', '쇼핑'] },
       selfcare: { title: '☕ 자기관리 세부 항목', items: ['일기', '명상', '스트레칭', '스킨케어'] },
       workout: { title: '🏃 운동 세부 항목', items: ['산책', '러닝', '홈트', '헬스'] }
-    };
+      event: { title: '🎉 이벤트 세부 항목', items: ['약속', '생일', '외출', '모임', '파티'] },
+      pet: { title: '🐾 멍냥 세부 항목', items: ['사료', '간식', '놀아주기', '빗질/케어', '병원/약'] },
+      etc: { title: '💭 기타 세부 항목', items: ['자유기록', '돌발', '정리', '기타'] },
+  };
 
     const MOOD_META = {
       happy: { icon: '🥰', label: '최고', bg: 'bg-amber-100 border-amber-300 text-amber-900' },
