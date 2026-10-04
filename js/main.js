@@ -2418,14 +2418,18 @@ function deleteClothFromCloset(id) {
       saveTicketsLocal(tickets);
     }
 
-  const now = new Date(REAL_TODAY_STR);
+function renderTicketList() {
+  const container = document.getElementById('ticketReservationList');
+  if (!container) return;
+  const tickets = getTicketsLocal();
+  const todayObj = new Date(REAL_TODAY_STR);
 
   // 날짜+시간 순 정렬 (전체보기일 때 과거 내역도 정렬되어 나옴)
   tickets.sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
 
   const filtered = tickets.filter(t => {
     const tDate = new Date(t.date);
-    const diff = Math.ceil((tDate - now) / (1000 * 60 * 60 * 24));
+    const diff = Math.ceil((tDate - todayObj) / (1000 * 60 * 60 * 24));
 
     if (ticketFilterMode === '7') {
       return t.date >= REAL_TODAY_STR && diff <= 7;
