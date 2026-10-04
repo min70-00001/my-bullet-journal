@@ -2770,86 +2770,85 @@ function toggleTicketComplete(id) {
       renderAnniversaries();
     }
 
-    function renderAnniversaries() {
-      const list = document.getElementById('anniversaryList');
-      const items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[{"id":1,"name":"생일","date":"1994-10-04"}]');
-      const now = new Date();
+function renderAnniversaries() {
+  const list = document.getElementById('anniversaryList');
+  if (!list) return;
+  const items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
+  const now = new Date();
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
-      const processed = items.map(item => {
-        const orig = new Date(item.date);
-        let next = new Date(now.getFullYear(), orig.getMonth(), orig.getDate());
-        if (next < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
-          next.setFullYear(now.getFullYear() + 1);
+  const processed = items.map(item => {
+    const orig = new Date(item.date);
+    let next = new Date(now.getFullYear(), orig.getMonth(), orig.getDate());
+    if (next < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+      next.setFullYear(now.getFullYear() + 1);
+    }
+    const diff = Math.ceil((next - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / (1000 * 60 * 60 * 24));
+    
+    // YY-MM-DD (요일) 포맷팅
+    const yy = String(next.getFullYear()).slice(-2);
+    const mm = String(next.getMonth() + 1).padStart(2, '0');
+    const dd = String(next.getDate()).padStart(2, '0');
+    const dayOfWeek = dayNames[next.getDay()];
+    const dateFormatted = `${yy}-${mm}-${dd} (${dayOfWeek})`;
+
+    return { 
+      ...item, 
+      diff, 
+      dateFormatted 
+    };
+  });
+
+  processed.sort((a, b) => a.diff - b.diff);
+
+  // 7일 이내 일정이 있으면 임박(7) 필터로 스마트 전환
+  if (typeof anniversaryFilterMode !== 'undefined') {
+    const hasUrgent = processed.some(i => i.diff <= 7);
+    if (hasUrgent && anniversaryFilterMode === '30') {
+      anniversaryFilterMode = '7';
+      ['7', '30', 'all'].forEach(m => {
+        const btn = document.getElementById(`annivFilter_${m}`);
+        if (btn) {
+          if (m === '7') btn.className = 'px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold';
+          else btn.className = 'px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold';
         }
-        const diff = Math.ceil((next - now) / (1000 * 60 * 60 * 24));
-        return { ...item, diff, origMonth: orig.getMonth() + 1, origDay: orig.getDate() };
       });
+    }
+  }
 
-      processed.sort((a, b) => a.diff - b.diff);
+  const filtered = processed.filter(item => {
+    if (anniversaryFilterMode === '7') return item.diff <= 7;
+    if (anniversaryFilterMode === '30') return item.diff <= 30;
+    return true; // 전체보기는 지난 기록이나 먼 미래도 모두 노출
+  });
 
-      const filtered = processed.filter(item => {
-        if (anniversaryFilterMode === '7') return item.diff <= 7;
-        if (anniversaryFilterMode === '30') return item.diff <= 30;
-        return true;
-      });
+  if (filtered.length === 0) {
+    list.innerHTML = '<p class="text-[11px] text-stone-300 py-3 text-center">해당 기간에 예정된 기념일이 없어요 🌿</p>';
+    return;
+  }
 
-      if (filtered.length === 0) {
-        list.innerHTML = `<p class="text-[11px] text-stone-300 py-3 text-center">해당 기간에 예정된 기념일이 없어요 🌿</p>`;
-        return;
-      }
+  list.innerHTML = filtered.map((item, idx) => {
+    // D-0인 경우 예쁜 '오늘' 뱃지, 아니면 기존 D-day 표시
+    const badgeText = item.diff === 0 ? '오늘' : `D-${item.diff}`;
+    const badgeStyle = item.diff === 0 
+      ? 'bg-rose-500 text-white animate-pulse' 
+      : (item.diff <= 7 ? 'text-rose-600 bg-rose-50' : 'text-amber-600 bg-amber-50');
 
-      list.innerHTML = filtered.map((item, idx) => `
-        <div class="p-2 rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-between text-xs">
-          <div onclick="editAnniversary(${idx})" class="cursor-pointer hover:text-amber-800 flex-1 flex items-center gap-1" title="클릭하여 수정">
-            <span class="font-bold text-stone-800">🎂 ${item.name}</span>
-            <span class="text-[11px] text-stone-400">(${item.origMonth}월 ${item.origDay}일)</span>
-            ${EDIT_SVG_ICON}
-          </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <span class="font-bold ${item.diff <= 7 ? 'text-rose-600 bg-rose-50' : 'text-amber-600 bg-amber-50'} px-2 py-0.5 rounded-full text-[11px]">D-${item.diff}</span>
-            <button onclick="deleteAnniversary(${item.id})" class="text-stone-300 hover:text-stone-500 text-xs">✕</button>
-          </div>
+    return `
+      <div class="p-2 rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-between text-xs">
+        <div onclick="editAnniversary(${idx})" class="cursor-pointer hover:text-amber-800 flex-1 flex items-center gap-2">
+          <span class="font-bold text-stone-800">🎂 ${item.name}</span>
+          <span class="text-[11px] text-stone-400 font-normal">${item.dateFormatted}</span>
+          ${typeof EDIT_SVG_ICON !== 'undefined' ? EDIT_SVG_ICON : ''}
         </div>
-      `).join('');
-    }
-
-    function addAnniversaryPrompt() {
-      const name = prompt("기념일 이름 (예: 내 생일):");
-      if (!name) return;
-      const date = prompt("날짜 (YYYY-MM-DD):", "1994-10-04");
-      if (!date) return;
-      const items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
-      items.push({ id: Date.now(), name, date });
-      localStorage.setItem('mingle_anniversaries', JSON.stringify(items));
-      renderAnniversaries();
-      renderCalendar();
-      updateTodaySpecialBanner();
-    }
-
-    function editAnniversary(idx) {
-      const items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
-      const target = items[idx];
-      if (!target) return;
-      const name = prompt("수정할 기념일 이름:", target.name);
-      if (!name) return;
-      const date = prompt("수정할 날짜 (YYYY-MM-DD):", target.date);
-      if (!date) return;
-      target.name = name;
-      target.date = date;
-      localStorage.setItem('mingle_anniversaries', JSON.stringify(items));
-      renderAnniversaries();
-      renderCalendar();
-      updateTodaySpecialBanner();
-    }
-
-    function deleteAnniversary(id) {
-      let items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
-      items = items.filter(a => a.id !== id);
-      localStorage.setItem('mingle_anniversaries', JSON.stringify(items));
-      renderAnniversaries();
-      renderCalendar();
-      updateTodaySpecialBanner();
-    }
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="font-bold px-2 py-0.5 rounded-full text-[10px] ${badgeStyle}">${badgeText}</span>
+          <button onclick="deleteAnniversary(${item.id})" class="text-stone-300 hover:text-stone-500 text-xs">✕</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
 
     // 도서 & 뜨개 아카이브
     function subscribeArchives() {
