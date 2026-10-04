@@ -2590,13 +2590,16 @@ function updateTodaySpecialBanner() {
   }
 
   // C. 교통/예매 내역 (스카이 블루 톤 & 탑승 완료 토글)
+    // 저장된 완료 티켓 ID 목록을 모두 문자열로 정규화
+    const completedStrList = completedTickets.map(x => String(x));
+
     tickets.forEach(t => {
-      const isDone = completedTickets.includes(t.id);
+      const isDone = completedStrList.includes(String(t.id));
       const memoText = t.seatMemo && t.seatMemo.trim() ? ` (${t.seatMemo.trim()})` : '';
       const label = `${ticketIconMap[t.type] || '🎫'} ${t.time || ''} ${t.depart || ''}→${t.arrive || ''}${memoText}`;
 
       const cardStyle = isDone
-        ? 'bg-stone-100 border-stone-200 text-stone-400 opacity-60'
+        ? 'bg-stone-100/80 border-stone-200 text-stone-400 opacity-60'
         : 'bg-sky-50/70 border-sky-200 text-stone-700';
 
       const textStyle = isDone 
@@ -2610,7 +2613,7 @@ function updateTodaySpecialBanner() {
       blocks.push(`
         <div class="flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${cardStyle}">
           <span class="truncate" ${textStyle}>${label}</span>
-          <button onclick="toggleTicketComplete('${t.id}'); event.stopPropagation();" class="shrink-0 text-[10px] px-2 py-0.5 rounded-full transition-colors ${btnStyle}">
+          <button onclick="toggleTicketComplete('${t.id}'); event.stopPropagation();" class="shrink-0 text-[10px] px-2 py-0.5 rounded-full transition-colors cursor-pointer ${btnStyle}">
             ${isDone ? '완료됨 ↩' : '탑승완료 ✓'}
           </button>
         </div>
@@ -2632,18 +2635,24 @@ function updateTodaySpecialBanner() {
 
 // 🎫 예매 탑승 완료 토글 도우미 함수 (문자열 타입 완벽 호환)
 function toggleTicketComplete(id) {
+  const targetId = String(id);
   let completed = [];
   try {
-    completed = JSON.parse(localStorage.getItem('mingle_completed_tickets') || '[]');
-  } catch(e) {}
+    const raw = JSON.parse(localStorage.getItem('mingle_completed_tickets') || '[]');
+    completed = raw.map(x => String(x));
+  } catch(e) {
+    completed = [];
+  }
 
-  if (completed.includes(id)) {
-    completed = completed.filter(x => x !== id);
+  if (completed.includes(targetId)) {
+    completed = completed.filter(x => x !== targetId);
   } else {
-    completed.push(id);
+    completed.push(targetId);
   }
 
   localStorage.setItem('mingle_completed_tickets', JSON.stringify(completed));
+  
+  // 배너 다시 그리기
   if (typeof updateTodaySpecialBanner === 'function') {
     updateTodaySpecialBanner();
   }
