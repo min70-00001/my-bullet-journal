@@ -2590,19 +2590,28 @@ function updateTodaySpecialBanner() {
   }
 
   // C. 교통/예매 내역 (스카이 블루 톤 & 탑승 완료 토글)
-  tickets.forEach(t => {
-    const isDone = completedTickets.includes(t.id);
-    const label = `${ticketIconMap[t.type] || '🎫'} ${t.time || ''} ${t.depart || ''}→${t.arrive || ''} (${t.status || '예매'})`;
-    
-    blocks.push(`
-      <div class="flex items-center justify-between gap-2 border px-2.5 py-1 rounded-xl text-[11px] transition-all shadow-2xs ${isDone ? 'bg-stone-50/60 border-stone-200 text-stone-400 line-through' : 'bg-sky-50 border-sky-200 text-sky-900 font-bold'}">
-        <span class="truncate">${label}</span>
-        <button onclick="toggleTicketComplete('${t.id}'); event.stopPropagation();" class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-md border font-semibold ${isDone ? 'bg-white text-stone-400 border-stone-200' : 'bg-white text-sky-700 border-sky-300 hover:bg-sky-100'}">
-          ${isDone ? '탑승완료 취소' : '탑승완료 ✓'}
-        </button>
-      </div>
-    `);
-  });
+    tickets.forEach(t => {
+      const isDone = completedTickets.includes(t.id);
+      const label = `${ticketIconMap[t.type] || '🎫'} ${t.time || ''} ${t.depart || ''}→${t.arrive || ''} (${t.seatMemo || ''})`;
+
+      const cardStyle = isDone
+        ? 'bg-stone-50 border-stone-200 text-stone-400 opacity-60'
+        : 'bg-sky-50/60 border-sky-200 text-stone-700';
+
+      const textStyle = isDone ? 'line-through text-stone-400' : 'font-medium text-stone-700';
+      const btnStyle = isDone
+        ? 'bg-stone-200 text-stone-500 hover:bg-stone-300'
+        : 'bg-sky-500 text-white hover:bg-sky-600 shadow-xs';
+
+      blocks.push(`
+        <div class="flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${cardStyle}">
+          <span class="truncate ${textStyle}">${label}</span>
+          <button onclick="toggleTicketComplete('${t.id}'); event.stopPropagation();" class="shrink-0 text-[10px] px-2 py-0.5 rounded-full transition-colors ${btnStyle}">
+            ${isDone ? '완료됨 ↩' : '탑승완료 ✓'}
+          </button>
+        </div>
+      `);
+    });
 
   // 표시할 게 하나도 없으면 숨김
   if (blocks.length === 0) {
