@@ -2592,20 +2592,24 @@ function updateTodaySpecialBanner() {
   // C. 교통/예매 내역 (스카이 블루 톤 & 탑승 완료 토글)
     tickets.forEach(t => {
       const isDone = completedTickets.includes(t.id);
-      const label = `${ticketIconMap[t.type] || '🎫'} ${t.time || ''} ${t.depart || ''}→${t.arrive || ''} (${t.seatMemo || ''})`;
+      const memoText = t.seatMemo && t.seatMemo.trim() ? ` (${t.seatMemo.trim()})` : '';
+      const label = `${ticketIconMap[t.type] || '🎫'} ${t.time || ''} ${t.depart || ''}→${t.arrive || ''}${memoText}`;
 
       const cardStyle = isDone
-        ? 'bg-stone-50 border-stone-200 text-stone-400 opacity-60'
-        : 'bg-sky-50/60 border-sky-200 text-stone-700';
+        ? 'bg-stone-100 border-stone-200 text-stone-400 opacity-60'
+        : 'bg-sky-50/70 border-sky-200 text-stone-700';
 
-      const textStyle = isDone ? 'line-through text-stone-400' : 'font-medium text-stone-700';
+      const textStyle = isDone 
+        ? 'style="text-decoration: line-through; color: #a8a29e;"' 
+        : 'class="font-medium text-stone-700 truncate"';
+
       const btnStyle = isDone
-        ? 'bg-stone-200 text-stone-500 hover:bg-stone-300'
-        : 'bg-sky-500 text-white hover:bg-sky-600 shadow-xs';
+        ? 'bg-stone-200 text-stone-500 border border-stone-300'
+        : 'bg-sky-500 text-white shadow-xs';
 
       blocks.push(`
         <div class="flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${cardStyle}">
-          <span class="truncate ${textStyle}">${label}</span>
+          <span class="truncate" ${textStyle}>${label}</span>
           <button onclick="toggleTicketComplete('${t.id}'); event.stopPropagation();" class="shrink-0 text-[10px] px-2 py-0.5 rounded-full transition-colors ${btnStyle}">
             ${isDone ? '완료됨 ↩' : '탑승완료 ✓'}
           </button>
@@ -2628,16 +2632,18 @@ function updateTodaySpecialBanner() {
 
 // 🎫 예매 탑승 완료 토글 도우미 함수 (문자열 타입 완벽 호환)
 function toggleTicketComplete(id) {
-  const strId = String(id);
-  let list = JSON.parse(localStorage.getItem('mingle_completed_tickets') || '[]').map(String);
-  
-  if (list.includes(strId)) {
-    list = list.filter(item => item !== strId);
+  let completed = [];
+  try {
+    completed = JSON.parse(localStorage.getItem('mingle_completed_tickets') || '[]');
+  } catch(e) {}
+
+  if (completed.includes(id)) {
+    completed = completed.filter(x => x !== id);
   } else {
-    list.push(strId);
+    completed.push(id);
   }
-  
-  localStorage.setItem('mingle_completed_tickets', JSON.stringify(list));
+
+  localStorage.setItem('mingle_completed_tickets', JSON.stringify(completed));
   if (typeof updateTodaySpecialBanner === 'function') {
     updateTodaySpecialBanner();
   }
