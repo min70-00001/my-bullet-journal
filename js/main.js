@@ -1767,10 +1767,18 @@ function renderClosetModalList() {
 
   const closet = getClosetData();
   let list = (closet[activeCategory] || []).slice();
-  let dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : (window.currentDayData || {});
+  
+  // 날짜 데이터 안전하게 조회
+  let dayData = {};
+  if (typeof getDayDataLocal === 'function' && typeof currentDate !== 'undefined') {
+    dayData = getDayDataLocal(currentDate) || {};
+  } else if (window.currentDayData) {
+    dayData = window.currentDayData;
+  }
+  
   const dayOotd = dayData.ootd || {};
   let selectedIds = dayOotd[activeCategory] || [];
-  if (!Array.isArray(selectedIds)) selectedIds = [String(selectedIds)];
+  if (!Array.isArray(selectedIds)) selectedIds = selectedIds ? [String(selectedIds)] : [];
 
   if (list.length === 0) {
     container.innerHTML = '<span class="text-[11px] text-stone-400 p-2">등록된 옷이 없어요. 위에서 추가해 보세요!</span>';
@@ -1786,36 +1794,46 @@ function renderClosetModalList() {
   list.forEach(item => {
     const isSelected = selectedIds.map(String).includes(String(item.id));
     const btn = document.createElement('div');
-    btn.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs border cursor-pointer transition-all ' +
+    btn.className = 'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border cursor-pointer select-none transition-all ' +
       (isSelected 
         ? 'bg-amber-100 border-amber-300 font-bold text-amber-900 shadow-xs ring-1 ring-amber-400' 
         : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50');
 
     btn.innerHTML = `
-      <span class="w-2.5 h-2.5 rounded-full border border-stone-300 shrink-0" style="background-color: ${item.color || '#A8A29E'};"></span>
-      <span class="cloth-title flex-1 select-none">${item.name}</span>
-      <span class="text-[10px] text-stone-400 font-normal shrink-0">(${item._count}회)</span>
-      <button onclick="event.stopPropagation(); editClothName('${item.id}', '${item.name}')" title="이름 수정" class="text-stone-300 hover:text-stone-500 p-0.5 transition-colors flex items-center">
+      <span class="w-2.5 h-2.5 rounded-full border border-stone-300 shrink-0 pointer-events-none" style="background-color: ${item.color || '#A8A29E'};"></span>
+      <span class="cloth-title flex-1 pointer-events-none">${item.name}</span>
+      <span class="text-[10px] text-stone-400 font-normal shrink-0 pointer-events-none">(${item._count}회)</span>
+      <button type="button" onclick="event.stopPropagation(); editClothName('${item.id}', '${item.name}')" title="이름 수정" class="text-stone-300 hover:text-stone-500 p-1 transition-colors flex items-center">
         <svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
         </svg>
       </button>
-      <button onclick="event.stopPropagation(); deleteClothFromCloset('${item.id}')" title="삭제" class="text-stone-300 hover:text-red-400 px-0.5 text-xs ml-0.5 transition-colors">×</button>
+      <button type="button" onclick="event.stopPropagation(); deleteClothFromCloset('${item.id}')" title="삭제" class="text-stone-300 hover:text-red-400 px-1 text-sm font-bold transition-colors">×</button>
     `;
 
-    // 뱃지 전체를 탭하면 바로 오늘 OOTD 선택/해제 토글!
-    btn.onclick = () => {
+    // 터치/클릭 시 확실하게 토글 실행
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
       toggleSelectCloth(activeCategory, item.id);
-    };
+    });
 
     container.appendChild(btn);
   });
 }
 
 function toggleSelectCloth(category, id) {
-  let dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : (window.currentDayData || {});
+  let dayData = null;
+  if (typeof getDayDataLocal === 'function' && typeof currentDate !== 'undefined') {
+    dayData = getDayDataLocal(currentDate);
+  } else if (window.currentDayData) {
+    dayData = window.currentDayData;
+  }
+  if (!dayData) return;
+
   if (!dayData.ootd) dayData.ootd = { outer: [], top: [], bottom: [], shoes: [], bag: [] };
-  if (!dayData.ootd[category] || !Array.isArray(dayData.ootd[category])) dayData.ootd[category] = [];
+  if (!dayData.ootd[category] || !Array.isArray(dayData.ootd[category])) {
+    dayData.ootd[category] = dayData.ootd[category] ? [String(dayData.ootd[category])] : [];
+  }
 
   const strId = String(id);
   let arr = dayData.ootd[category].map(String);
@@ -1834,9 +1852,11 @@ function toggleSelectCloth(category, id) {
   }
 
   dayData.ootd[category] = arr;
+
+  // 로컬 및 화면 전체 반영
   if (typeof saveDayData === 'function') saveDayData();
   renderClosetModalList();
-  renderOotd();
+  if (typeof renderOotd === 'function') renderOotd();
   if (typeof renderCalendar === 'function') renderCalendar();
 }
 
