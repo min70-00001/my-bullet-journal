@@ -1741,13 +1741,32 @@ function closeOotdClosetModal() {
   renderOotd();
 }
 
+// OOTD 옷별 착용 누적 횟수 계산 함수
+function getClothWearCount(category, clothId) {
+  let count = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('mingle_day_')) {
+        const d = JSON.parse(localStorage.getItem(key) || '{}');
+        if (d && d.ootd && Array.isArray(d.ootd[category])) {
+          if (d.ootd[category].map(String).includes(String(clothId))) {
+            count++;
+          }
+        }
+      }
+    }
+  } catch(e) {}
+  return count;
+}
+
 function renderClosetModalList() {
   const container = document.getElementById('ootdClosetList');
   if (!container) return;
   container.innerHTML = '';
 
   const closet = getClosetData();
-  const list = closet[activeCategory] || [];
+  let list = (closet[activeCategory] || []).slice();
   let dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : (window.currentDayData || {});
   const dayOotd = dayData.ootd || {};
   let selectedIds = dayOotd[activeCategory] || [];
@@ -1758,26 +1777,36 @@ function renderClosetModalList() {
     return;
   }
 
+  // 착용 횟수 미리 계산 후 자주 입은 순(내림차순) 정렬
+  list.forEach(item => {
+    item._count = getClothWearCount(activeCategory, item.id);
+  });
+  list.sort((a, b) => b._count - a._count);
+
   list.forEach(item => {
     const isSelected = selectedIds.map(String).includes(String(item.id));
     const btn = document.createElement('div');
-    btn.className = `flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs border cursor-pointer transition-all ${
-      isSelected 
-        ? 'bg-amber-100 border-amber-300 font-bold text-amber-900 shadow-xs' 
-        : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
-    }`;
-    
+    btn.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs border cursor-pointer transition-all ' +
+      (isSelected 
+        ? 'bg-amber-100 border-amber-300 font-bold text-amber-900 shadow-xs ring-1 ring-amber-400' 
+        : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50');
+
     btn.innerHTML = `
-      <span class="w-2.5 h-2.5 rounded-full border border-stone-300 shrink-0" style="background-color: ${item.color || '#ddd'}"></span>
-      <span onclick="editClothName('${item.id}', '${item.name}')" title="클릭하여 이름 수정">${item.name}</span>
-      <button onclick="deleteClothFromCloset('${item.id}'); event.stopPropagation();" class="text-stone-300 hover:text-rose-500 text-xs ml-1">×</button>
+      <span class="w-2.5 h-2.5 rounded-full border border-stone-300 shrink-0" style="background-color: ${item.color || '#A8A29E'};"></span>
+      <span class="cloth-title flex-1 select-none">${item.name}</span>
+      <span class="text-[10px] text-stone-400 font-normal shrink-0">(${item._count}회)</span>
+      <button onclick="event.stopPropagation(); editClothName('${item.id}', '${item.name}')" title="이름 수정" class="text-stone-300 hover:text-stone-500 p-0.5 transition-colors flex items-center">
+        <svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+        </svg>
+      </button>
+      <button onclick="event.stopPropagation(); deleteClothFromCloset('${item.id}')" title="삭제" class="text-stone-300 hover:text-red-400 px-0.5 text-xs ml-0.5 transition-colors">×</button>
     `;
 
-    btn.addEventListener('click', (e) => {
-      if (e.target.tagName !== 'BUTTON' && (e.target.tagName !== 'SPAN' || e.target.title !== '클릭하여 이름 수정')) {
-        toggleSelectCloth(activeCategory, item.id);
-      }
-    });
+    // 뱃지 전체를 탭하면 바로 오늘 OOTD 선택/해제 토글!
+    btn.onclick = () => {
+      toggleSelectCloth(activeCategory, item.id);
+    };
 
     container.appendChild(btn);
   });
@@ -1785,7 +1814,7 @@ function renderClosetModalList() {
 
 function toggleSelectCloth(category, id) {
   let dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : (window.currentDayData || {});
-  if (!dayData.ootd) dayData.ootd = { top: [], bottom: [], shoes: [], bag: [] };
+  if (!dayData.ootd) dayData.ootd = { outer: [], top: [], bottom: [], shoes: [], bag: [] };
   if (!dayData.ootd[category] || !Array.isArray(dayData.ootd[category])) dayData.ootd[category] = [];
 
   const strId = String(id);
@@ -1795,9 +1824,9 @@ function toggleSelectCloth(category, id) {
     arr = arr.filter(x => x !== strId);
   } else {
     arr.push(strId);
-    if (category === 'top') {
+    if (category === 'top' || category === 'outer') {
       const closet = getClosetData();
-      const cloth = (closet.top || []).find(c => String(c.id) === strId);
+      const cloth = (closet[category] || []).find(c => String(c.id) === strId);
       if (cloth && cloth.color) {
         dayData.ootd.color = cloth.color;
       }
