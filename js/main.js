@@ -2098,24 +2098,34 @@ function deleteClothFromCloset(id) {
         });
     }
 
-    // 데일리 데이터 동기화
+    // 데일리 데이터 동기화 (순수 파이어베이스 직통)
     function subscribeDayData(dateStr) {
       if (unsubscribeDay) unsubscribeDay();
-      applyDayDataToUI(getDayDataLocal(dateStr));
+
+      // 날짜 변경 즉시 이전 날짜 잔상 메모리 초기화
+      window.currentDayData = { date: dateStr, expenses: [], ootdSelected: {}, ootd: {} };
+      applyDayDataToUI(window.currentDayData);
 
       if (!db) return;
       unsubscribeDay = db.collection('diary_days').doc(dateStr)
         .onSnapshot((doc) => {
           if (doc.exists) {
-            const data = doc.data();
-            saveDayDataLocal(dateStr, data);
+            const data = doc.data() || {};
+            data.date = dateStr;
+            window.currentDayData = data;
             applyDayDataToUI(data);
-    
-            // 💰 가계부 지출 위젯 및 달력 동기화
-            if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
-            if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
-            if (typeof renderOotdSelectedList === 'function') renderOotdSelectedList();
+          } else {
+            // 해당 날짜에 기록이 없으면 깨끗하게 빈 화면으로 리셋!
+            const emptyData = { date: dateStr, expenses: [], ootdSelected: {}, ootd: {} };
+            window.currentDayData = emptyData;
+            applyDayDataToUI(emptyData);
           }
+
+          // 위젯 및 달력 동기화
+          if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+          if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
+          if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+          if (typeof renderOotdSelectedList === 'function') renderOotdSelectedList();
         }, err => console.error(err));
     }
 
@@ -2212,6 +2222,8 @@ function deleteClothFromCloset(id) {
     }
 
     function applyDayDataToUI(data) {
+      data = data || {};
+      window.currentDayData = data; // 이전 날짜 찌꺼기 강제 덮어쓰기 영구 박멸!
       initTimetableGrid();
 
       const weatherEl = document.getElementById('todayWeatherSelect');
@@ -4720,29 +4732,9 @@ function renderExpenseWidget() {
     const totalChip = document.getElementById('expenseTodayTotalChip');
     if (!container) return;
 
-    // 현재 날짜 데이터 가져오기 (파이어베이스 수신 데이터 1순위 조회)
+    // 오직 현재 날짜의 파이어베이스 데이터만 정직하게 조회!
     const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
-    let dayData = {};
-    
-    // 1순위: getDayDataLocal (파이어베이스 실시간 수신 저장소)
-    if (typeof getDayDataLocal === 'function') {
-      try { dayData = getDayDataLocal(curDate) || {}; } catch(e) {}
-    }
-    // 2순위: window.currentDayData
-    if ((!dayData.expenses || dayData.expenses.length === 0) && window.currentDayData && window.currentDayData.expenses) {
-      dayData.expenses = window.currentDayData.expenses;
-    }
-    // 3순위: mingle_day_ 로컬 키
-    if (!dayData.expenses || dayData.expenses.length === 0) {
-      try {
-        const stored = localStorage.getItem('mingle_day_' + curDate);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed && Array.isArray(parsed.expenses)) dayData.expenses = parsed.expenses;
-        }
-      } catch(e) {}
-    }
-
+    let dayData = (window.currentDayData && window.currentDayData.date === curDate) ? window.currentDayData : {};
     const expenses = Array.isArray(dayData.expenses) ? dayData.expenses : [];
     container.innerHTML = '';
 
