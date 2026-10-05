@@ -2458,6 +2458,9 @@ function deleteClothFromCloset(id) {
 
     function openCalendarEventModal(eventId = null) {
       editingEventId = eventId;
+      const sTimeInp = document.getElementById('calEventStartTime');
+      const eTimeInp = document.getElementById('calEventEndTime');
+
       if (eventId) {
         const ev = getCalendarEvents().find(e => e.id === eventId);
         if (ev) {
@@ -2465,6 +2468,8 @@ function deleteClothFromCloset(id) {
           document.getElementById('calEventTitle').value = ev.title;
           document.getElementById('calEventStart').value = ev.start;
           document.getElementById('calEventEnd').value = ev.end;
+          if (sTimeInp) sTimeInp.value = ev.startTime || '';
+          if (eTimeInp) eTimeInp.value = ev.endTime || '';
           document.getElementById('calEventRepeatToggle').checked = !!ev.isRepeat;
           calEventRepeatDays = ev.repeatDays ? [...ev.repeatDays] : [];
           toggleCalEventRepeat(!!ev.isRepeat);
@@ -2475,6 +2480,8 @@ function deleteClothFromCloset(id) {
         document.getElementById('calEventTitle').value = '';
         document.getElementById('calEventStart').value = currentDate;
         document.getElementById('calEventEnd').value = currentDate;
+        if (sTimeInp) sTimeInp.value = '';
+        if (eTimeInp) eTimeInp.value = '';
         document.getElementById('calEventRepeatToggle').checked = false;
         calEventRepeatDays = [];
         document.getElementById('calEventRepeatDaysBox').classList.add('hidden');
@@ -2492,6 +2499,8 @@ function deleteClothFromCloset(id) {
       const title = document.getElementById('calEventTitle').value.trim();
       const start = document.getElementById('calEventStart').value;
       const end = document.getElementById('calEventEnd').value || start;
+      const startTime = document.getElementById('calEventStartTime')?.value.trim() || '';
+      const endTime = document.getElementById('calEventEndTime')?.value.trim() || '';
       if (!title || !start) return;
 
       const isRepeat = document.getElementById('calEventRepeatToggle').checked;
@@ -2503,6 +2512,8 @@ function deleteClothFromCloset(id) {
           events[idx].title = title;
           events[idx].start = start;
           events[idx].end = end;
+          events[idx].startTime = startTime;
+          events[idx].endTime = endTime;
           events[idx].category = selectedCalEventCategory;
           events[idx].isRepeat = isRepeat;
           events[idx].repeatDays = isRepeat ? [...calEventRepeatDays] : null;
@@ -2513,6 +2524,8 @@ function deleteClothFromCloset(id) {
           title,
           start,
           end,
+          startTime,
+          endTime,
           category: selectedCalEventCategory,
           isRepeat,
           repeatDays: isRepeat ? [...calEventRepeatDays] : null,
@@ -2832,7 +2845,7 @@ function renderTicketList() {
                 <span>${catMeta.icon} ${e.title}</span>
                 ${EDIT_SVG_ICON}
               </span>
-              <span class="text-[10px] text-stone-400 block">${e.isRepeat ? '매주 반복 일정' : `${e.start} ~ ${e.end}`}</span>
+              <span class="text-[10px] text-stone-400 block">${e.isRepeat ? '매주 반복 일정' : `${e.start} ~ ${e.end}`}${e.startTime ? ` (${e.startTime}${e.endTime ? '~' + e.endTime : ''})` : ''}</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
               <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${catMeta.bg}">${ddayText}</span>
@@ -2897,29 +2910,30 @@ function updateTodaySpecialBanner() {
   // 각 항목별 HTML 블록 생성
   const blocks = [];
 
-  // A. 기념일 / 공휴일 (로즈 핑크 톤)
+  // A. 기념일 / 공휴일 (로즈 핑크 톤 - 편지봉투 삭제로 깔끔화!)
   const annivTexts = [];
   if (holidayName) annivTexts.push(`🇰🇷 ${holidayName}`);
   hitAnniv.forEach(a => annivTexts.push(`🎉 ${a.name}`));
   if (annivTexts.length > 0) {
     blocks.push(`
       <div class="flex items-center gap-1.5 bg-rose-50/80 border border-rose-200/80 px-2.5 py-1 rounded-xl text-[11px] text-rose-800 font-bold shadow-2xs">
-        <span>💌</span>
         <span>${annivTexts.join(' · ')}</span>
       </div>
     `);
   }
 
-  // B. 일반 일정 (웜 스톤 톤)
-  if (hitEvents.length > 0) {
-    const evText = hitEvents.map(e => e.title).join(', ');
+  // B. 일반 일정 (선택한 카테고리 구분 이모지 반영!)
+  hitEvents.forEach(e => {
+    const catMeta = (typeof EVENT_CATEGORIES !== 'undefined' ? EVENT_CATEGORIES.find(c => c.key === e.category) : null) || { icon: '🗓️', bg: 'bg-stone-50 text-stone-700 border-stone-200' };
+    const timeStr = e.startTime ? ` · ${e.startTime}${e.endTime ? '~' + e.endTime : ''}` : '';
+
     blocks.push(`
       <div class="flex items-center gap-1.5 bg-stone-50 border border-stone-200 px-2.5 py-1 rounded-xl text-[11px] text-stone-700 font-bold shadow-2xs">
-        <span>🗓️</span>
-        <span class="truncate">${evText}</span>
+        <span>${catMeta.icon}</span>
+        <span class="truncate">${e.title}${timeStr}</span>
       </div>
     `);
-  }
+  });
 
   // C. 교통/예매 내역 (스카이 블루 톤 & 탑승 완료 토글)
     // 저장된 완료 티켓 ID 목록을 모두 문자열로 정규화
