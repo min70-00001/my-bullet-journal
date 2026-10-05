@@ -1769,11 +1769,13 @@ function renderClosetModalList() {
   const closet = getClosetData();
   let list = (closet[activeCategory] || []).slice();
   
+  // 로컬 스토리지에서 최신 당일 데이터를 가장 먼저 직접 조회!
   let dayData = {};
-  if (typeof getDayDataLocal === 'function' && typeof currentDate !== 'undefined') {
-    dayData = getDayDataLocal(currentDate) || {};
-  } else if (window.currentDayData) {
-    dayData = window.currentDayData;
+  try {
+    const key = 'mingle_day_' + currentDate;
+    dayData = JSON.parse(localStorage.getItem(key) || '{}');
+  } catch(e) {
+    dayData = (typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : window.currentDayData) || {};
   }
   
   const selObj = dayData.ootdSelected || dayData.ootd || {};
@@ -1864,8 +1866,14 @@ function toggleSelectCloth(category, id) {
   }
 
   renderClosetModalList();
+  if (typeof loadDayData === 'function') {
+    try { loadDayData(currentDate); } catch(e) {}
+  }
   if (typeof renderOotd === 'function') {
     try { renderOotd(); } catch(e) {}
+  }
+  if (typeof renderTodayOotd === 'function') {
+    try { renderTodayOotd(); } catch(e) {}
   }
   if (typeof renderCalendar === 'function') {
     try { renderCalendar(); } catch(e) {}
