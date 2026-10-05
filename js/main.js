@@ -2218,6 +2218,17 @@ function deleteClothFromCloset(id) {
       renderOotdSelectedList();
     }
   }
+  // 🎨 대표 컬러 즉시 동기화 반영
+  const remoteOotdColor = (data && data.ootd && data.ootd.color) ? data.ootd.color : ((data && data.ootdColor) ? data.ootdColor : null);
+  if (remoteOotdColor) {
+    if (!window.currentDayData) window.currentDayData = {};
+    if (!window.currentDayData.ootd) window.currentDayData.ootd = {};
+    window.currentDayData.ootd.color = remoteOotdColor;
+    const badge = document.getElementById('ootdColorBadge');
+    const input = document.getElementById('ootdColorInput');
+    if (badge) badge.style.backgroundColor = remoteOotdColor;
+    if (input) input.value = remoteOotdColor;
+  }
   if (typeof renderOotd === 'function') renderOotd();
 
   // 💸 클라우드 지출 데이터 즉시 반영 및 렌더링
@@ -5441,3 +5452,31 @@ if (origOpenDrawerBudget) {
     origOpenDrawerBudget();
   };
 }
+
+// 🎨 대표 컬러 수동 변경 시 Firestore 즉시 동기화
+document.addEventListener('DOMContentLoaded', () => {
+  const ootdColorInp = document.getElementById('ootdColorInput');
+  if (ootdColorInp) {
+    ootdColorInp.addEventListener('change', (e) => {
+      const newColor = e.target.value;
+      const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
+      const badge = document.getElementById('ootdColorBadge');
+      if (badge) badge.style.backgroundColor = newColor;
+
+      try {
+        const k = 'mingle_day_' + curDate;
+        let d = JSON.parse(localStorage.getItem(k) || '{}');
+        if (!d.ootd) d.ootd = {};
+        d.ootd.color = newColor;
+        localStorage.setItem(k, JSON.stringify(d));
+        if (typeof saveDayDataLocal === 'function') saveDayDataLocal(curDate, d);
+      } catch(err) {}
+
+      if (typeof db !== 'undefined' && db) {
+        db.collection('diary_days').doc(curDate).set({
+          ootd: { color: newColor }
+        }, { merge: true }).catch(err => console.error(err));
+      }
+    });
+  }
+});
