@@ -2945,15 +2945,16 @@ function updateTodaySpecialBanner() {
     `);
   }
 
-  // A-2. 개인 기념일/생일 카드 (화사한 핑크 톤)
-  if (hitAnniv.length > 0) {
-    const annivText = hitAnniv.map(a => `🎉 ${a.name}`).join(' · ');
+  // A-2. 개인 기념일/생일 카드 (공백·이모지 간격 완벽 통일!)
+  hitAnniv.forEach(a => {
+    const catIcon = a.category === '기념일' ? '💖' : (a.category === '이벤트' ? '🎉' : '🎂');
     blocks.push(`
       <div class="flex items-center gap-1.5 bg-pink-50/80 border border-pink-200 px-2.5 py-1 rounded-xl text-[11px] text-pink-900 font-bold shadow-2xs">
-        <span>${annivText}</span>
+        <span>${catIcon}</span>
+        <span class="truncate">${a.name}</span>
       </div>
     `);
-  }
+  });
 
   // B. 일반 일정 (선택한 카테고리 구분 이모지 반영!)
   hitEvents.forEach(e => {
