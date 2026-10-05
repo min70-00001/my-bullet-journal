@@ -1780,10 +1780,34 @@ function openOotdClosetModal(category) {
   if (modal) modal.classList.remove('hidden');
 }
 
+// OOTD 파이어베이스 즉시 동기화 함수
+function syncOotdToFirestore() {
+  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
+  const selectedData = (typeof currentOotdSelected !== 'undefined') ? currentOotdSelected : {};
+  
+  // 1. 로컬 저장소 동기화
+  try {
+    const key = 'mingle_day_' + curDate;
+    let d = JSON.parse(localStorage.getItem(key) || '{}');
+    d.ootdSelected = selectedData;
+    localStorage.setItem(key, JSON.stringify(d));
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(curDate, d);
+  } catch(e) {}
+
+  // 2. 파이어베이스 클라우드 동기화 (기존 데이터 보존)
+  if (typeof db !== 'undefined' && db) {
+    db.collection('diary_days').doc(curDate).set({
+      ootdSelected: selectedData
+    }, { merge: true }).catch(err => console.error(err));
+  }
+}
+
 function closeOotdClosetModal() {
   const modal = document.getElementById('ootdClosetModal');
   if (modal) modal.classList.add('hidden');
-  renderOotd();
+  syncOotdToFirestore();
+  if (typeof renderOotd === 'function') renderOotd();
+  if (typeof renderOotdSelectedList === 'function') renderOotdSelectedList();
 }
 
 // OOTD 옷별 착용 누적 횟수 계산 함수
