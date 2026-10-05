@@ -4720,17 +4720,34 @@ function addExpenseEntry() {
 
 // 지출 항목 삭제
 function deleteExpenseEntry(idx) {
-  const key = 'mingle_day_' + currentDate;
-   let dayData = (typeof getDayDataLocal === 'function') ? (getDayDataLocal(currentDate) || {}) : {};
-    if (Array.isArray(dayData.expenses)) {
-      dayData.expenses.splice(idx, 1);
-      if (typeof saveDayDataLocal === 'function') {
-        saveDayDataLocal(currentDate, dayData);
-      } else {
-        localStorage.setItem('mingle_day_' + currentDate, JSON.stringify(dayData));
-      }
-      if (window.currentDayData) window.currentDayData.expenses = dayData.expenses;
-    renderExpenseWidget();
+  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
+  const key = 'mingle_day_' + curDate;
+  let dayData = {};
+  try {
+    const stored = localStorage.getItem(key);
+    dayData = stored ? JSON.parse(stored) : {};
+  } catch(e) {
+    dayData = {};
+  }
+
+  if (Array.isArray(dayData.expenses)) {
+    dayData.expenses.splice(idx, 1);
+    localStorage.setItem(key, JSON.stringify(dayData));
+    if (typeof saveDayDataLocal === 'function') {
+      try { saveDayDataLocal(curDate, dayData); } catch(e) {}
+    }
+    if (window.currentDayData) window.currentDayData.expenses = dayData.expenses;
+
+    // 파이어베이스 즉시 동기화 삭제 반영
+    if (typeof db !== 'undefined' && db) {
+      db.collection('diary_days').doc(curDate).set({
+        expenses: dayData.expenses
+      }, { merge: true }).catch(err => console.error(err));
+    }
+
+    if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+    if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
+    if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
   }
 }
 
