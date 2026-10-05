@@ -2044,7 +2044,8 @@ function deleteClothFromCloset(id) {
           text: document.getElementById('ootdTextInput')?.value || (existing.ootd?.text || ''),
           color: (existing.ootd && existing.ootd.color) ? existing.ootd.color : (document.getElementById('ootdColorInput')?.value || '#ecdcc9')
         },
-        ootdSelected: existing.ootdSelected || {},
+        ootdSelected: (typeof currentOotdSelected !== 'undefined') ? currentOotdSelected : (existing.ootdSelected || {}),
+        expenses: existing.expenses || [],
         bgm: {
           song: document.getElementById('bgmSearchInput')?.value || '',
           info: document.getElementById('bgmInfoText')?.innerText || '',
