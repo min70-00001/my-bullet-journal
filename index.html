@@ -1552,6 +1552,103 @@
     </div>
   </div>
 
+  <!-- ⚙️ 가계부 설정 (카테고리 및 결제수단 관리) 모달 -->
+  <div id="modalExpenseCategorySetting" class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-4 shadow-xl space-y-4 max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-stone-150 pb-2.5">
+        <h3 class="font-bold text-sm text-stone-800">⚙️ 가계부 설정 & 분류 관리</h3>
+        <button onclick="closeExpenseCategorySettingModal()" class="text-stone-400 hover:text-stone-700 text-lg font-bold">×</button>
+      </div>
+
+      <div class="space-y-4 overflow-y-auto pr-1 text-xs">
+        <!-- 1. 결제수단 관리 -->
+        <div class="space-y-2 bg-stone-50 p-2.5 rounded-xl border border-stone-200/60">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-stone-700">💳 결제수단 목록</span>
+            <span class="text-[10px] text-stone-400">자주 쓰는 카드/계좌</span>
+          </div>
+          <div id="settingPayMethodTagList" class="flex flex-wrap gap-1.5 pt-1">
+            <!-- JS 렌더링 -->
+          </div>
+          <div class="flex gap-1 pt-1">
+            <input type="text" id="settingNewPayMethodInput" placeholder="새 결제수단 (예: 현대카드)" 
+                   class="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-[11px] text-stone-700 focus:outline-none">
+            <button onclick="addNewPayMethod()" class="bg-stone-800 text-white px-2.5 py-1 rounded-lg text-[11px] shrink-0 font-medium">추가</button>
+          </div>
+        </div>
+
+        <!-- 2. 지출 카테고리 관리 (대분류/소분류) -->
+        <div class="space-y-2 bg-stone-50 p-2.5 rounded-xl border border-stone-200/60">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-stone-700">📂 지출 카테고리 관리</span>
+          </div>
+          <div>
+            <label class="block text-[10px] text-stone-400 mb-1">대분류 선택</label>
+            <select id="settingMainCatSelect" onchange="renderSettingSubCats()" 
+                    class="w-full bg-white border border-stone-200 rounded-lg px-2 py-1.5 text-[11px] text-stone-700 focus:outline-none">
+            </select>
+          </div>
+          <div class="pt-1">
+            <label class="block text-[10px] text-stone-400 mb-1">소분류 항목들 (클릭 시 삭제)</label>
+            <div id="settingSubCatTagList" class="flex flex-wrap gap-1.5">
+              <!-- JS 렌더링 -->
+            </div>
+          </div>
+          <div class="flex gap-1 pt-1.5">
+            <input type="text" id="settingNewSubCatInput" placeholder="선택한 대분류에 새 소분류 추가" 
+                   class="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-[11px] text-stone-700 focus:outline-none">
+            <button onclick="addNewSubCategory()" class="bg-stone-800 text-white px-2.5 py-1 rounded-lg text-[11px] shrink-0 font-medium">추가</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-1">
+        <button onclick="closeExpenseCategorySettingModal()" class="w-full py-2 bg-stone-150 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-semibold transition">
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔔 고정지출 추가/수정 모달 -->
+  <div id="modalAddFixedExpense" class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-xs rounded-2xl p-4 shadow-xl space-y-3.5 text-xs">
+      <div class="flex items-center justify-between border-b border-stone-150 pb-2">
+        <h3 class="font-bold text-sm text-stone-800">🔔 고정지출 등록</h3>
+        <button onclick="closeAddFixedExpenseModal()" class="text-stone-400 hover:text-stone-700 text-lg font-bold">×</button>
+      </div>
+
+      <div class="space-y-2.5">
+        <div>
+          <label class="block text-[10px] text-stone-400 mb-0.5">항목 이름</label>
+          <input type="text" id="fixedExpenseTitleInput" placeholder="예: 넷플릭스, 청약저축, 통신비" 
+                 class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-700 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-[10px] text-stone-400 mb-0.5">매월 출금일</label>
+          <select id="fixedExpenseDaySelect" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-700 focus:outline-none">
+            <!-- 1일 ~ 31일, 말일 옵션은 JS 자동 생성 -->
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] text-stone-400 mb-0.5">금액 (원)</label>
+          <input type="number" id="fixedExpenseAmountInput" placeholder="예: 17000" 
+                 class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-700 font-mono focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-[10px] text-stone-400 mb-0.5">출금 계좌 / 카드 메모 (선택)</label>
+          <input type="text" id="fixedExpenseMemoInput" placeholder="예: 카카오뱅크, 국민카드" 
+                 class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-700 focus:outline-none">
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeAddFixedExpenseModal()" class="flex-1 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-xl font-medium">취소</button>
+        <button onclick="saveFixedExpenseItem()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold shadow-xs">저장</button>
+      </div>
+    </div>
+  </div>
+
 <!-- 📁 거대한 통합 두뇌 파일 1개만 연결 -->
 <script src="js/main.js?v=20261005_render_ootd_final_sync"></script>
 </body>
