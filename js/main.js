@@ -181,6 +181,7 @@ const SUB_CATEGORIES = {
       subscribeRoutineDefinitions();
       subscribeAccountBookSettings();
       subscribeAnniversaries();
+      subscribeClosetData();
 
       renderCalendar();
       renderAnniversaries();
@@ -1640,6 +1641,32 @@ function saveClosetData(data) {
   try {
     localStorage.setItem('mingle_closet_v2', JSON.stringify(data));
   } catch(e) {}
+  // ☁️ 옷장 전체 목록 Firestore 클라우드 즉시 동기화
+  if (typeof db !== 'undefined' && db) {
+    db.collection('closet_data').doc('master').set({
+      closet: data
+    }, { merge: true }).catch(console.error);
+  }
+}
+
+// ☁️ 옷장 목록 실시간 양방향 클라우드 구독기
+let unsubscribeCloset = null;
+function subscribeClosetData() {
+  if (typeof renderOotd === 'function') renderOotd();
+
+  if (!db) return;
+  if (unsubscribeCloset) unsubscribeCloset();
+  unsubscribeCloset = db.collection('closet_data').doc('master')
+    .onSnapshot(doc => {
+      if (doc.exists) {
+        const d = doc.data() || {};
+        if (d.closet) {
+          localStorage.setItem('mingle_closet_v2', JSON.stringify(d.closet));
+          if (typeof renderOotd === 'function') renderOotd();
+          if (typeof renderClosetModalList === 'function') renderClosetModalList();
+        }
+      }
+    }, err => console.error(err));
 }
 
 let activeCategory = 'outer';
