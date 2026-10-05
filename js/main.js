@@ -179,6 +179,7 @@ const SUB_CATEGORIES = {
       subscribeCalendarEvents();
       subscribeTicketData();
       subscribeRoutineDefinitions();
+      subscribeAccountBookSettings();
 
       renderCalendar();
       renderAnniversaries();
@@ -4910,6 +4911,11 @@ function getStoredPayMethods() {
 function saveStoredPayMethods(list) {
   localStorage.setItem('mingle_expense_pay_methods', JSON.stringify(list));
   refreshPayMethodSelects();
+  if (typeof db !== 'undefined' && db) {
+    db.collection('account_book_settings').doc('master').set({
+      payMethods: list
+    }, { merge: true }).catch(console.error);
+  }
 }
 
 function getStoredCategories() {
@@ -4925,6 +4931,11 @@ function saveStoredCategories(cats) {
   localStorage.setItem('mingle_expense_custom_cats', JSON.stringify(cats));
   window.DEFAULT_EXPENSE_CATS = cats;
   if (typeof onExpenseMainCatChange === 'function') onExpenseMainCatChange();
+  if (typeof db !== 'undefined' && db) {
+    db.collection('account_book_settings').doc('master').set({
+      categories: cats
+    }, { merge: true }).catch(console.error);
+  }
 }
 
 function refreshPayMethodSelects() {
@@ -5188,6 +5199,11 @@ function openSetTotalBudgetModal() {
     if (!isNaN(num) && num >= 0) {
       localStorage.setItem('mingle_monthly_budget_target', num);
       renderAccountBookBudget();
+      if (typeof db !== 'undefined' && db) {
+        db.collection('account_book_settings').doc('master').set({
+          monthlyBudgetTarget: num
+        }, { merge: true }).catch(console.error);
+      }
     }
   }
 }
@@ -5205,6 +5221,45 @@ function saveStoredFixedExpenses(list) {
   localStorage.setItem('mingle_fixed_expenses', JSON.stringify(list));
   renderAccountBookFixed();
   checkFixedExpenseAlerts();
+  if (typeof db !== 'undefined' && db) {
+    db.collection('account_book_settings').doc('master').set({
+      fixedExpenses: list
+    }, { merge: true }).catch(console.error);
+  }
+}
+
+// ☁️ 가계부 설정 실시간 양방향 동기화 구독기
+let unsubscribeAccountSettings = null;
+function subscribeAccountBookSettings() {
+  if (typeof renderAccountBookFixed === 'function') renderAccountBookFixed();
+  if (typeof renderAccountBookBudget === 'function') renderAccountBookBudget();
+
+  if (!db) return;
+  if (unsubscribeAccountSettings) unsubscribeAccountSettings();
+  unsubscribeAccountSettings = db.collection('account_book_settings').doc('master')
+    .onSnapshot(doc => {
+      if (doc.exists) {
+        const d = doc.data() || {};
+        if (Array.isArray(d.fixedExpenses)) {
+          localStorage.setItem('mingle_fixed_expenses', JSON.stringify(d.fixedExpenses));
+          if (typeof renderAccountBookFixed === 'function') renderAccountBookFixed();
+          if (typeof checkFixedExpenseAlerts === 'function') checkFixedExpenseAlerts();
+        }
+        if (d.monthlyBudgetTarget !== undefined) {
+          localStorage.setItem('mingle_monthly_budget_target', d.monthlyBudgetTarget);
+          if (typeof renderAccountBookBudget === 'function') renderAccountBookBudget();
+        }
+        if (Array.isArray(d.payMethods)) {
+          localStorage.setItem('mingle_expense_pay_methods', JSON.stringify(d.payMethods));
+          if (typeof refreshPayMethodSelects === 'function') refreshPayMethodSelects();
+        }
+        if (d.categories) {
+          localStorage.setItem('mingle_expense_custom_cats', JSON.stringify(d.categories));
+          window.DEFAULT_EXPENSE_CATS = d.categories;
+          if (typeof onExpenseMainCatChange === 'function') onExpenseMainCatChange();
+        }
+      }
+    }, err => console.error(err));
 }
 
 function renderAccountBookFixed() {
