@@ -4674,7 +4674,15 @@ function addExpenseEntry() {
     amount: amount
   };
 
-    let dayData = (typeof getDayDataLocal === 'function') ? (getDayDataLocal(currentDate) || {}) : {};
+    const key = 'mingle_day_' + currentDate;
+    let dayData = {};
+    try {
+      const stored = localStorage.getItem(key);
+      dayData = stored ? JSON.parse(stored) : {};
+    } catch(e) {
+      dayData = {};
+    }
+
     if (!Array.isArray(dayData.expenses)) {
       dayData.expenses = [];
     }
@@ -4683,17 +4691,24 @@ function addExpenseEntry() {
     // 시간순 정렬
     dayData.expenses.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
+    // 1. 로컬 스토리지 안전 저장
+    localStorage.setItem(key, JSON.stringify(dayData));
     if (typeof saveDayDataLocal === 'function') {
-      saveDayDataLocal(currentDate, dayData);
-    } else {
-      localStorage.setItem('mingle_day_' + currentDate, JSON.stringify(dayData));
+      try { saveDayDataLocal(currentDate, dayData); } catch(e) {}
     }
     if (window.currentDayData) window.currentDayData.expenses = dayData.expenses;
 
-  // 전체 데일리 저장 트리거
-  if (typeof saveDayData === 'function') {
-    saveDayData();
-  }
+    // 2. 파이어베이스에 즉시 동기화 (기존 다른 데이터 절대 안 건드림)
+    if (typeof db !== 'undefined' && db) {
+      db.collection('diary_days').doc(currentDate).set({
+        expenses: dayData.expenses
+      }, { merge: true }).catch(err => console.error(err));
+    }
+
+    // 3. 화면 지출 목록 갱신
+    if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+    if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
+    if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
 
   // 인풋 초기화
   if (itemInput) itemInput.value = '';
