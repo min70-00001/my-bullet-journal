@@ -1766,11 +1766,35 @@ function renderOotd() {
 }
 
 function onOotdColorChange(color) {
-  let dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : (window.currentDayData || {});
+  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
+  let dayData = (typeof getDayDataLocal === 'function' ? getDayDataLocal(curDate) : window.currentDayData) || {};
   if (!dayData.ootd) dayData.ootd = {};
   dayData.ootd.color = color;
+
   const badge = document.getElementById('ootdColorBadge');
   if (badge) badge.style.backgroundColor = color;
+  const input = document.getElementById('ootdColorInput');
+  if (input) input.value = color;
+
+  if (window.currentDayData) {
+    if (!window.currentDayData.ootd) window.currentDayData.ootd = {};
+    window.currentDayData.ootd.color = color;
+  }
+
+  // 1. 로컬 저장
+  try {
+    const k = 'mingle_day_' + curDate;
+    localStorage.setItem(k, JSON.stringify(dayData));
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(curDate, dayData);
+  } catch(e) {}
+
+  // 2. ☁️ 파이어베이스 즉시 클라우드 동기화
+  if (typeof db !== 'undefined' && db) {
+    db.collection('diary_days').doc(curDate).set({
+      ootd: { color: color }
+    }, { merge: true }).catch(err => console.error(err));
+  }
+
   if (typeof saveDayData === 'function') saveDayData();
   if (typeof renderCalendar === 'function') renderCalendar();
 }
@@ -5452,31 +5476,3 @@ if (origOpenDrawerBudget) {
     origOpenDrawerBudget();
   };
 }
-
-// 🎨 대표 컬러 수동 변경 시 Firestore 즉시 동기화
-document.addEventListener('DOMContentLoaded', () => {
-  const ootdColorInp = document.getElementById('ootdColorInput');
-  if (ootdColorInp) {
-    ootdColorInp.addEventListener('change', (e) => {
-      const newColor = e.target.value;
-      const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
-      const badge = document.getElementById('ootdColorBadge');
-      if (badge) badge.style.backgroundColor = newColor;
-
-      try {
-        const k = 'mingle_day_' + curDate;
-        let d = JSON.parse(localStorage.getItem(k) || '{}');
-        if (!d.ootd) d.ootd = {};
-        d.ootd.color = newColor;
-        localStorage.setItem(k, JSON.stringify(d));
-        if (typeof saveDayDataLocal === 'function') saveDayDataLocal(curDate, d);
-      } catch(err) {}
-
-      if (typeof db !== 'undefined' && db) {
-        db.collection('diary_days').doc(curDate).set({
-          ootd: { color: newColor }
-        }, { merge: true }).catch(err => console.error(err));
-      }
-    });
-  }
-});
