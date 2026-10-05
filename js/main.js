@@ -2590,6 +2590,7 @@ function deleteClothFromCloset(id) {
       `).join('');
     }
 
+    let unsubscribeCompletedTickets = null;
     function subscribeTicketData() {
       renderTicketList();
       if (!db) return;
@@ -2600,6 +2601,17 @@ function deleteClothFromCloset(id) {
             localStorage.setItem('mingle_tickets', JSON.stringify(doc.data().tickets || []));
             renderTicketList();
             renderCalendar();
+            updateTodaySpecialBanner();
+          }
+        }, err => console.error(err));
+
+      // ☁️ 탑승완료 상태도 클라우드에서 실시간 동기화
+      if (unsubscribeCompletedTickets) unsubscribeCompletedTickets();
+      unsubscribeCompletedTickets = db.collection('tickets_data').doc('completed')
+        .onSnapshot(doc => {
+          if (doc.exists) {
+            const ids = (doc.data() && doc.data().completedIds) || [];
+            localStorage.setItem('mingle_completed_tickets', JSON.stringify(ids));
             updateTodaySpecialBanner();
           }
         }, err => console.error(err));
@@ -2969,36 +2981,41 @@ function updateTodaySpecialBanner() {
     `);
   });
 
-  // C. 교통/예매 내역 (스카이 블루 톤 & 탑승 완료 토글)
-    // 저장된 완료 티켓 ID 목록을 모두 문자열로 정규화
-    const completedStrList = completedTickets.map(x => String(x));
+  // C. 교통/예매 내역 (스카이 블루 톤 & 볼드체·간격 gap-1.5 완벽 일치!)
+  const pureIcons = { bus: '🚌', train: '🚆', flight: '✈️' };
+  const completedStrList = completedTickets.map(x => String(x));
 
-    tickets.forEach(t => {
-      const isDone = completedStrList.includes(String(t.id));
-      const memoText = t.seatMemo && t.seatMemo.trim() ? ` (${t.seatMemo.trim()})` : '';
-      const label = `${ticketIconMap[t.type] || '🎫'} ${t.time || ''} ${t.depart || ''}→${t.arrive || ''}${memoText}`;
+  tickets.forEach(t => {
+    const isDone = completedStrList.includes(String(t.id));
+    const memoText = t.seatMemo && t.seatMemo.trim() ? ` (${t.seatMemo.trim()})` : '';
+    const icon = pureIcons[t.type] || '🎫';
+    const timeStr = t.time ? `${t.time} ` : '';
+    const label = `${timeStr}${t.depart || ''} → ${t.arrive || ''}${memoText}`;
 
-      const cardStyle = isDone
-        ? 'bg-stone-100/80 border-stone-200 text-stone-400 opacity-60'
-        : 'bg-sky-50/70 border-sky-200 text-stone-700';
+    const cardStyle = isDone
+      ? 'bg-stone-100/80 border-stone-200 text-stone-400 opacity-60'
+      : 'bg-sky-50/70 border-sky-200 text-stone-700';
 
-      const textStyle = isDone 
-        ? 'style="text-decoration: line-through; color: #a8a29e;"' 
-        : 'class="font-medium text-stone-700 truncate"';
+    const textStyle = isDone 
+      ? 'style="text-decoration: line-through; color: #a8a29e;"' 
+      : 'class="font-bold text-stone-700 truncate"';
 
-      const btnStyle = isDone
-        ? 'bg-stone-200 text-stone-500 border border-stone-300'
-        : 'bg-sky-500 text-white shadow-xs';
+    const btnStyle = isDone
+      ? 'bg-stone-200 text-stone-500 border border-stone-300'
+      : 'bg-sky-500 text-white shadow-xs';
 
-      blocks.push(`
-        <div class="flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${cardStyle}">
-          <span class="truncate" ${textStyle}>${label}</span>
-          <button onclick="toggleTicketComplete('${t.id}'); event.stopPropagation();" class="shrink-0 text-[10px] px-2 py-0.5 rounded-full transition-colors cursor-pointer ${btnStyle}">
-            ${isDone ? '완료됨 ↩' : '탑승완료 ✓'}
-          </button>
+    blocks.push(`
+      <div class="flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${cardStyle}">
+        <div class="flex items-center gap-1.5 min-w-0 flex-1">
+          <span class="shrink-0">${icon}</span>
+          <span ${textStyle}>${label}</span>
         </div>
-      `);
-    });
+        <button onclick="toggleTicketComplete('${t.id}'); event.stopPropagation();" class="shrink-0 text-[10px] px-2 py-0.5 rounded-full transition-colors cursor-pointer font-bold ${btnStyle}">
+          ${isDone ? '완료됨 ↩' : '탑승완료 ✓'}
+        </button>
+      </div>
+    `);
+  });
 
   // 표시할 게 하나도 없으면 숨김
   if (blocks.length === 0) {
@@ -3008,12 +3025,12 @@ function updateTodaySpecialBanner() {
 
   // 배너 표시 및 예쁜 카드 리스트로 렌더링
   banner.classList.remove('hidden');
-  banner.className = 'w-full space-y-1.5 mb-2'; // 부모 배너 컨테이너 정돈
+  banner.className = 'w-full space-y-1.5 mb-2';
   textEl.className = 'flex flex-col gap-1.5 w-full';
   textEl.innerHTML = blocks.join('');
 }
 
-// 🎫 예매 탑승 완료 토글 도우미 함수 (문자열 타입 완벽 호환)
+// 🎫 예매 탑승 완료 토글 도우미 함수 (Firestore 실시간 양방향 클라우드 저장 탑재)
 function toggleTicketComplete(id) {
   const targetId = String(id);
   let completed = [];
@@ -3032,7 +3049,13 @@ function toggleTicketComplete(id) {
 
   localStorage.setItem('mingle_completed_tickets', JSON.stringify(completed));
   
-  // 배너 다시 그리기
+  // ☁️ 파이어베이스 즉시 클라우드 동기화
+  if (typeof db !== 'undefined' && db) {
+    db.collection('tickets_data').doc('completed').set({
+      completedIds: completed
+    }, { merge: true }).catch(console.error);
+  }
+
   if (typeof updateTodaySpecialBanner === 'function') {
     updateTodaySpecialBanner();
   }
