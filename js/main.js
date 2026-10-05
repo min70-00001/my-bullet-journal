@@ -1704,9 +1704,11 @@ function renderOotd() {
 
       selectedIds.forEach(id => {
         let item = (closet[cat] || []).find(c => String(c.id) === String(id) || c.name === String(id));
-        // 다른 기기라 옷장에 없으면 이름 그대로 임시 표시
-        const displayName = item ? item.name : String(id);
-        const displayColor = item ? (item.color || detectClothColor(displayName)) : detectClothColor(displayName);
+        const savedName = (dayData.ootdNames && dayData.ootdNames[cat]) ? dayData.ootdNames[cat][id] : null;
+        const savedColor = (dayData.ootdColors && dayData.ootdColors[cat]) ? dayData.ootdColors[cat][id] : null;
+
+        const displayName = item ? item.name : (savedName || String(id));
+        const displayColor = item ? (item.color || detectClothColor(displayName)) : (savedColor || detectClothColor(displayName));
 
         const chip = document.createElement('span');
         chip.className = 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-stone-700 border border-stone-200';
@@ -1909,16 +1911,19 @@ function renderClosetModalList() {
 
 function toggleSelectCloth(category, id) {
   const strId = String(id);
-  const key = 'mingle_day_' + currentDate;
+  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
+  const key = 'mingle_day_' + curDate;
   let dayData = {};
   try {
-    dayData = JSON.parse(localStorage.getItem(key) || '{}');
+    dayData = JSON.parse(localStorage.getItem(key)) || {};
   } catch(e) {
     dayData = {};
   }
 
   if (!dayData.ootdSelected) dayData.ootdSelected = {};
   if (!dayData.ootd) dayData.ootd = {};
+  if (!dayData.ootdNames) dayData.ootdNames = {};
+  if (!dayData.ootdColors) dayData.ootdColors = {};
 
   let arr = [];
   const sourceArr = dayData.ootdSelected[category] || dayData.ootd[category];
@@ -1928,15 +1933,25 @@ function toggleSelectCloth(category, id) {
     arr = [String(sourceArr)];
   }
 
+  const closet = getClosetData();
+  const cloth = (closet[category] || []).find(c => String(c.id) === strId || c.name === strId);
+  const clothName = cloth ? cloth.name : strId;
+  const clothColor = cloth ? (cloth.color || detectClothColor(clothName)) : detectClothColor(clothName);
+
   if (arr.includes(strId)) {
     arr = arr.filter(x => x !== strId);
+    if (dayData.ootdNames[category]) delete dayData.ootdNames[category][strId];
+    if (dayData.ootdColors[category]) delete dayData.ootdColors[category][strId];
   } else {
     arr.push(strId);
+    if (!dayData.ootdNames[category]) dayData.ootdNames[category] = {};
+    if (!dayData.ootdColors[category]) dayData.ootdColors[category] = {};
+    dayData.ootdNames[category][strId] = clothName;
+    dayData.ootdColors[category][strId] = clothColor;
+
     if (category === 'top' || category === 'outer') {
-      const closet = getClosetData();
-      const cloth = (closet[category] || []).find(c => String(c.id) === strId);
-      if (cloth && cloth.color && (!dayData.ootd.color || dayData.ootd.color === '#ecdcc9')) {
-        dayData.ootd.color = cloth.color;
+      if (clothColor && (!dayData.ootd.color || dayData.ootd.color === '#ecdcc9')) {
+        dayData.ootd.color = clothColor;
       }
     }
   }
@@ -1946,22 +1961,25 @@ function toggleSelectCloth(category, id) {
 
   try {
     localStorage.setItem(key, JSON.stringify(dayData));
-    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(currentDate, dayData);
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(curDate, dayData);
   } catch(e) {}
 
   if (window.currentDayData) {
     window.currentDayData.ootdSelected = dayData.ootdSelected;
     window.currentDayData.ootd = dayData.ootd;
+    window.currentDayData.ootdNames = dayData.ootdNames;
+    window.currentDayData.ootdColors = dayData.ootdColors;
     if (dayData.ootd && dayData.ootd.color) window.currentDayData.ootd.color = dayData.ootd.color;
   }
 
-  // ☁️ OOTD 선택 즉시 파이어베이스 동기화
+  // ☁️ 파이어베이스 즉시 동기화 (이름과 색상까지 함께 전송)
   if (typeof db !== 'undefined' && db) {
-    const ootdPayload = {
-      ootdSelected: dayData.ootdSelected || {},
-      ootd: dayData.ootd || {}
-    };
-    db.collection('diary_days').doc(currentDate).set(ootdPayload, { merge: true }).catch(err => console.error(err));
+    db.collection('diary_days').doc(curDate).set({
+      ootdSelected: dayData.ootdSelected,
+      ootd: dayData.ootd,
+      ootdNames: dayData.ootdNames,
+      ootdColors: dayData.ootdColors
+    }, { merge: true }).catch(err => console.error(err));
   }
 
   renderClosetModalList();
