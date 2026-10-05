@@ -4591,16 +4591,30 @@ function renderExpenseWidget() {
     const totalChip = document.getElementById('expenseTodayTotalChip');
     if (!container) return;
 
-    // 현재 날짜 데이터 가져오기
+    // 현재 날짜 데이터 가져오기 (파이어베이스 수신 데이터 1순위 조회)
+    const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
     let dayData = {};
-    try {
-      const key = 'mingle_day_' + currentDate;
-      dayData = JSON.parse(localStorage.getItem(key) || '{}');
-    } catch(e) {
-      dayData = (typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : window.currentDayData) || {};
+    
+    // 1순위: getDayDataLocal (파이어베이스 실시간 수신 저장소)
+    if (typeof getDayDataLocal === 'function') {
+      try { dayData = getDayDataLocal(curDate) || {}; } catch(e) {}
+    }
+    // 2순위: window.currentDayData
+    if ((!dayData.expenses || dayData.expenses.length === 0) && window.currentDayData && window.currentDayData.expenses) {
+      dayData.expenses = window.currentDayData.expenses;
+    }
+    // 3순위: mingle_day_ 로컬 키
+    if (!dayData.expenses || dayData.expenses.length === 0) {
+      try {
+        const stored = localStorage.getItem('mingle_day_' + curDate);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && Array.isArray(parsed.expenses)) dayData.expenses = parsed.expenses;
+        }
+      } catch(e) {}
     }
 
-    const expenses = dayData.expenses || [];
+    const expenses = Array.isArray(dayData.expenses) ? dayData.expenses : [];
     container.innerHTML = '';
 
     let totalSum = 0;
