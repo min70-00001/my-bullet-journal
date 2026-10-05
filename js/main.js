@@ -2577,10 +2577,17 @@ function deleteClothFromCloset(id) {
       return JSON.parse(localStorage.getItem('mingle_fav_places') || JSON.stringify(DEFAULT_FAV_PLACES));
     }
 
-    function saveFavPlaces(places) {
-      localStorage.setItem('mingle_fav_places', JSON.stringify(places));
-      renderFavPlaceChips();
-    }
+function saveFavPlaces(places) {
+  localStorage.setItem('mingle_fav_places', JSON.stringify(places));
+  renderFavPlaceChips();
+
+  // ☁️ 자주 가는 장소 Firestore 클라우드 즉시 동기화
+  if (typeof db !== 'undefined' && db) {
+    db.collection('tickets_data').doc('fav_places').set({
+      places: places
+    }, { merge: true }).catch(console.error);
+  }
+}
 
     function promptAddPlaceChip() {
       const place = prompt("자주 가는 도시/지명을 입력해주세요:\n(예: 대전, 대구, 순천)");
@@ -2618,6 +2625,8 @@ function deleteClothFromCloset(id) {
     }
 
     let unsubscribeCompletedTickets = null;
+    let unsubscribeCompletedTickets = null;
+    let unsubscribeFavPlaces = null;
     function subscribeTicketData() {
       renderTicketList();
       if (!db) return;
@@ -2632,7 +2641,7 @@ function deleteClothFromCloset(id) {
           }
         }, err => console.error(err));
 
-      // ☁️ 탑승완료 상태도 클라우드에서 실시간 동기화
+      // ☁️ 탑승완료 상태 실시간 동기화
       if (unsubscribeCompletedTickets) unsubscribeCompletedTickets();
       unsubscribeCompletedTickets = db.collection('tickets_data').doc('completed')
         .onSnapshot(doc => {
@@ -2640,6 +2649,19 @@ function deleteClothFromCloset(id) {
             const ids = (doc.data() && doc.data().completedIds) || [];
             localStorage.setItem('mingle_completed_tickets', JSON.stringify(ids));
             updateTodaySpecialBanner();
+          }
+        }, err => console.error(err));
+
+      // ☁️ 자주 가는 장소 실시간 동기화
+      if (unsubscribeFavPlaces) unsubscribeFavPlaces();
+      unsubscribeFavPlaces = db.collection('tickets_data').doc('fav_places')
+        .onSnapshot(doc => {
+          if (doc.exists) {
+            const places = (doc.data() && doc.data().places) || [];
+            if (Array.isArray(places) && places.length > 0) {
+              localStorage.setItem('mingle_fav_places', JSON.stringify(places));
+              if (typeof renderFavPlaceChips === 'function') renderFavPlaceChips();
+            }
           }
         }, err => console.error(err));
     }
