@@ -1713,10 +1713,18 @@ function saveOotdMemo(memo) {
 }
 
 function openOotdClosetModal(category) {
-  activeCategory = category;
-  const catNames = { top: '👕 상의', bottom: '👖 하의', shoes: '👟 신발', bag: '👜 가방' };
+  activeCategory = category || 'outer';
+  const catNames = {
+    outer: '🧥 외투',
+    top: '👕 상의',
+    bottom: '👖 하의',
+    shoes: '👟 신발',
+    bag: '👜 가방'
+  };
   const titleEl = document.getElementById('ootdModalTitle');
-  if (titleEl) titleEl.innerText = `${catNames[category]} 옷장 선택 & 관리`;
+  if (titleEl) {
+    titleEl.innerText = `${catNames[activeCategory] || '🧥 외투'} 옷장 선택 & 관리`;
+  }
 
   renderClosetModalList();
   const modal = document.getElementById('ootdClosetModal');
@@ -1805,12 +1813,15 @@ function addNewClothToCloset() {
   const name = input.value.trim();
   if (!name) return;
 
-  const color = detectClothColor(name);
+  const color = typeof detectClothColor === 'function' ? detectClothColor(name) : '#A8A29E';
   const closet = getClosetData();
-  if (!closet[activeCategory]) closet[activeCategory] = [];
+  
+  if (!closet[activeCategory]) {
+    closet[activeCategory] = [];
+  }
 
   const newId = String(Date.now());
-  closet[activeCategory].push({ id: newId, name, color });
+  closet[activeCategory].push({ id: newId, name: name, color: color });
   saveClosetData(closet);
 
   input.value = '';
