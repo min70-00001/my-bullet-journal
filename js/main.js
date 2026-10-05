@@ -1596,7 +1596,8 @@ const OOTD_COLOR_DICT = {
   '네이비': '#1B2A4A', '블루': '#4A90E2', '소라': '#A0C4E2',
   '하늘': '#BCE0FD', '연청': '#A5C7E6', '중청': '#5C82A6', '진청': '#2C405A',
   '핑크': '#F4B6C2', '분홍': '#F4B6C2', '로즈': '#E08594',
-  '레드': '#D32F2F', '빨강': '#D32F2F', '버건디': '#800020', '와인': '#722F37',
+  '레드': '#D32F2F', '빨강': '#D32F2F', '토마토': '#E53E3E', '버건디': '#800020', '와인': '#722F37',
+  '보라': '#8E44AD', '퍼플': '#9B59B6', '라벤더': '#D7BDE2', '바이올렛': '#6C3483', '연보라': '#E8DAEF',
   '그린': '#4CAF50', '초록': '#4CAF50', '카키': '#706E49', '민트': '#A8E6CF', '올리브': '#6B8E23',
   '옐로우': '#FEE56A', '노랑': '#FEE56A', '버터': '#FDF0A6',
   '오렌지': '#FF9800', '주황': '#FF9800', '브라운': '#8D6E63', '갈색': '#8D6E63', '카멜': '#C19A6B'
@@ -1702,15 +1703,17 @@ function renderOotd() {
       }
 
       selectedIds.forEach(id => {
-        const item = (closet[cat] || []).find(c => String(c.id) === String(id));
-        if (!item) return;
+        let item = (closet[cat] || []).find(c => String(c.id) === String(id) || c.name === String(id));
+        // 다른 기기라 옷장에 없으면 이름 그대로 임시 표시
+        const displayName = item ? item.name : String(id);
+        const displayColor = item ? (item.color || detectClothColor(displayName)) : detectClothColor(displayName);
 
         const chip = document.createElement('span');
         chip.className = 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-stone-700 border border-stone-200';
         chip.innerHTML = `
-          <span class="w-2 h-2 rounded-full border border-stone-300 shrink-0" style="background-color: ${item.color || '#ecdcc9'};"></span>
-          <span>${item.name}</span>
-          <button onclick="toggleSelectCloth('${cat}', '${item.id}'); event.stopPropagation();" class="text-stone-400 hover:text-red-500 ml-0.5 text-xs font-bold leading-none">×</button>
+          <span class="w-2 h-2 rounded-full border border-stone-300 shrink-0" style="background-color: ${displayColor};"></span>
+          <span>${displayName}</span>
+          <button onclick="toggleSelectCloth('${cat}', '${id}'); event.stopPropagation();" class="text-stone-400 hover:text-red-500 ml-0.5 text-xs font-bold leading-none">×</button>
         `;
         container.appendChild(chip);
       });
@@ -1932,7 +1935,7 @@ function toggleSelectCloth(category, id) {
     if (category === 'top' || category === 'outer') {
       const closet = getClosetData();
       const cloth = (closet[category] || []).find(c => String(c.id) === strId);
-      if (cloth && cloth.color) {
+      if (cloth && cloth.color && (!dayData.ootd.color || dayData.ootd.color === '#ecdcc9')) {
         dayData.ootd.color = cloth.color;
       }
     }
