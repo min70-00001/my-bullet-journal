@@ -1627,28 +1627,30 @@ function saveClosetData(data) {
 
 let activeCategory = 'outer';
 
-// OOTD 화면 렌더링 (구버전 단일 문자열/새버전 배열 완벽 호환 방어막)
 function renderOotd() {
   try {
     const closet = getClosetData();
     let dayData = {};
-    if (typeof getDayDataLocal === 'function' && typeof currentDate !== 'undefined') {
-      dayData = getDayDataLocal(currentDate) || {};
-    } else if (window.currentDayData) {
-      dayData = window.currentDayData;
+    
+    // 로컬스토리지에서 최신 당일 데이터 직접 우선 조회!
+    try {
+      const key = 'mingle_day_' + currentDate;
+      dayData = JSON.parse(localStorage.getItem(key) || '{}');
+    } catch(e) {
+      dayData = (typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : window.currentDayData) || {};
     }
 
     const dayOotd = dayData.ootd || {};
+    const ootdSel = dayData.ootdSelected || {};
 
     ['outer', 'top', 'bottom', 'shoes', 'bag'].forEach(cat => {
       const container = document.getElementById(`ootdSelected_${cat}`);
       if (!container) return;
       container.innerHTML = '';
 
-      let rawVal = dayOotd[cat] || (dayData.ootdSelected ? dayData.ootdSelected[cat] : null);
+      let rawVal = ootdSel[cat] !== undefined ? ootdSel[cat] : dayOotd[cat];
       let selectedIds = [];
 
-      // 🛡️ 구버전 문자열 vs 새버전 배열 방어막 처리
       if (Array.isArray(rawVal)) {
         selectedIds = rawVal.map(String);
       } else if (typeof rawVal === 'string' && rawVal.trim() !== '') {
@@ -1674,11 +1676,11 @@ function renderOotd() {
         if (!item) return;
 
         const chip = document.createElement('span');
-        chip.className = 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100/80 border border-stone-200 text-stone-700 shadow-2xs';
+        chip.className = 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-stone-700 border border-stone-200';
         chip.innerHTML = `
-          <span class="w-2 h-2 rounded-full border border-stone-300 shrink-0" style="background-color: ${item.color || '#ddd'}"></span>
+          <span class="w-2 h-2 rounded-full border border-stone-300 shrink-0" style="background-color: ${item.color || '#ecdcc9'};"></span>
           <span>${item.name}</span>
-          <button onclick="toggleSelectCloth('${cat}', '${item.id}'); event.stopPropagation();" class="text-stone-400 hover:text-stone-600 text-xs ml-0.5">×</button>
+          <button onclick="toggleSelectCloth('${cat}', '${item.id}'); event.stopPropagation();" class="text-stone-400 hover:text-red-500 ml-0.5 text-xs font-bold leading-none">×</button>
         `;
         container.appendChild(chip);
       });
@@ -1694,6 +1696,7 @@ function renderOotd() {
     // 메모 반영
     const memoEl = document.getElementById('ootdMemoInput');
     if (memoEl) memoEl.value = dayOotd.memo || dayData.dailyOotdMemo || '';
+
   } catch (err) {
     console.warn("OOTD 렌더링 안전 패스:", err);
   }
