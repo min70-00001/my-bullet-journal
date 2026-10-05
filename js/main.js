@@ -1712,6 +1712,7 @@ function renderOotd() {
       if (infoEl) infoEl.innerText = bgm.info || bgm.song || 'BGM을 검색해보세요';
       if (inputEl) inputEl.value = bgm.song || '';
     } else {
+          
       // 해당 날짜에 저장된 노래가 없으면 기본 감성 커버와 플레이스홀더로 복원!
       if (coverEl) {
         coverEl.src = defaultCover;
@@ -1720,6 +1721,9 @@ function renderOotd() {
       if (infoEl) infoEl.innerText = 'BGM을 검색해보세요';
       if (inputEl) inputEl.value = '';
     }
+
+      // 지출 위젯 렌더링 호출
+    if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
 
   } catch (err) {
     console.warn("OOTD 렌더링 안전 패스:", err);
@@ -4483,4 +4487,199 @@ function formatTimeInput(input) {
     val = val.slice(0, 2) + ':' + val.slice(2, 4);
   }
   input.value = val;
+}
+
+// ==========================================
+// 💸 데일리 가계부 & 스마트 시간 입력 로직
+// ==========================================
+
+// 기본 카테고리 맵 (대분류 -> 소분류 목록)
+window.DEFAULT_EXPENSE_CATS = {
+  '식비': ['식재료', '외식', '카페·간식', '배달'],
+  '생활비': ['생필품', '반려묘', '주거/통신', '생활잡화'],
+  '교통': ['대중교통', '택시', '주유/차량'],
+  '쇼핑': ['의류/패션', '화장품/뷰티', '취미/도서'],
+  '문화/여가': ['영화/공연', '여행/숙박', '운동'],
+  '의료/건강': ['병원/약국', '영양제/건강식'],
+  '기타': ['경조사/선물', '기타지출']
+};
+
+// 스마트 시간 포맷터 (숫자만 치면 00:00 자동 변환)
+function formatSmartTimeInput(el) {
+  if (!el) return;
+  let val = el.value.replace(/[^0-9]/g, '');
+  if (val.length >= 4) {
+    let hh = parseInt(val.slice(0, 2), 10);
+    let mm = parseInt(val.slice(2, 4), 10);
+    if (isNaN(hh) || hh > 23) hh = 23;
+    if (isNaN(mm) || mm > 59) mm = 59;
+    el.value = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+  } else {
+    el.value = val;
+  }
+}
+
+// 현재 시간 기본 세팅 함수 (HH:mm)
+function setExpenseNowTime() {
+  const timeInput = document.getElementById('expenseTimeInput');
+  if (!timeInput) return;
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  timeInput.value = `${hh}:${mm}`;
+}
+
+// 대분류 변경 시 소분류 셀렉트박스 동적 업데이트
+function onExpenseMainCatChange() {
+  const mainSelect = document.getElementById('expenseMainCatSelect');
+  const subSelect = document.getElementById('expenseSubCatSelect');
+  if (!mainSelect || !subSelect) return;
+
+  const mainCat = mainSelect.value;
+  const subCats = (window.DEFAULT_EXPENSE_CATS && window.DEFAULT_EXPENSE_CATS[mainCat]) || ['기본'];
+  
+  subSelect.innerHTML = '';
+  subCats.forEach(sub => {
+    const opt = document.createElement('option');
+    opt.value = sub;
+    opt.textContent = sub;
+    subSelect.appendChild(opt);
+  });
+}
+
+// 오늘 지출 목록 화면 렌더링
+function renderExpenseWidget() {
+  try {
+    const container = document.getElementById('expenseListContainer');
+    const totalChip = document.getElementById('expenseTodayTotalChip');
+    if (!container) return;
+
+    // 현재 날짜 데이터 가져오기
+    let dayData = {};
+    try {
+      const key = 'mingle_day_' + currentDate;
+      dayData = JSON.parse(localStorage.getItem(key) || '{}');
+    } catch(e) {
+      dayData = (typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : window.currentDayData) || {};
+    }
+
+    const expenses = dayData.expenses || [];
+    container.innerHTML = '';
+
+    let totalSum = 0;
+
+    if (expenses.length === 0) {
+      container.innerHTML = '<p class="text-[11px] text-stone-300 italic text-center py-2">오늘 지출 내역이 없습니다 ✨</p>';
+    } else {
+      expenses.forEach((item, idx) => {
+        const amt = Number(item.amount) || 0;
+        totalSum += amt;
+
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between bg-white border border-stone-150 rounded-xl px-2.5 py-1.5 text-xs text-stone-700 shadow-2xs';
+        row.innerHTML = `
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="font-mono text-[10px] text-stone-400 shrink-0">${item.time || '--:--'}</span>
+            <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 text-[10px] font-medium border border-amber-200/50 shrink-0">${item.mainCat}/${item.subCat}</span>
+            <span class="truncate font-medium text-stone-800">${item.title || '지출'}</span>
+            <span class="text-[10px] text-stone-400 shrink-0">(${item.payMethod || '카드'})</span>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0 ml-2">
+            <span class="font-mono font-semibold text-stone-900">${amt.toLocaleString()}원</span>
+            <button onclick="deleteExpenseEntry(${idx})" class="text-stone-300 hover:text-red-500 font-bold px-1 text-sm leading-none">×</button>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    if (totalChip) {
+      totalChip.innerText = `총 ${totalSum.toLocaleString()}원`;
+    }
+
+    // 소분류 초기화 확인 & 시간 세팅
+    if (document.getElementById('expenseSubCatSelect')?.options?.length === 0) {
+      onExpenseMainCatChange();
+    }
+    const timeInput = document.getElementById('expenseTimeInput');
+    if (timeInput && !timeInput.value) {
+      setExpenseNowTime();
+    }
+  } catch(err) {
+    console.warn('renderExpenseWidget 에러 패스:', err);
+  }
+}
+
+// 지출 새 항목 추가
+function addExpenseEntry() {
+  const timeInput = document.getElementById('expenseTimeInput');
+  const mainSelect = document.getElementById('expenseMainCatSelect');
+  const subSelect = document.getElementById('expenseSubCatSelect');
+  const paySelect = document.getElementById('expensePayMethodSelect');
+  const itemInput = document.getElementById('expenseItemInput');
+  const amountInput = document.getElementById('expenseAmountInput');
+
+  const amount = parseInt(amountInput?.value, 10);
+  if (isNaN(amount) || amount <= 0) {
+    alert('금액을 올바르게 입력해 주세요!');
+    amountInput?.focus();
+    return;
+  }
+
+  const title = (itemInput?.value || '').trim() || subSelect?.value || '기타 지출';
+  const newEntry = {
+    id: 'exp_' + Date.now(),
+    time: timeInput?.value || '00:00',
+    mainCat: mainSelect?.value || '기타',
+    subCat: subSelect?.value || '일반',
+    payMethod: paySelect?.value || '카드',
+    title: title,
+    amount: amount
+  };
+
+  const key = 'mingle_day_' + currentDate;
+  let dayData = {};
+  try {
+    dayData = JSON.parse(localStorage.getItem(key) || '{}');
+  } catch(e) {}
+
+  if (!Array.isArray(dayData.expenses)) {
+    dayData.expenses = [];
+  }
+  dayData.expenses.push(newEntry);
+
+  // 시간순 정렬
+  dayData.expenses.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+  localStorage.setItem(key, JSON.stringify(dayData));
+  if (window.currentDayData) window.currentDayData.expenses = dayData.expenses;
+
+  // 전체 데일리 저장 트리거
+  if (typeof saveDayData === 'function') {
+    saveDayData();
+  }
+
+  // 인풋 초기화
+  if (itemInput) itemInput.value = '';
+  if (amountInput) amountInput.value = '';
+  setExpenseNowTime();
+
+  renderExpenseWidget();
+}
+
+// 지출 항목 삭제
+function deleteExpenseEntry(idx) {
+  const key = 'mingle_day_' + currentDate;
+  let dayData = {};
+  try {
+    dayData = JSON.parse(localStorage.getItem(key) || '{}');
+  } catch(e) {}
+
+  if (Array.isArray(dayData.expenses)) {
+    dayData.expenses.splice(idx, 1);
+    localStorage.setItem(key, JSON.stringify(dayData));
+    if (window.currentDayData) window.currentDayData.expenses = dayData.expenses;
+    if (typeof saveDayData === 'function') saveDayData();
+    renderExpenseWidget();
+  }
 }
