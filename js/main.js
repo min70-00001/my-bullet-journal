@@ -4242,21 +4242,125 @@ function renderBudgetDashboard() {
   }
 
   container.innerHTML = monthExpenses.map(item => `
-    <div class="p-3 rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-between text-xs">
+    <div onclick="openEditExpenseModal(${item.id})" class="p-3 rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-between text-xs cursor-pointer hover:bg-stone-100/70 transition">
       <div class="min-w-0 pr-2 flex-1">
-        <div class="flex items-center gap-1.5">
-          <span class="font-bold text-stone-800">${item.memo || item.category}</span>
-          <span class="text-[9px] bg-amber-50 text-amber-800 px-1.5 py-0.2 rounded font-semibold border border-amber-200">${item.category}</span>
-          <span class="text-[9px] text-stone-400">${item.payment || ''}</span>
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="font-bold text-stone-800">${item.memo || item.category || '지출'}</span>
+          <span class="text-[9px] bg-amber-50 text-amber-800 px-1.5 py-0.2 rounded font-semibold border border-amber-200/50">${(item.category || '').includes('>') ? item.category.split('>').pop().trim() : (item.category || '기타')}</span>
+          ${item.payment ? `<span class="text-[9px] text-stone-400 border border-stone-200 px-1 rounded">${item.payment}</span>` : ''}
         </div>
-        <div class="text-[10px] text-stone-400 mt-0.5">${item.date}</div>
+        <div class="text-[10px] text-stone-400 mt-0.5">${item.date || ''}</div>
       </div>
       <div class="flex items-center gap-2 shrink-0">
-        <span class="font-bold font-mono text-rose-700">-${parseFloat(item.amount).toLocaleString()}원</span>
-        <button onclick="deleteExpenseItem(${item.id})" class="text-stone-300 hover:text-rose-500 text-xs px-1">✕</button>
+        <span class="font-bold font-mono text-rose-700">-${parseFloat(item.amount || 0).toLocaleString()}원</span>
+        <button type="button" onclick="event.stopPropagation(); deleteExpenseItem(${item.id})" class="text-stone-300 hover:text-rose-500 text-xs px-1" title="삭제">&times;</button>
       </div>
     </div>
   `).join('');
+}
+
+// ✏️ 지출 내역 상세 수정 모달 (소분류 단독 표시)
+function openEditExpenseModal(id) {
+  const budgetData = getBudgetMaster();
+  const item = (budgetData.expenses || []).find(e => e.id == id);
+  if (!item) return;
+
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : {};
+  const payMethods = typeof getStoredPayMethods === 'function' ? getStoredPayMethods() : ['현금', '계좌이체', '간편결제'];
+
+  // 모든 소분류 목록을 단일 리스트로 수집 (중복 제거)
+  let subCatList = [];
+  Object.keys(cats).forEach(k => {
+    (cats[k] || []).forEach(s => {
+      if (!subCatList.includes(s)) subCatList.push(s);
+    });
+  });
+  if (subCatList.length === 0) subCatList = ['식재료', '외식', '카페·간식', '쇼핑', '교통', '생활', '기타'];
+
+  // 기존 카테고리에서 소분류 이름만 추출
+  const currentSub = (item.category || '').includes('>') ? item.category.split('>').pop().trim() : (item.category || '');
+
+  let modalEl = document.getElementById('modalExpenseEdit');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'modalExpenseEdit';
+    document.body.appendChild(modalEl);
+  }
+
+  modalEl.className = 'fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4';
+  modalEl.innerHTML = `
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-xl border border-stone-200">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2.5">
+        <h3 class="text-sm font-bold text-stone-800 flex items-center gap-1.5">
+          <span>✏️</span> 지출 내역 수정
+        </h3>
+        <button type="button" onclick="document.getElementById('modalExpenseEdit').remove()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="text-[11px] text-stone-500 font-medium block mb-1">날짜 / 시간</label>
+          <input type="text" id="editExpDate" value="${item.date || ''}" class="w-full border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-800 focus:outline-stone-400 font-mono">
+        </div>
+
+        <div>
+          <label class="text-[11px] text-stone-500 font-medium block mb-1">카테고리 (소분류)</label>
+          <select id="editExpCat" class="w-full border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-800 focus:outline-stone-400 bg-white">
+            ${subCatList.map(s => `<option value="${s}" ${s === currentSub ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </div>
+
+        <div>
+          <label class="text-[11px] text-stone-500 font-medium block mb-1">지출 내역 (항목명)</label>
+          <input type="text" id="editExpMemo" value="${item.memo || ''}" class="w-full border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-800 focus:outline-stone-400">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[11px] text-stone-500 font-medium block mb-1">결제수단</label>
+            <select id="editExpPay" class="w-full border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-800 focus:outline-stone-400 bg-white">
+              ${payMethods.map(m => `<option value="${m}" ${m === item.payment ? 'selected' : ''}>${m}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="text-[11px] text-stone-500 font-medium block mb-1">금액 (원)</label>
+            <input type="number" id="editExpAmount" value="${item.amount || 0}" class="w-full border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-800 focus:outline-stone-400 font-mono font-bold">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button type="button" onclick="document.getElementById('modalExpenseEdit').remove()" class="flex-1 py-2 bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200 font-medium text-xs transition">취소</button>
+        <button type="button" onclick="saveEditedExpense(${id})" class="flex-1 py-2 bg-stone-800 text-white rounded-xl hover:bg-stone-900 font-bold text-xs transition shadow-sm">수정 완료</button>
+      </div>
+    </div>
+  `;
+}
+
+// 💾 수정된 지출 내역 저장 & 화면 갱신
+function saveEditedExpense(id) {
+  const budgetData = getBudgetMaster();
+  const idx = (budgetData.expenses || []).findIndex(e => e.id == id);
+  if (idx === -1) return;
+
+  const newDate = document.getElementById('editExpDate').value.trim();
+  const newCat = document.getElementById('editExpCat').value;
+  const newMemo = document.getElementById('editExpMemo').value.trim();
+  const newPay = document.getElementById('editExpPay').value;
+  const newAmount = parseFloat(document.getElementById('editExpAmount').value) || 0;
+
+  budgetData.expenses[idx].date = newDate;
+  budgetData.expenses[idx].category = newCat;
+  budgetData.expenses[idx].memo = newMemo;
+  budgetData.expenses[idx].payment = newPay;
+  budgetData.expenses[idx].amount = newAmount;
+
+  saveBudgetMaster(budgetData);
+  document.getElementById('modalExpenseEdit')?.remove();
+
+  if (typeof renderAccountBookDailyList === 'function') renderAccountBookDailyList();
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+  if (typeof renderAccountBookBudget === 'function') renderAccountBookBudget();
 }
 
 // 5. 가계부 입력 & 세팅 모달
@@ -5579,6 +5683,9 @@ function closeExpenseCategorySettingModal() {
   document.getElementById('modalExpenseCategorySetting')?.classList.add('hidden');
 }
 
+// ✏️ 단정한 회색 미니 연필 아이콘 SVG
+const MINGLE_EDIT_ICON = `<svg class="w-3 h-3 text-stone-400 hover:text-stone-700 transition inline-block align-middle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>`;
+
 function renderSettingPayMethods() {
   const container = document.getElementById('settingPayMethodTagList');
   if (!container) return;
@@ -5586,10 +5693,10 @@ function renderSettingPayMethods() {
   container.innerHTML = '';
   list.forEach((m, idx) => {
     const tag = document.createElement('span');
-    tag.className = 'inline-flex items-center gap-1 bg-white border border-stone-200 px-2 py-1 rounded-lg text-xs font-medium text-stone-700 shadow-2xs';
+    tag.className = 'inline-flex items-center gap-1.5 bg-white border border-stone-200 px-2 py-1 rounded-lg text-xs font-medium text-stone-700 shadow-2xs';
     tag.innerHTML = `<span>${m}</span>
-      <button type="button" onclick="editPayMethod(${idx})" class="text-stone-400 hover:text-stone-700 ml-0.5 text-[11px]" title="수정">✏️</button>
-      <button type="button" onclick="deletePayMethod(${idx})" class="text-stone-300 hover:text-red-500 font-bold ml-0.5" title="삭제">&times;</button>`;
+      <button type="button" onclick="editPayMethod(${idx})" class="p-0.5 hover:bg-stone-100 rounded inline-flex items-center" title="수정">${MINGLE_EDIT_ICON}</button>
+      <button type="button" onclick="deletePayMethod(${idx})" class="text-stone-300 hover:text-rose-500 font-bold ml-0.5 text-xs" title="삭제">&times;</button>`;
     container.appendChild(tag);
   });
 }
@@ -5650,10 +5757,10 @@ function renderSettingSubCats() {
   container.innerHTML = '';
   subList.forEach((sub, idx) => {
     const tag = document.createElement('span');
-    tag.className = 'inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200/60 px-2 py-1 rounded-lg text-xs font-medium shadow-2xs';
+    tag.className = 'inline-flex items-center gap-1.5 bg-amber-50 text-amber-900 border border-amber-200/60 px-2.5 py-1 rounded-lg text-xs font-medium shadow-2xs';
     tag.innerHTML = `<span>${sub}</span>
-      <button type="button" onclick="editSettingSubCat('${sel.value}', ${idx})" class="text-stone-400 hover:text-stone-700 ml-0.5 text-[11px]" title="수정">✏️</button>
-      <button type="button" onclick="deleteSubCat('${sel.value}', ${idx})" class="text-amber-400 hover:text-red-500 font-bold ml-0.5" title="삭제">&times;</button>`;
+      <button type="button" onclick="editSettingSubCat('${sel.value}', ${idx})" class="p-0.5 hover:bg-amber-100/60 rounded inline-flex items-center" title="수정">${MINGLE_EDIT_ICON}</button>
+      <button type="button" onclick="deleteSubCat('${sel.value}', ${idx})" class="text-amber-400 hover:text-rose-500 font-bold ml-0.5 text-xs" title="삭제">&times;</button>`;
     container.appendChild(tag);
   });
 }
