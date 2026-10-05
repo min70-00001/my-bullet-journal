@@ -1702,21 +1702,22 @@ function renderOotd() {
     const coverEl = document.getElementById('bgmCoverImg');
     const infoEl = document.getElementById('bgmInfoText');
     const inputEl = document.getElementById('bgmSearchInput');
+    const defaultCover = 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&auto=format&fit=crop&q=60';
 
     if (bgm.song || bgm.info) {
       if (coverEl) {
-        coverEl.src = bgm.cover || '';
-        coverEl.style.display = bgm.cover ? 'block' : 'none';
+        coverEl.src = bgm.cover || defaultCover;
+        coverEl.style.display = 'block';
       }
-      if (infoEl) infoEl.innerText = bgm.info || bgm.song || '';
+      if (infoEl) infoEl.innerText = bgm.info || bgm.song || 'BGM을 검색해보세요';
       if (inputEl) inputEl.value = bgm.song || '';
     } else {
-      // 해당 날짜에 저장된 노래가 없으면 깔끔하게 빈칸으로 초기화!
+      // 해당 날짜에 저장된 노래가 없으면 기본 감성 커버와 플레이스홀더로 복원!
       if (coverEl) {
-        coverEl.src = '';
-        coverEl.style.display = 'none';
+        coverEl.src = defaultCover;
+        coverEl.style.display = 'block';
       }
-      if (infoEl) infoEl.innerText = '오늘의 노래를 등록해 보세요 🎵';
+      if (infoEl) infoEl.innerText = 'BGM을 검색해보세요';
       if (inputEl) inputEl.value = '';
     }
 
