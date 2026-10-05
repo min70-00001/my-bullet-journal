@@ -1296,6 +1296,17 @@
             <input type="date" id="calEventEnd" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1 text-[11px]">
           </div>
         </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[10px] text-stone-500 block mb-1">시작 시간 (선택)</label>
+              <input type="text" inputmode="numeric" id="calEventStartTime" placeholder="예: 14:00" maxlength="5" oninput="formatSmartTimeInput(this)" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs font-mono">
+            </div>
+            <div>
+              <label class="text-[10px] text-stone-500 block mb-1">종료 시간 (선택)</label>
+              <input type="text" inputmode="numeric" id="calEventEndTime" placeholder="예: 16:30" maxlength="5" oninput="formatSmartTimeInput(this)" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs font-mono">
+            </div>
+          </div>
+
         <!-- 요일 반복 (예시 제거 & 초기 체크 없음) -->
         <div class="pt-1 border-t border-stone-100">
           <label class="flex items-center gap-1.5 text-[11px] font-bold text-stone-700 cursor-pointer">
