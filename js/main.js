@@ -4660,22 +4660,21 @@ function addExpenseEntry() {
     amount: amount
   };
 
-  const key = 'mingle_day_' + currentDate;
-  let dayData = {};
-  try {
-    dayData = JSON.parse(localStorage.getItem(key) || '{}');
-  } catch(e) {}
+    let dayData = (typeof getDayDataLocal === 'function') ? (getDayDataLocal(currentDate) || {}) : {};
+    if (!Array.isArray(dayData.expenses)) {
+      dayData.expenses = [];
+    }
+    dayData.expenses.push(newEntry);
 
-  if (!Array.isArray(dayData.expenses)) {
-    dayData.expenses = [];
-  }
-  dayData.expenses.push(newEntry);
+    // 시간순 정렬
+    dayData.expenses.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
-  // 시간순 정렬
-  dayData.expenses.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-
-  localStorage.setItem(key, JSON.stringify(dayData));
-  if (window.currentDayData) window.currentDayData.expenses = dayData.expenses;
+    if (typeof saveDayDataLocal === 'function') {
+      saveDayDataLocal(currentDate, dayData);
+    } else {
+      localStorage.setItem('mingle_day_' + currentDate, JSON.stringify(dayData));
+    }
+    if (window.currentDayData) window.currentDayData.expenses = dayData.expenses;
 
   // 전체 데일리 저장 트리거
   if (typeof saveDayData === 'function') {
@@ -4693,16 +4692,15 @@ function addExpenseEntry() {
 // 지출 항목 삭제
 function deleteExpenseEntry(idx) {
   const key = 'mingle_day_' + currentDate;
-  let dayData = {};
-  try {
-    dayData = JSON.parse(localStorage.getItem(key) || '{}');
-  } catch(e) {}
-
-  if (Array.isArray(dayData.expenses)) {
-    dayData.expenses.splice(idx, 1);
-    localStorage.setItem(key, JSON.stringify(dayData));
-    if (window.currentDayData) window.currentDayData.expenses = dayData.expenses;
-    if (typeof saveDayData === 'function') saveDayData();
+   let dayData = (typeof getDayDataLocal === 'function') ? (getDayDataLocal(currentDate) || {}) : {};
+    if (Array.isArray(dayData.expenses)) {
+      dayData.expenses.splice(idx, 1);
+      if (typeof saveDayDataLocal === 'function') {
+        saveDayDataLocal(currentDate, dayData);
+      } else {
+        localStorage.setItem('mingle_day_' + currentDate, JSON.stringify(dayData));
+      }
+      if (window.currentDayData) window.currentDayData.expenses = dayData.expenses;
     renderExpenseWidget();
   }
 }
