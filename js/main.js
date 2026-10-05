@@ -2876,8 +2876,12 @@ function updateTodaySpecialBanner() {
   const dStr = dayNum < 10 ? `0${dayNum}` : `${dayNum}`;
 
   const hitAnniv = anniversaries.filter(a => {
-    if (a.isSolar) return a.month === m && a.day === dayNum;
-    return false;
+    if (!a.date) return false;
+    const cleanDate = a.date.replace(/\./g, '-');
+    const aParts = cleanDate.split('-');
+    const aMonth = parseInt(aParts[aParts.length - 2], 10);
+    const aDay = parseInt(aParts[aParts.length - 1], 10);
+    return aMonth === m && aDay === dayNum;
   });
 
   let holidayName = '';
@@ -3101,6 +3105,19 @@ function toggleTicketComplete(id) {
 // --- 기념일 모달 및 관리 로직 ---
 let editingAnnivId = null;
 
+// 📅 숫자 8자리 입력 시 YYYY-MM-DD 하이픈 자동 포맷 스마트 함수
+function formatSmartDateInput(el) {
+  if (!el) return;
+  let val = el.value.replace(/[^0-9]/g, '');
+  if (val.length <= 4) {
+    el.value = val;
+  } else if (val.length <= 6) {
+    el.value = val.slice(0, 4) + '-' + val.slice(4);
+  } else {
+    el.value = val.slice(0, 4) + '-' + val.slice(4, 6) + '-' + val.slice(6, 8);
+  }
+}
+
 function openAnnivModal(id = null) {
   editingAnnivId = id;
   const modal = document.getElementById('annivModal');
@@ -3127,6 +3144,9 @@ function openAnnivModal(id = null) {
     const radios = document.getElementsByName('annivCategory');
     if (radios.length > 0) radios[0].checked = true;
   }
+  if (dateInput) {
+    dateInput.oninput = () => formatSmartDateInput(dateInput);
+  }
   modal.classList.remove('hidden');
 }
 
@@ -3145,7 +3165,13 @@ function saveAnniversaryFromModal() {
   const nameInput = document.getElementById('annivInputName');
   const dateInput = document.getElementById('annivInputDate');
   const name = nameInput ? nameInput.value.trim() : '';
-  const date = dateInput ? dateInput.value : '';
+  let date = dateInput ? dateInput.value.trim() : '';
+
+  if (!name) return alert('기념일 이름을 입력해 주세요.');
+  if (!date) return alert('날짜를 선택해 주세요.');
+
+  // 혹시 점(.)이 섞여 있어도 무조건 표준 하이픈(-)으로 정돈
+  date = date.replace(/\./g, '-');
   
   if (!name) return alert('기념일 이름을 입력해 주세요.');
   if (!date) return alert('날짜를 선택해 주세요.');
