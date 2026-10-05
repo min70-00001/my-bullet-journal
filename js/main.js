@@ -1927,17 +1927,25 @@ function toggleSelectCloth(category, id) {
 
   try {
     localStorage.setItem(key, JSON.stringify(dayData));
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(currentDate, dayData);
   } catch(e) {}
 
   if (window.currentDayData) {
     window.currentDayData.ootdSelected = dayData.ootdSelected;
     window.currentDayData.ootd = dayData.ootd;
+    if (dayData.ootd && dayData.ootd.color) window.currentDayData.ootd.color = dayData.ootd.color;
+  }
+
+  // ☁️ OOTD 선택 즉시 파이어베이스 동기화
+  if (typeof db !== 'undefined' && db) {
+    const ootdPayload = {
+      ootdSelected: dayData.ootdSelected || {},
+      ootd: dayData.ootd || {}
+    };
+    db.collection('diary_days').doc(currentDate).set(ootdPayload, { merge: true }).catch(err => console.error(err));
   }
 
   renderClosetModalList();
-  if (typeof loadDayData === 'function') {
-    try { loadDayData(currentDate); } catch(e) {}
-  }
   if (typeof renderOotd === 'function') {
     try { renderOotd(); } catch(e) {}
   }
@@ -5366,3 +5374,33 @@ document.addEventListener('DOMContentLoaded', () => {
   refreshPayMethodSelects();
   checkFixedExpenseAlerts();
 });
+
+// 🔄 서랍 상세 모듈(가계부 등) 새로고침 복원
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    try {
+      const activeTab = localStorage.getItem('mingle_active_tab') || 'today';
+      const drawerSub = sessionStorage.getItem('mingle_drawer_subtab');
+      if (activeTab === 'drawer' && drawerSub === 'budget') {
+        const hub = document.getElementById('drawerHubGrid');
+        const bMod = document.getElementById('drawerBudgetModule');
+        if (hub && bMod) {
+          hub.classList.add('hidden');
+          bMod.classList.remove('hidden');
+          bMod.style.display = 'block';
+          if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+          if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
+        }
+      }
+    } catch(e) {}
+  }, 150);
+});
+
+// 가계부 모듈 열 때 서브탭 기억
+const origOpenDrawerBudget = typeof openDrawerBudget === 'function' ? openDrawerBudget : null;
+if (origOpenDrawerBudget) {
+  openDrawerBudget = function() {
+    try { sessionStorage.setItem('mingle_drawer_subtab', 'budget'); } catch(e) {}
+    origOpenDrawerBudget();
+  };
+}
