@@ -1749,65 +1749,6 @@ function getClothWearCount(category, clothId) {
       const key = localStorage.key(i);
       if (key && key.startsWith('mingle_day_')) {
         const d = JSON.parse(localStorage.getItem(key) || '{}');
-        if (d && d.ootd && Array.isArray(d.ootd[category])) {
-          if (d.ootd[category].map(String).includes(String(clothId))) {
-            count++;
-          }
-        }
-      }
-    }
-  } catch(e) {}
-  return count;
-}
-
-function renderClosetModalList() {
-  const container = document.getElementById('ootdClosetList');
-  if (!container) return;
-  container.innerHTML = '';
-
-  const closet = getClosetData();
-  let list = (closet[activeCategory] || []).slice();
-  
-  // 날짜 데이터 안전하게 조회
-  let dayData = {};
-  if (typeof getDayDataLocal === 'function' && typeof currentDate !== 'undefined') {
-    dayData = getDayDataLocal(currentDate) || {};
-  } else if (window.currentDayData) {
-    dayData = window.currentDayData;
-  }
-  
-  const dayOotd = dayData.ootd || {};
-  let selectedIds = dayOotd[activeCategory] || [];
-  if (!Array.isArray(selectedIds)) selectedIds = selectedIds ? [String(selectedIds)] : [];
-
-  if (list.length === 0) {
-    container.innerHTML = '<span class="text-[11px] text-stone-400 p-2">등록된 옷이 없어요. 위에서 추가해 보세요!</span>';
-    return;
-  }
-
-  // 착용 횟수 미리 계산 후 자주 입은 순(내림차순) 정렬
-  list.forEach(item => {
-    item._count = getClothWearCount(activeCategory, item.id);
-  });
-  list.sort((a, b) => b._count - a._count);
-
-  list.forEach(item => {
-    const isSelected = selectedIds.map(String).includes(String(item.id));
-    const btn = document.createElement('div');
-    btn.className = 'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border cursor-pointer select-none transition-all ' +
-      (isSelected 
-        ? 'bg-amber-100 border-amber-300 font-bold text-amber-900 shadow-xs ring-1 ring-amber-400' 
-        : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50');
-
-    btn.innerHTML = `
-      <span class="w-2.5 h-2.5 rounded-full border border-stone-300 shrink-0 pointer-events-none" style="background-color: ${item.color || '#A8A29E'};"></span>// OOTD 옷별 착용 누적 횟수 계산 함수
-function getClothWearCount(category, clothId) {
-  let count = 0;
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('mingle_day_')) {
-        const d = JSON.parse(localStorage.getItem(key) || '{}');
         const target = (d && d.ootdSelected && d.ootdSelected[category]) || (d && d.ootd && d.ootd[category]);
         if (Array.isArray(target) && target.map(String).includes(String(clothId))) {
           count++;
@@ -1853,22 +1794,20 @@ function renderClosetModalList() {
   list.forEach(item => {
     const isSelected = selectedIds.map(String).includes(String(item.id));
     const btn = document.createElement('div');
-    btn.className = 'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border cursor-pointer select-none transition-all ' +
-      (isSelected 
-        ? 'bg-amber-100 border-amber-300 font-bold text-amber-900 shadow-xs ring-1 ring-amber-400' 
-        : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50');
+    btn.className = isSelected 
+      ? 'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border cursor-pointer select-none transition-all bg-amber-100 border-amber-300 font-bold text-amber-900 shadow-xs ring-1 ring-amber-400' 
+      : 'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border cursor-pointer select-none transition-all bg-white border-stone-200 text-stone-600 hover:bg-stone-50';
 
-    btn.innerHTML = `
-      <span class="w-2.5 h-2.5 rounded-full border border-stone-300 shrink-0 pointer-events-none" style="background-color: ${item.color || '#A8A29E'};"></span>
-      <span class="cloth-title flex-1 pointer-events-none">${item.name}</span>
-      <span class="text-[10px] text-stone-400 font-normal shrink-0 pointer-events-none">(${item._count}회)</span>
-      <button type="button" onclick="event.stopPropagation(); editClothName('${item.id}', '${item.name}')" title="이름 수정" class="text-stone-300 hover:text-stone-500 p-1 transition-colors flex items-center">
-        <svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
-        </svg>
-      </button>
-      <button type="button" onclick="event.stopPropagation(); deleteClothFromCloset('${item.id}')" title="삭제" class="text-stone-300 hover:text-red-400 px-1 text-sm font-bold transition-colors">×</button>
-    `;
+    btn.innerHTML = '' +
+      '<span class="w-2.5 h-2.5 rounded-full border border-stone-300 shrink-0 pointer-events-none" style="background-color: ' + (item.color || '#A8A29E') + ';"></span>' +
+      '<span class="cloth-title flex-1 pointer-events-none">' + item.name + '</span>' +
+      '<span class="text-[10px] text-stone-400 font-normal shrink-0 pointer-events-none">(' + item._count + '회)</span>' +
+      '<button type="button" onclick="event.stopPropagation(); editClothName(\'' + item.id + '\', \'' + item.name.replace(/'/g, "\\'") + '\')" title="이름 수정" class="text-stone-300 hover:text-stone-500 p-1 transition-colors flex items-center">' +
+        '<svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>' +
+        '</svg>' +
+      '</button>' +
+      '<button type="button" onclick="event.stopPropagation(); deleteClothFromCloset(\'' + item.id + '\')" title="삭제" class="text-stone-300 hover:text-red-400 px-1 text-sm font-bold transition-colors">×</button>';
 
     btn.onclick = () => {
       toggleSelectCloth(activeCategory, item.id);
