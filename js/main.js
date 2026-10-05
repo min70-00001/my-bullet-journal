@@ -2832,11 +2832,36 @@ function renderTicketList() {
         return;
       }
 
+      const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
       container.innerHTML = filtered.map(e => {
         const catMeta = EVENT_CATEGORIES.find(c => c.key === e.category) || EVENT_CATEGORIES[6];
         const startD = new Date(e.start);
         const diff = Math.ceil((startD - now) / (1000 * 60 * 60 * 24));
-        const ddayText = e.isRepeat ? "반복일정" : (diff === 0 ? "D-Day" : diff < 0 ? "진행중" : `D-${diff}`);
+        
+        // 디데이 뱃지: 오늘이면 다른 탭들처럼 '오늘'로 통일!
+        let ddayText = '';
+        let badgeStyle = catMeta.bg;
+
+        if (e.isRepeat) {
+          ddayText = '반복일정';
+        } else if (diff === 0) {
+          ddayText = '오늘';
+          badgeStyle = 'bg-rose-500 text-white animate-pulse shadow-xs';
+        } else if (diff < 0) {
+          ddayText = '진행중';
+        } else {
+          ddayText = `D-${diff}`;
+        }
+
+        // 반복 요일 텍스트 조합 (예: 매주 월요일 또는 매주 화, 목)
+        let repeatDaysText = '매주 반복 일정';
+        if (e.isRepeat && Array.isArray(e.repeatDays) && e.repeatDays.length > 0) {
+          const sortedDays = [...e.repeatDays].sort((a, b) => a - b).map(d => dayNames[d]);
+          repeatDaysText = `매주 (${sortedDays.join(', ')})`;
+        }
+
+        const timeStr = e.startTime ? ` (${e.startTime}${e.endTime ? '~' + e.endTime : ''})` : '';
 
         return `
           <div class="p-2 rounded-xl border flex items-center justify-between text-xs bg-stone-50 border-stone-100 text-stone-800">
@@ -2845,10 +2870,10 @@ function renderTicketList() {
                 <span>${catMeta.icon} ${e.title}</span>
                 ${EDIT_SVG_ICON}
               </span>
-              <span class="text-[10px] text-stone-400 block">${e.isRepeat ? '매주 반복 일정' : `${e.start} ~ ${e.end}`}${e.startTime ? ` (${e.startTime}${e.endTime ? '~' + e.endTime : ''})` : ''}</span>
+              <span class="text-[10px] text-stone-400 block">${e.isRepeat ? repeatDaysText : `${e.start} ~${e.end}`}${timeStr}</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${catMeta.bg}">${ddayText}</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeStyle}">${ddayText}</span>
               <button onclick="deleteCalendarEvent(${e.id})" class="text-stone-300 hover:text-stone-500 text-xs px-1">✕</button>
             </div>
           </div>
@@ -2910,14 +2935,22 @@ function updateTodaySpecialBanner() {
   // 각 항목별 HTML 블록 생성
   const blocks = [];
 
-  // A. 기념일 / 공휴일 (로즈 핑크 톤 - 편지봉투 삭제로 깔끔화!)
-  const annivTexts = [];
-  if (holidayName) annivTexts.push(`🇰🇷 ${holidayName}`);
-  hitAnniv.forEach(a => annivTexts.push(`🎉 ${a.name}`));
-  if (annivTexts.length > 0) {
+  // A-1. 국가 공휴일 카드 (은은한 로즈 톤)
+  if (holidayName) {
     blocks.push(`
       <div class="flex items-center gap-1.5 bg-rose-50/80 border border-rose-200/80 px-2.5 py-1 rounded-xl text-[11px] text-rose-800 font-bold shadow-2xs">
-        <span>${annivTexts.join(' · ')}</span>
+        <span>🇰🇷</span>
+        <span>${holidayName}</span>
+      </div>
+    `);
+  }
+
+  // A-2. 개인 기념일/생일 카드 (화사한 핑크 톤)
+  if (hitAnniv.length > 0) {
+    const annivText = hitAnniv.map(a => `🎉 ${a.name}`).join(' · ');
+    blocks.push(`
+      <div class="flex items-center gap-1.5 bg-pink-50/80 border border-pink-200 px-2.5 py-1 rounded-xl text-[11px] text-pink-900 font-bold shadow-2xs">
+        <span>${annivText}</span>
       </div>
     `);
   }
