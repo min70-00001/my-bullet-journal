@@ -270,7 +270,7 @@
             <div class="flex items-center justify-between">
               <span class="font-bold text-stone-700">☀️ 아침</span>
               <div class="flex items-center gap-1">
-                <input type="time" id="mealTime_1" onchange="saveDayData()" class="text-[10px] bg-white border border-stone-200 rounded px-1">
+                <input type="text" id="mealTime_1" placeholder="00:00" maxlength="5" onkeyup="formatTimeInput(this)" onchange="saveDayData()" class="w-14 text-center text-[10px] bg-white border border-stone-200 rounded px-1 py-0.5 focus:outline-none">
                 <input type="number" id="sugarFast" placeholder="공복" onchange="saveDayData()" class="w-12 text-[10px] bg-white border border-stone-200 rounded px-1 text-center">
                 <input type="number" id="sugarPost_1" placeholder="식후" onchange="saveDayData()" class="w-12 text-[10px] bg-white border border-stone-200 rounded px-1 text-center">
               </div>
@@ -304,7 +304,7 @@
             <div class="flex items-center justify-between">
               <span class="font-bold text-stone-700">🍚 점심</span>
               <div class="flex items-center gap-1">
-                <input type="time" id="mealTime_2" onchange="saveDayData()" class="text-[10px] bg-white border border-stone-200 rounded px-1">
+                <input type="text" id="mealTime_2" placeholder="00:00" maxlength="5" onkeyup="formatTimeInput(this)" onchange="saveDayData()" class="w-14 text-center text-[10px] bg-white border border-stone-200 rounded px-1 py-0.5 focus:outline-none">
                 <input type="number" id="sugarPost_2" placeholder="식후" onchange="saveDayData()" class="w-12 text-[10px] bg-white border border-stone-200 rounded px-1 text-center">
               </div>
             </div>
@@ -341,7 +341,7 @@
             <div class="flex items-center justify-between">
               <span class="font-bold text-stone-700">🍲 저녁</span>
               <div class="flex items-center gap-1">
-                <input type="time" id="mealTime_3" onchange="saveDayData()" class="text-[10px] bg-white border border-stone-200 rounded px-1">
+                <input type="text" id="mealTime_3" placeholder="00:00" maxlength="5" onkeyup="formatTimeInput(this)" onchange="saveDayData()" class="w-14 text-center text-[10px] bg-white border border-stone-200 rounded px-1 py-0.5 focus:outline-none">
                 <input type="number" id="sugarPost_3" placeholder="식후" onchange="saveDayData()" class="w-12 text-[10px] bg-white border border-stone-200 rounded px-1 text-center">
               </div>
             </div>
