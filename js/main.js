@@ -4373,3 +4373,12 @@ function getRatingStars(rating) {
   const hasHalf = score % 1 !== 0;
   return '⭐'.repeat(fullStars) + (hasHalf ? '✨' : '');
 }
+
+// 시간 입력창에 숫자만 치면 자동으로 HH:mm 형식 포맷팅해주는 스마트 함수
+function formatTimeInput(input) {
+  let val = input.value.replace(/[^0-9]/g, '');
+  if (val.length >= 3) {
+    val = val.slice(0, 2) + ':' + val.slice(2, 4);
+  }
+  input.value = val;
+}
