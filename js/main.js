@@ -1982,15 +1982,16 @@ function deleteClothFromCloset(id) {
         }
       }
 
-      const existing = getDayDataLocal(currentDate);
+      const existing = getDayDataLocal(currentDate) || {};
 
       const data = {
         ...existing,
         weather: document.getElementById('todayWeatherSelect')?.value || '',
         mood: document.getElementById('todayMoodSelect')?.value || '',
         ootd: {
-          text: document.getElementById('ootdTextInput')?.value || '',
-          color: document.getElementById('ootdColorInput')?.value || '#ecdcc9'
+          ...(existing.ootd || {}),
+          text: document.getElementById('ootdTextInput')?.value || (existing.ootd?.text || ''),
+          color: (existing.ootd && existing.ootd.color) ? existing.ootd.color : (document.getElementById('ootdColorInput')?.value || '#ecdcc9')
         },
         ootdSelected: existing.ootdSelected || {},
         bgm: {
