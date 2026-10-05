@@ -3800,6 +3800,20 @@ function enterDrawerSub(type) {
     if (mod) mod.classList.add('hidden');
   });
 
+  // 선택된 서브 모듈 화면 표시
+  const targetMod = document.getElementById(`drawer${type.charAt(0).toUpperCase() + type.slice(1)}Module`);
+  if (targetMod) {
+    targetMod.classList.remove('hidden');
+    targetMod.style.display = 'block';
+  }
+
+  // 가계부 서랍 진입 시 달력 및 알림 즉시 렌더링
+  if (type === 'budget') {
+    if (typeof switchAccountBookTab === 'function') switchAccountBookTab('calendar');
+    if (typeof refreshPayMethodSelects === 'function') refreshPayMethodSelects();
+    if (typeof checkFixedExpenseAlerts === 'function') checkFixedExpenseAlerts();
+  }
+
   const targetMod = document.getElementById(`drawer${type.charAt(0).toUpperCase() + type.slice(1)}Module`);
   if (targetMod) targetMod.classList.remove('hidden');
 
