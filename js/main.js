@@ -4683,3 +4683,556 @@ function deleteExpenseEntry(idx) {
     renderExpenseWidget();
   }
 }
+
+// ==========================================
+// 💰 밍글 똑똑 가계부 통합 관리 엔진
+// ==========================================
+
+// 현재 가계부 달력 조회 기준 연/월 (기본값: 오늘)
+window.abCurrentYear = new Date().getFullYear();
+window.abCurrentMonth = new Date().getMonth() + 1; // 1 ~ 12
+window.abSelectedDate = typeof currentDate !== 'undefined' ? currentDate : new Date().toISOString().slice(0, 10);
+
+// 결제수단 기본값
+window.DEFAULT_PAY_METHODS = ['카드', '현금', '계좌이체', '간편결제'];
+
+function getStoredPayMethods() {
+  try {
+    const saved = localStorage.getItem('mingle_expense_pay_methods');
+    return saved ? JSON.parse(saved) : window.DEFAULT_PAY_METHODS;
+  } catch(e) {
+    return window.DEFAULT_PAY_METHODS;
+  }
+}
+
+function saveStoredPayMethods(list) {
+  localStorage.setItem('mingle_expense_pay_methods', JSON.stringify(list));
+  refreshPayMethodSelects();
+}
+
+function getStoredCategories() {
+  try {
+    const saved = localStorage.getItem('mingle_expense_custom_cats');
+    return saved ? JSON.parse(saved) : (window.DEFAULT_EXPENSE_CATS || {});
+  } catch(e) {
+    return window.DEFAULT_EXPENSE_CATS || {};
+  }
+}
+
+function saveStoredCategories(cats) {
+  localStorage.setItem('mingle_expense_custom_cats', JSON.stringify(cats));
+  window.DEFAULT_EXPENSE_CATS = cats;
+  if (typeof onExpenseMainCatChange === 'function') onExpenseMainCatChange();
+}
+
+function refreshPayMethodSelects() {
+  const paySelect = document.getElementById('expensePayMethodSelect');
+  if (!paySelect) return;
+  const methods = getStoredPayMethods();
+  paySelect.innerHTML = '';
+  methods.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m;
+    paySelect.appendChild(opt);
+  });
+}
+
+// 탭 전환 (달력 / 예산 / 고정지출)
+function switchAccountBookTab(tab) {
+  const vCal = document.getElementById('abViewCalendar');
+  const vBud = document.getElementById('abViewBudget');
+  const vFix = document.getElementById('abViewFixed');
+  const bCal = document.getElementById('abTabBtnCalendar');
+  const bBud = document.getElementById('abTabBtnBudget');
+  const bFix = document.getElementById('abTabBtnFixed');
+
+  [vCal, vBud, vFix].forEach(el => el && el.classList.add('hidden'));
+  [bCal, bBud, bFix].forEach(el => {
+    if (el) {
+      el.className = 'py-1.5 rounded-lg hover:text-stone-700 transition';
+    }
+  });
+
+  if (tab === 'calendar') {
+    if (vCal) vCal.classList.remove('hidden');
+    if (bCal) bCal.className = 'py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-semibold transition';
+    renderAccountBookCalendar();
+  } else if (tab === 'budget') {
+    if (vBud) vBud.classList.remove('hidden');
+    if (bBud) bBud.className = 'py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-semibold transition';
+    renderAccountBookBudget();
+  } else if (tab === 'fixed') {
+    if (vFix) vFix.classList.remove('hidden');
+    if (bFix) bFix.className = 'py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-semibold transition';
+    renderAccountBookFixed();
+  }
+}
+
+// 가계부 달력 월 변경 (< > 버튼)
+function changeAccountBookMonth(delta) {
+  window.abCurrentMonth += delta;
+  if (window.abCurrentMonth < 1) {
+    window.abCurrentMonth = 12;
+    window.abCurrentYear -= 1;
+  } else if (window.abCurrentMonth > 12) {
+    window.abCurrentMonth = 1;
+    window.abCurrentYear += 1;
+  }
+  renderAccountBookCalendar();
+}
+
+// 날짜별 총 지출 데이터 수집 (해당 월 전체)
+function getMonthExpensesData(year, month) {
+  const result = {
+    dailyTotals: {}, // 'YYYY-MM-DD': 총금액
+    monthTotal: 0,
+    totalCount: 0,
+    catTotals: {}
+  };
+
+  const prefix = `mingle_day_${year}-${String(month).padStart(2, '0')}`;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(prefix)) {
+      const dateStr = key.replace('mingle_day_', '');
+      try {
+        const dayData = JSON.parse(localStorage.getItem(key) || '{}');
+        const expenses = dayData.expenses || [];
+        let daySum = 0;
+        expenses.forEach(item => {
+          const amt = Number(item.amount) || 0;
+          daySum += amt;
+          result.monthTotal += amt;
+          result.totalCount += 1;
+          const main = item.mainCat || '기타';
+          result.catTotals[main] = (result.catTotals[main] || 0) + amt;
+        });
+        if (daySum > 0) {
+          result.dailyTotals[dateStr] = daySum;
+        }
+      } catch(e) {}
+    }
+  }
+  return result;
+}
+
+// 가계부 달력 화면 렌더링
+function renderAccountBookCalendar() {
+  const y = window.abCurrentYear;
+  const m = window.abCurrentMonth;
+  const monthData = getMonthExpensesData(y, m);
+
+  // 헤더 텍스트 반영
+  const badge = document.getElementById('accountBookMonthBadge');
+  if (badge) badge.innerText = `${y}년 ${m}월`;
+  const title = document.getElementById('abCalendarMonthTitle');
+  if (title) title.innerText = `${y}.${String(m).padStart(2, '0')}`;
+
+  const totalEl = document.getElementById('abMonthTotalExpense');
+  if (totalEl) totalEl.innerText = `${monthData.monthTotal.toLocaleString()}원`;
+  const countBadge = document.getElementById('abMonthCountBadge');
+  if (countBadge) countBadge.innerText = `총 ${monthData.totalCount}건 기록`;
+
+  // 달력 그리드 계산
+  const grid = document.getElementById('abCalendarGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const firstDayIndex = new Date(y, m - 1, 1).getDay(); // 0(일) ~ 6(토)
+  const lastDate = new Date(y, m, 0).getDate();
+
+  // 빈 칸
+  for (let b = 0; b < firstDayIndex; b++) {
+    const emptyCell = document.createElement('div');
+    emptyCell.className = 'h-12';
+    grid.appendChild(emptyCell);
+  }
+
+  // 1일 ~ 말일 셀 생성
+  for (let d = 1; d <= lastDate; d++) {
+    const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dayTotal = monthData.dailyTotals[dateStr] || 0;
+    const isSelected = (window.abSelectedDate === dateStr);
+
+    const cell = document.createElement('div');
+    cell.onclick = () => {
+      window.abSelectedDate = dateStr;
+      renderAccountBookCalendar();
+    };
+
+    let borderClass = isSelected ? 'border-amber-500 bg-amber-50/50 font-bold' : 'border-stone-100 hover:border-stone-300 bg-white';
+    cell.className = `h-12 border rounded-lg p-0.5 flex flex-col justify-between cursor-pointer transition text-left ${borderClass}`;
+
+    cell.innerHTML = `
+      <span class="text-[10px] text-stone-600 leading-none pl-0.5">${d}</span>
+      ${dayTotal > 0 ? `<span class="text-[9px] font-mono font-semibold text-rose-600 truncate text-right pr-0.5 leading-none">-${dayTotal >= 10000 ? Math.round(dayTotal/10000)+'만' : dayTotal.toLocaleString()}</span>` : '<span class="h-2"></span>'}
+    `;
+    grid.appendChild(cell);
+  }
+
+  // 선택된 날짜 상세 지출 목록 렌더링
+  renderSelectedDayExpenses();
+}
+
+// 선택한 날짜 지출 목록 출력
+function renderSelectedDayExpenses() {
+  const targetDate = window.abSelectedDate;
+  const labelEl = document.getElementById('abSelectedDateLabel');
+  const totalEl = document.getElementById('abSelectedDateTotal');
+  const listEl = document.getElementById('abDayExpenseList');
+  if (!listEl) return;
+
+  if (labelEl) {
+    const parts = targetDate.split('-');
+    labelEl.innerText = `${parseInt(parts[1], 10)}월 ${parseInt(parts[2], 10)}일`;
+  }
+
+  let dayData = {};
+  try {
+    dayData = JSON.parse(localStorage.getItem('mingle_day_' + targetDate) || '{}');
+  } catch(e) {}
+
+  const expenses = dayData.expenses || [];
+  listEl.innerHTML = '';
+  let sum = 0;
+
+  if (expenses.length === 0) {
+    listEl.innerHTML = '<p class="text-[11px] text-stone-300 italic text-center py-2">지출 내역이 없습니다 ✨</p>';
+  } else {
+    expenses.forEach((item, idx) => {
+      const amt = Number(item.amount) || 0;
+      sum += amt;
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-between bg-stone-50 border border-stone-150 rounded-xl px-2.5 py-1.5 text-xs text-stone-700';
+      row.innerHTML = `
+        <div class="flex items-center gap-1.5 min-w-0">
+          <span class="font-mono text-[10px] text-stone-400 shrink-0">${item.time || '--:--'}</span>
+          <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-medium shrink-0">${item.mainCat}/${item.subCat}</span>
+          <span class="truncate font-medium text-stone-800">${item.title || '지출'}</span>
+          <span class="text-[10px] text-stone-400 shrink-0">(${item.payMethod || '카드'})</span>
+        </div>
+        <span class="font-mono font-bold text-stone-900 shrink-0 ml-2">${amt.toLocaleString()}원</span>
+      `;
+      listEl.appendChild(row);
+    });
+  }
+
+  if (totalEl) totalEl.innerText = `${sum.toLocaleString()}원`;
+}
+
+// 2. 월간 예산 렌더링
+function renderAccountBookBudget() {
+  const y = window.abCurrentYear;
+  const m = window.abCurrentMonth;
+  const monthData = getMonthExpensesData(y, m);
+
+  const budgetTotal = parseInt(localStorage.getItem('mingle_monthly_budget_target') || '1000000', 10);
+  const totalAmtEl = document.getElementById('abTotalBudgetAmount');
+  const remainEl = document.getElementById('abRemainingBudgetLabel');
+  const barEl = document.getElementById('abBudgetProgressBar');
+
+  if (totalAmtEl) totalAmtEl.innerText = `${budgetTotal.toLocaleString()}원`;
+  const remain = budgetTotal - monthData.monthTotal;
+  if (remainEl) {
+    if (remain >= 0) {
+      remainEl.className = 'text-xs font-semibold text-emerald-700';
+      remainEl.innerText = `잔여: ${remain.toLocaleString()}원`;
+    } else {
+      remainEl.className = 'text-xs font-semibold text-rose-600';
+      remainEl.innerText = `초과: ${Math.abs(remain).toLocaleString()}원!`;
+    }
+  }
+
+  if (barEl) {
+    const pct = Math.min(100, Math.round((monthData.monthTotal / budgetTotal) * 100));
+    barEl.style.width = `${pct}%`;
+    barEl.className = pct > 90 ? 'bg-rose-500 h-2 rounded-full transition-all duration-300' : 'bg-amber-500 h-2 rounded-full transition-all duration-300';
+  }
+
+  // 카테고리별 분배 목록
+  const catListEl = document.getElementById('abCategoryBudgetList');
+  if (!catListEl) return;
+  catListEl.innerHTML = '';
+
+  const cats = Object.keys(monthData.catTotals);
+  if (cats.length === 0) {
+    catListEl.innerHTML = '<p class="text-[11px] text-stone-300 italic text-center py-2">이번 달 지출 내역이 없습니다.</p>';
+  } else {
+    cats.forEach(cat => {
+      const amt = monthData.catTotals[cat];
+      const pct = monthData.monthTotal > 0 ? Math.round((amt / monthData.monthTotal) * 100) : 0;
+      const row = document.createElement('div');
+      row.className = 'bg-stone-50 border border-stone-200/60 p-2 rounded-xl space-y-1';
+      row.innerHTML = `
+        <div class="flex justify-between items-center text-xs">
+          <span class="font-medium text-stone-700">${cat}</span>
+          <span class="font-mono font-bold text-stone-800">${amt.toLocaleString()}원 (${pct}%)</span>
+        </div>
+        <div class="w-full bg-stone-200 rounded-full h-1.5 overflow-hidden">
+          <div class="bg-amber-500 h-1.5 rounded-full" style="width: ${pct}%"></div>
+        </div>
+      `;
+      catListEl.appendChild(row);
+    });
+  }
+}
+
+function openSetTotalBudgetModal() {
+  const current = localStorage.getItem('mingle_monthly_budget_target') || '1000000';
+  const val = prompt('이번 달 총 목표 예산 금액을 입력하세요 (숫자만):', current);
+  if (val !== null) {
+    const num = parseInt(val.replace(/[^0-9]/g, ''), 10);
+    if (!isNaN(num) && num >= 0) {
+      localStorage.setItem('mingle_monthly_budget_target', num);
+      renderAccountBookBudget();
+    }
+  }
+}
+
+// 3. 고정지출 렌더링 & 모달 제어
+function getStoredFixedExpenses() {
+  try {
+    return JSON.parse(localStorage.getItem('mingle_fixed_expenses') || '[]');
+  } catch(e) {
+    return [];
+  }
+}
+
+function saveStoredFixedExpenses(list) {
+  localStorage.setItem('mingle_fixed_expenses', JSON.stringify(list));
+  renderAccountBookFixed();
+  checkFixedExpenseAlerts();
+}
+
+function renderAccountBookFixed() {
+  const listEl = document.getElementById('abFixedExpenseList');
+  if (!listEl) return;
+  const list = getStoredFixedExpenses();
+  listEl.innerHTML = '';
+
+  if (list.length === 0) {
+    listEl.innerHTML = '<p class="text-[11px] text-stone-300 italic text-center py-4">등록된 고정지출(구독료, 공과금 등)이 없습니다 ✨</p>';
+    return;
+  }
+
+  list.forEach((item, idx) => {
+    const row = document.createElement('div');
+    row.className = 'flex items-center justify-between bg-stone-50 border border-stone-200/70 p-2.5 rounded-xl';
+    row.innerHTML = `
+      <div>
+        <div class="flex items-center gap-1.5">
+          <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px]">매월 ${item.day === 'last' ? '말일' : item.day + '일'}</span>
+          <span class="font-bold text-stone-800 text-xs">${item.title}</span>
+        </div>
+        ${item.memo ? `<p class="text-[10px] text-stone-400 mt-0.5">${item.memo}</p>` : ''}
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="font-mono font-bold text-stone-900 text-xs">${Number(item.amount).toLocaleString()}원</span>
+        <button onclick="deleteFixedExpenseItem(${idx})" class="text-stone-300 hover:text-red-500 font-bold text-sm px-1">×</button>
+      </div>
+    `;
+    listEl.appendChild(row);
+  });
+}
+
+function openAddFixedExpenseModal() {
+  const sel = document.getElementById('fixedExpenseDaySelect');
+  if (sel && sel.options.length === 0) {
+    sel.innerHTML = '';
+    for (let i = 1; i <= 31; i++) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${i}일`;
+      sel.appendChild(opt);
+    }
+    const lastOpt = document.createElement('option');
+    lastOpt.value = 'last';
+    lastOpt.textContent = '말일 (월말 자동)';
+    sel.appendChild(lastOpt);
+  }
+  document.getElementById('modalAddFixedExpense')?.classList.remove('hidden');
+}
+
+function closeAddFixedExpenseModal() {
+  document.getElementById('modalAddFixedExpense')?.classList.add('hidden');
+}
+
+function saveFixedExpenseItem() {
+  const title = document.getElementById('fixedExpenseTitleInput')?.value.trim();
+  const day = document.getElementById('fixedExpenseDaySelect')?.value;
+  const amount = parseInt(document.getElementById('fixedExpenseAmountInput')?.value, 10);
+  const memo = document.getElementById('fixedExpenseMemoInput')?.value.trim();
+
+  if (!title) {
+    alert('항목 이름을 입력해 주세요!');
+    return;
+  }
+  if (isNaN(amount) || amount <= 0) {
+    alert('금액을 올바르게 입력해 주세요!');
+    return;
+  }
+
+  const list = getStoredFixedExpenses();
+  list.push({ title, day, amount, memo });
+  saveStoredFixedExpenses(list);
+
+  document.getElementById('fixedExpenseTitleInput').value = '';
+  document.getElementById('fixedExpenseAmountInput').value = '';
+  document.getElementById('fixedExpenseMemoInput').value = '';
+  closeAddFixedExpenseModal();
+}
+
+function deleteFixedExpenseItem(idx) {
+  if (confirm('이 고정지출 항목을 삭제할까요?')) {
+    const list = getStoredFixedExpenses();
+    list.splice(idx, 1);
+    saveStoredFixedExpenses(list);
+  }
+}
+
+// 4. 카테고리 & 결제수단 설정 모달 제어
+function openExpenseCategorySettingModal() {
+  const modal = document.getElementById('modalExpenseCategorySetting');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  renderSettingPayMethods();
+  renderSettingMainCatSelect();
+  renderSettingSubCats();
+}
+
+function closeExpenseCategorySettingModal() {
+  document.getElementById('modalExpenseCategorySetting')?.classList.add('hidden');
+}
+
+function renderSettingPayMethods() {
+  const container = document.getElementById('settingPayMethodTagList');
+  if (!container) return;
+  const list = getStoredPayMethods();
+  container.innerHTML = '';
+  list.forEach((m, idx) => {
+    const tag = document.createElement('span');
+    tag.className = 'inline-flex items-center gap-1 bg-white border border-stone-200 px-2 py-1 rounded-lg text-[11px] text-stone-700';
+    tag.innerHTML = `${m} <button onclick="deletePayMethod(${idx})" class="text-stone-300 hover:text-red-500 font-bold ml-0.5">×</button>`;
+    container.appendChild(tag);
+  });
+}
+
+function addNewPayMethod() {
+  const input = document.getElementById('settingNewPayMethodInput');
+  const val = input?.value.trim();
+  if (!val) return;
+  const list = getStoredPayMethods();
+  if (!list.includes(val)) {
+    list.push(val);
+    saveStoredPayMethods(list);
+  }
+  input.value = '';
+  renderSettingPayMethods();
+}
+
+function deletePayMethod(idx) {
+  const list = getStoredPayMethods();
+  list.splice(idx, 1);
+  saveStoredPayMethods(list);
+  renderSettingPayMethods();
+}
+
+function renderSettingMainCatSelect() {
+  const sel = document.getElementById('settingMainCatSelect');
+  if (!sel) return;
+  const cats = getStoredCategories();
+  sel.innerHTML = '';
+  Object.keys(cats).forEach(main => {
+    const opt = document.createElement('option');
+    opt.value = main;
+    opt.textContent = main;
+    sel.appendChild(opt);
+  });
+}
+
+function renderSettingSubCats() {
+  const sel = document.getElementById('settingMainCatSelect');
+  const container = document.getElementById('settingSubCatTagList');
+  if (!sel || !container) return;
+  const cats = getStoredCategories();
+  const subList = cats[sel.value] || [];
+
+  container.innerHTML = '';
+  subList.forEach((sub, idx) => {
+    const tag = document.createElement('span');
+    tag.className = 'inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200/60 px-2 py-1 rounded-lg text-[11px]';
+    tag.innerHTML = `${sub} <button onclick="deleteSubCat('${sel.value}', ${idx})" class="text-amber-400 hover:text-red-500 font-bold ml-0.5">×</button>`;
+    container.appendChild(tag);
+  });
+}
+
+function addNewSubCategory() {
+  const sel = document.getElementById('settingMainCatSelect');
+  const input = document.getElementById('settingNewSubCatInput');
+  const main = sel?.value;
+  const sub = input?.value.trim();
+  if (!main || !sub) return;
+
+  const cats = getStoredCategories();
+  if (!cats[main]) cats[main] = [];
+  if (!cats[main].includes(sub)) {
+    cats[main].push(sub);
+    saveStoredCategories(cats);
+  }
+  input.value = '';
+  renderSettingSubCats();
+}
+
+function deleteSubCat(main, idx) {
+  const cats = getStoredCategories();
+  if (cats[main]) {
+    cats[main].splice(idx, 1);
+    saveStoredCategories(cats);
+    renderSettingSubCats();
+  }
+}
+
+// 5. 오늘 날짜 고정지출 알림 체크 (메인 상단 연동)
+function checkFixedExpenseAlerts() {
+  // 오늘 날짜 기준 출금일 계산
+  const today = new Date();
+  const dayNum = today.getDate();
+  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+  const list = getStoredFixedExpenses();
+  const todayDueList = list.filter(item => {
+    if (item.day === 'last' && dayNum === lastDayOfMonth) return true;
+    return parseInt(item.day, 10) === dayNum;
+  });
+
+  const banner = document.getElementById('todayFixedExpenseAlertBanner');
+  if (!banner) return;
+
+  if (todayDueList.length > 0) {
+    const totalDue = todayDueList.reduce((acc, cur) => acc + Number(cur.amount), 0);
+    const names = todayDueList.map(i => `${i.title}(${Number(i.amount).toLocaleString()}원)`).join(', ');
+    banner.classList.remove('hidden');
+    banner.innerHTML = `
+      <div class="bg-rose-50 border border-rose-200 text-rose-800 px-3.5 py-2.5 rounded-2xl flex items-center justify-between text-xs shadow-xs">
+        <div class="flex items-center gap-2">
+          <span class="text-base">🔔</span>
+          <div>
+            <span class="font-bold">오늘 고정지출 출금일!</span>
+            <span class="text-[11px] text-rose-600 block sm:inline sm:ml-1">${names} (총 ${totalDue.toLocaleString()}원)</span>
+          </div>
+        </div>
+        <span class="text-[10px] font-semibold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full shrink-0">잔고 확인</span>
+      </div>
+    `;
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+
+// 서랍 열릴 때 가계부 자동 초기화 훅
+document.addEventListener('DOMContentLoaded', () => {
+  refreshPayMethodSelects();
+  checkFixedExpenseAlerts();
+});
