@@ -1818,24 +1818,25 @@ function renderClosetModalList() {
 }
 
 function toggleSelectCloth(category, id) {
-  alert('클릭 카테고리: ' + category + ' / 아이디: ' + id);
-  let dayData = null;
-  if (typeof getDayDataLocal === 'function' && typeof currentDate !== 'undefined') {
-    dayData = getDayDataLocal(currentDate);
-  } else if (window.currentDayData) {
-    dayData = window.currentDayData;
+  const strId = String(id);
+  const key = 'mingle_day_' + currentDate;
+  let dayData = {};
+  try {
+    dayData = JSON.parse(localStorage.getItem(key) || '{}');
+  } catch(e) {
+    dayData = {};
   }
-  if (!dayData) return;
 
   if (!dayData.ootdSelected) dayData.ootdSelected = {};
   if (!dayData.ootd) dayData.ootd = {};
 
-  if (!dayData.ootdSelected[category] || !Array.isArray(dayData.ootdSelected[category])) {
-    dayData.ootdSelected[category] = dayData.ootdSelected[category] ? [String(dayData.ootdSelected[category])] : [];
+  let arr = [];
+  const sourceArr = dayData.ootdSelected[category] || dayData.ootd[category];
+  if (Array.isArray(sourceArr)) {
+    arr = sourceArr.map(String);
+  } else if (sourceArr) {
+    arr = [String(sourceArr)];
   }
-
-  const strId = String(id);
-  let arr = dayData.ootdSelected[category].map(String);
 
   if (arr.includes(strId)) {
     arr = arr.filter(x => x !== strId);
@@ -1853,10 +1854,22 @@ function toggleSelectCloth(category, id) {
   dayData.ootdSelected[category] = arr;
   dayData.ootd[category] = arr;
 
-  if (typeof saveDayData === 'function') saveDayData();
+  try {
+    localStorage.setItem(key, JSON.stringify(dayData));
+  } catch(e) {}
+
+  if (window.currentDayData) {
+    window.currentDayData.ootdSelected = dayData.ootdSelected;
+    window.currentDayData.ootd = dayData.ootd;
+  }
+
   renderClosetModalList();
-  if (typeof renderOotd === 'function') renderOotd();
-  if (typeof renderCalendar === 'function') renderCalendar();
+  if (typeof renderOotd === 'function') {
+    try { renderOotd(); } catch(e) {}
+  }
+  if (typeof renderCalendar === 'function') {
+    try { renderCalendar(); } catch(e) {}
+  }
 }
 
 function addNewClothToCloset() {
