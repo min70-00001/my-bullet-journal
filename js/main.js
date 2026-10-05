@@ -1605,10 +1605,14 @@ function getClosetData() {
     bag: []
   };
   try {
-    const saved = localStorage.getItem('mingle_closet_master');
+    const saved = localStorage.getItem('mingle_closet_v2');
     if (!saved) return defaultCloset;
     const parsed = JSON.parse(saved);
     if (!parsed.outer) parsed.outer = [];
+    if (!parsed.top) parsed.top = [];
+    if (!parsed.bottom) parsed.bottom = [];
+    if (!parsed.shoes) parsed.shoes = [];
+    if (!parsed.bag) parsed.bag = [];
     return parsed;
   } catch(e) {
     return defaultCloset;
@@ -1825,6 +1829,7 @@ function addNewClothToCloset() {
   saveClosetData(closet);
 
   input.value = '';
+  renderClosetModalList();
   toggleSelectCloth(activeCategory, newId);
 }
 
