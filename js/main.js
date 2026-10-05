@@ -3836,7 +3836,10 @@ function backToDrawerHub() {
 
   ['note', 'budget', 'book', 'knit'].forEach(t => {
     const mod = document.getElementById(`drawer${t.charAt(0).toUpperCase() + t.slice(1)}Module`);
-    if (mod) mod.classList.add('hidden');
+    if (mod) {
+      mod.classList.add('hidden');
+      mod.style.display = 'none';
+    }
   });
 }
 
