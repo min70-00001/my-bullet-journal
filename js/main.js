@@ -180,6 +180,7 @@ const SUB_CATEGORIES = {
       subscribeTicketData();
       subscribeRoutineDefinitions();
       subscribeAccountBookSettings();
+      subscribeAnniversaries();
 
       renderCalendar();
       renderAnniversaries();
@@ -3176,6 +3177,13 @@ function saveAnniversaryFromModal() {
   renderAnniversaries();
   if (typeof renderCalendar === 'function') renderCalendar();
   if (typeof updateTodaySpecialBanner === 'function') updateTodaySpecialBanner();
+
+  // ☁️ 파이어베이스 즉시 동기화
+  if (typeof db !== 'undefined' && db) {
+    db.collection('anniversaries_data').doc('master').set({
+      anniversaries: items
+    }, { merge: true }).catch(console.error);
+  }
 }
 
 function deleteAnniversary(id) {
@@ -3186,6 +3194,35 @@ function deleteAnniversary(id) {
   renderAnniversaries();
   if (typeof renderCalendar === 'function') renderCalendar();
   if (typeof updateTodaySpecialBanner === 'function') updateTodaySpecialBanner();
+
+  // ☁️ 파이어베이스 즉시 동기화
+  if (typeof db !== 'undefined' && db) {
+    db.collection('anniversaries_data').doc('master').set({
+      anniversaries: items
+    }, { merge: true }).catch(console.error);
+  }
+}
+
+// ☁️ 기념일 실시간 양방향 구독기
+let unsubscribeAnniversaries = null;
+function subscribeAnniversaries() {
+  if (typeof renderAnniversaries === 'function') renderAnniversaries();
+  if (typeof renderCalendar === 'function') renderCalendar();
+
+  if (!db) return;
+  if (unsubscribeAnniversaries) unsubscribeAnniversaries();
+  unsubscribeAnniversaries = db.collection('anniversaries_data').doc('master')
+    .onSnapshot(doc => {
+      if (doc.exists) {
+        const d = doc.data() || {};
+        if (Array.isArray(d.anniversaries)) {
+          localStorage.setItem('mingle_anniversaries', JSON.stringify(d.anniversaries));
+          if (typeof renderAnniversaries === 'function') renderAnniversaries();
+          if (typeof renderCalendar === 'function') renderCalendar();
+          if (typeof updateTodaySpecialBanner === 'function') updateTodaySpecialBanner();
+        }
+      }
+    }, err => console.error(err));
 }
 
 function renderAnniversaries() {
