@@ -2126,7 +2126,21 @@ function deleteClothFromCloset(id) {
       const oMemoInput = document.getElementById('ootdMemoInput');
       if (oMemoInput) oMemoInput.value = data.ootd.memo || '';
     }
-    if (typeof renderOotd === 'function') renderOotd();
+      // 👗 OOTD 선택 옷 데이터 복원 및 렌더링
+  if (data.ootdSelected) {
+    if (typeof currentOotdSelected !== 'undefined') {
+      currentOotdSelected = data.ootdSelected;
+    }
+    if (typeof renderOotdSelectedList === 'function') {
+      renderOotdSelectedList();
+    }
+  }
+  if (typeof renderOotd === 'function') renderOotd();
+
+  // 💸 지출 내역 위젯 및 가계부 달력 렌더링
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+  if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
 
       if (data.bgm) {
         document.getElementById('bgmSearchInput').value = data.bgm.song || '';
