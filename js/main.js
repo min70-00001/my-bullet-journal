@@ -2003,6 +2003,11 @@ function deleteClothFromCloset(id) {
             const data = doc.data();
             saveDayDataLocal(dateStr, data);
             applyDayDataToUI(data);
+    
+            // 💰 가계부 지출 위젯 및 달력 동기화
+            if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
+            if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+            if (typeof renderOotdSelectedList === 'function') renderOotdSelectedList();
           }
         }, err => console.error(err));
     }
