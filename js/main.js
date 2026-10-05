@@ -254,7 +254,21 @@ const SUB_CATEGORIES = {
   }
 }
 
-    function setHobbySubTab(type) {
+// 📦 서랍 세부 모듈 열기 & 새로고침 기억
+function openDrawerModule(modName) {
+  try {
+    sessionStorage.setItem('mingle_drawer_subtab', modName);
+  } catch(e) {}
+}
+
+// 📦 서랍 로비로 돌아갈 때 서브탭 기억 초기화
+const origBackToDrawerHub = typeof backToDrawerHub === 'function' ? backToDrawerHub : null;
+backToDrawerHub = function() {
+  try { sessionStorage.removeItem('mingle_drawer_subtab'); } catch(e) {}
+  if (origBackToDrawerHub) origBackToDrawerHub();
+};
+
+function setHobbySubTab(type) {
       if (type === 'book') {
         document.getElementById('hobbyBookModule').classList.remove('hidden');
         document.getElementById('hobbyKnitModule').classList.add('hidden');
@@ -2137,7 +2151,18 @@ function deleteClothFromCloset(id) {
   }
   if (typeof renderOotd === 'function') renderOotd();
 
-  // 💸 지출 내역 위젯 및 가계부 달력 렌더링
+  // 💸 클라우드 지출 데이터 즉시 반영 및 렌더링
+  if (data && Array.isArray(data.expenses)) {
+    if (!window.currentDayData) window.currentDayData = {};
+    window.currentDayData.expenses = data.expenses;
+    const curD = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
+    try {
+      const k = 'mingle_day_' + curD;
+      let d = JSON.parse(localStorage.getItem(k) || '{}');
+      d.expenses = data.expenses;
+      localStorage.setItem(k, JSON.stringify(d));
+    } catch(e) {}
+  }
   if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
   if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
   if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
