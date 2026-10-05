@@ -2625,7 +2625,6 @@ function saveFavPlaces(places) {
     }
 
     let unsubscribeCompletedTickets = null;
-    let unsubscribeCompletedTickets = null;
     let unsubscribeFavPlaces = null;
     function subscribeTicketData() {
       renderTicketList();
