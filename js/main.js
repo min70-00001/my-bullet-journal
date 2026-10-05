@@ -1697,6 +1697,29 @@ function renderOotd() {
     const memoEl = document.getElementById('ootdMemoInput');
     if (memoEl) memoEl.value = dayOotd.memo || dayData.dailyOotdMemo || '';
 
+    // 오늘의 노래 반영 및 초기화 (다른 날짜 유령 노래 방지)
+    const bgm = dayData.bgm || {};
+    const coverEl = document.getElementById('bgmCoverImg');
+    const infoEl = document.getElementById('bgmInfoText');
+    const inputEl = document.getElementById('bgmSearchInput');
+
+    if (bgm.song || bgm.info) {
+      if (coverEl) {
+        coverEl.src = bgm.cover || '';
+        coverEl.style.display = bgm.cover ? 'block' : 'none';
+      }
+      if (infoEl) infoEl.innerText = bgm.info || bgm.song || '';
+      if (inputEl) inputEl.value = bgm.song || '';
+    } else {
+      // 해당 날짜에 저장된 노래가 없으면 깔끔하게 빈칸으로 초기화!
+      if (coverEl) {
+        coverEl.src = '';
+        coverEl.style.display = 'none';
+      }
+      if (infoEl) infoEl.innerText = '오늘의 노래를 등록해 보세요 🎵';
+      if (inputEl) inputEl.value = '';
+    }
+
   } catch (err) {
     console.warn("OOTD 렌더링 안전 패스:", err);
   }
