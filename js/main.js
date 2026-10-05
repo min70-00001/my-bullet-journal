@@ -1645,13 +1645,29 @@ function renderOotd() {
   try {
     const closet = getClosetData();
     let dayData = {};
-    
-    // 로컬스토리지에서 최신 당일 데이터 직접 우선 조회!
-    try {
-      const key = 'mingle_day_' + currentDate;
-      dayData = JSON.parse(localStorage.getItem(key) || '{}');
-    } catch(e) {
-      dayData = (typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : window.currentDayData) || {};
+    const curD = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
+
+    // 1순위: getDayDataLocal (파이어베이스 실시간 수신 데이터 저장소)
+    if (typeof getDayDataLocal === 'function') {
+      try { dayData = getDayDataLocal(curD) || {}; } catch(e) {}
+    }
+    // 2순위: window.currentDayData
+    if ((!dayData.ootdSelected && !dayData.ootd) && window.currentDayData) {
+      if (window.currentDayData.ootdSelected) dayData.ootdSelected = window.currentDayData.ootdSelected;
+      if (window.currentDayData.ootd) dayData.ootd = window.currentDayData.ootd;
+    }
+    // 3순위: mingle_day_ 로컬 키
+    if (!dayData.ootdSelected && !dayData.ootd) {
+      try {
+        const stored = localStorage.getItem('mingle_day_' + curD);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed) {
+            dayData.ootdSelected = parsed.ootdSelected || {};
+            dayData.ootd = parsed.ootd || {};
+          }
+        }
+      } catch(e) {}
     }
 
     const dayOotd = dayData.ootd || {};
