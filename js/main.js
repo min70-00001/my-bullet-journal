@@ -1818,6 +1818,7 @@ function renderClosetModalList() {
 }
 
 function toggleSelectCloth(category, id) {
+  alert('클릭 카테고리: ' + category + ' / 아이디: ' + id);
   let dayData = null;
   if (typeof getDayDataLocal === 'function' && typeof currentDate !== 'undefined') {
     dayData = getDayDataLocal(currentDate);
