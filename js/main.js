@@ -5100,6 +5100,19 @@ function saveStoredPayMethods(list) {
   }
 }
 
+// ✏️ 결제수단 이름 수정 (클라우드 즉시 동기화)
+function editStoredPayMethod(idx) {
+  let list = getStoredPayMethods();
+  if (idx < 0 || idx >= list.length) return;
+  const oldName = list[idx];
+  const newName = prompt('결제수단 이름을 수정해주세요:', oldName);
+  if (!newName || !newName.trim() || newName.trim() === oldName) return;
+
+  list[idx] = newName.trim();
+  saveStoredPayMethods(list);
+  if (typeof renderPayMethodSettingsModal === 'function') renderPayMethodSettingsModal();
+}
+
 function getStoredCategories() {
   try {
     const saved = localStorage.getItem('mingle_expense_custom_cats');
@@ -5118,6 +5131,23 @@ function saveStoredCategories(cats) {
       categories: cats
     }, { merge: true }).catch(console.error);
   }
+}
+
+// ✏️️ 카테고리(중분류) 이름 수정 도우미
+function editStoredSubCategory(mainKey, idx) {
+  let cats = getStoredCategories();
+  let list = cats[mainKey] || [];
+  if (idx < 0 || idx >= list.length) return;
+  const oldName = list[idx];
+  const newName = prompt('카테고리 이름을 수정해주세요:', oldName);
+  if (!newName || !newName.trim() || newName.trim() === oldName) return;
+
+  list[idx] = newName.trim();
+  cats[mainKey] = list;
+  saveStoredCategories(cats);
+  if (typeof renderCategorySettingsModal === 'function') renderCategorySettingsModal();
+  if (typeof refreshCategorySelects === 'function') refreshCategorySelects();
+  if (typeof onExpenseMainCatChange === 'function') onExpenseMainCatChange();
 }
 
 function refreshPayMethodSelects() {
@@ -5434,11 +5464,15 @@ function subscribeAccountBookSettings() {
         if (Array.isArray(d.payMethods)) {
           localStorage.setItem('mingle_expense_pay_methods', JSON.stringify(d.payMethods));
           if (typeof refreshPayMethodSelects === 'function') refreshPayMethodSelects();
+          if (typeof renderPayMethodSettings === 'function') renderPayMethodSettings();
         }
-        if (d.categories) {
-          localStorage.setItem('mingle_expense_custom_cats', JSON.stringify(d.categories));
-          window.DEFAULT_EXPENSE_CATS = d.categories;
-          if (typeof onExpenseMainCatChange === 'function') onExpenseMainCatChange();
+        if (d.subCategories) {
+          localStorage.setItem('mingle_expense_sub_categories', JSON.stringify(d.subCategories));
+          if (typeof renderCategorySettings === 'function') renderCategorySettings();
+        }
+        if (Array.isArray(d.mainCatKeys)) {
+          localStorage.setItem('mingle_expense_main_cat_keys', JSON.stringify(d.mainCatKeys));
+          if (typeof renderAccountBookCategoryList === 'function') renderAccountBookCategoryList();
         }
       }
     }, err => console.error(err));
@@ -5552,11 +5586,26 @@ function renderSettingPayMethods() {
   container.innerHTML = '';
   list.forEach((m, idx) => {
     const tag = document.createElement('span');
-    tag.className = 'inline-flex items-center gap-1 bg-white border border-stone-200 px-2 py-1 rounded-lg text-[11px] text-stone-700';
-    tag.innerHTML = `${m} <button onclick="deletePayMethod(${idx})" class="text-stone-300 hover:text-red-500 font-bold ml-0.5">×</button>`;
+    tag.className = 'inline-flex items-center gap-1 bg-white border border-stone-200 px-2 py-1 rounded-lg text-xs font-medium text-stone-700 shadow-2xs';
+    tag.innerHTML = `<span>${m}</span>
+      <button type="button" onclick="editPayMethod(${idx})" class="text-stone-400 hover:text-stone-700 ml-0.5 text-[11px]" title="수정">✏️</button>
+      <button type="button" onclick="deletePayMethod(${idx})" class="text-stone-300 hover:text-red-500 font-bold ml-0.5" title="삭제">&times;</button>`;
     container.appendChild(tag);
   });
 }
+
+function editPayMethod(idx) {
+  const list = getStoredPayMethods();
+  if (idx < 0 || idx >= list.length) return;
+  const oldName = list[idx];
+  const newName = prompt('결제수단 이름을 수정해주세요:', oldName);
+  if (!newName || !newName.trim() || newName.trim() === oldName) return;
+
+  list[idx] = newName.trim();
+  saveStoredPayMethods(list);
+  renderSettingPayMethods();
+}
+
 
 function addNewPayMethod() {
   const input = document.getElementById('settingNewPayMethodInput');
@@ -5601,10 +5650,27 @@ function renderSettingSubCats() {
   container.innerHTML = '';
   subList.forEach((sub, idx) => {
     const tag = document.createElement('span');
-    tag.className = 'inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200/60 px-2 py-1 rounded-lg text-[11px]';
-    tag.innerHTML = `${sub} <button onclick="deleteSubCat('${sel.value}', ${idx})" class="text-amber-400 hover:text-red-500 font-bold ml-0.5">×</button>`;
+    tag.className = 'inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200/60 px-2 py-1 rounded-lg text-xs font-medium shadow-2xs';
+    tag.innerHTML = `<span>${sub}</span>
+      <button type="button" onclick="editSettingSubCat('${sel.value}', ${idx})" class="text-stone-400 hover:text-stone-700 ml-0.5 text-[11px]" title="수정">✏️</button>
+      <button type="button" onclick="deleteSubCat('${sel.value}', ${idx})" class="text-amber-400 hover:text-red-500 font-bold ml-0.5" title="삭제">&times;</button>`;
     container.appendChild(tag);
   });
+}
+
+function editSettingSubCat(mainKey, idx) {
+  let cats = getStoredCategories();
+  let list = cats[mainKey] || [];
+  if (idx < 0 || idx >= list.length) return;
+  const oldName = list[idx];
+  const newName = prompt('카테고리 이름을 수정해주세요:', oldName);
+  if (!newName || !newName.trim() || newName.trim() === oldName) return;
+
+  list[idx] = newName.trim();
+  cats[mainKey] = list;
+  saveStoredCategories(cats);
+  renderSettingSubCats();
+  if (typeof onExpenseMainCatChange === 'function') onExpenseMainCatChange();
 }
 
 function addNewSubCategory() {
