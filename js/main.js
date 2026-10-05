@@ -1598,29 +1598,18 @@ function detectClothColor(name) {
 
 function getClosetData() {
   const defaultCloset = {
-    top: [
-      { id: '1', name: '아이보리 셔츠', color: '#FFFFF0' },
-      { id: '2', name: '민트 브이넥 니트', color: '#A8E6CF' },
-      { id: '3', name: '화이트 반팔티', color: '#FFFFFF' }
-    ],
-    bottom: [
-      { id: '4', name: '연청 데님', color: '#A5C7E6' },
-      { id: '5', name: '블랙 슬랙스', color: '#2B2B2B' },
-      { id: '6', name: '베이지 코튼팬츠', color: '#E8DCB8' }
-    ],
-    shoes: [
-      { id: '7', name: '화이트 스니커즈', color: '#FFFFFF' },
-      { id: '8', name: '반스 체커보드', color: '#2B2B2B' },
-      { id: '9', name: '컨버스 로우', color: '#2B2B2B' }
-    ],
-    bag: [
-      { id: '10', name: '미피 네트백', color: '#E8DCB8' },
-      { id: '11', name: '블랙 백팩', color: '#2B2B2B' },
-      { id: '12', name: '캔버스 에코백', color: '#FFFFF0' }
-    ]
+    outer: [],
+    top: [],
+    bottom: [],
+    shoes: [],
+    bag: []
   };
   try {
-    return JSON.parse(localStorage.getItem('mingle_closet_master')) || defaultCloset;
+    const saved = localStorage.getItem('mingle_closet_master');
+    if (!saved) return defaultCloset;
+    const parsed = JSON.parse(saved);
+    if (!parsed.outer) parsed.outer = [];
+    return parsed;
   } catch(e) {
     return defaultCloset;
   }
@@ -1628,11 +1617,11 @@ function getClosetData() {
 
 function saveClosetData(data) {
   try {
-    localStorage.setItem('mingle_closet_master', JSON.stringify(data));
+    localStorage.setItem('mingle_closet_v2', JSON.stringify(data));
   } catch(e) {}
 }
 
-let activeCategory = 'top';
+let activeCategory = 'outer';
 
 // OOTD 화면 렌더링 (구버전 단일 문자열/새버전 배열 완벽 호환 방어막)
 function renderOotd() {
@@ -1647,7 +1636,7 @@ function renderOotd() {
 
     const dayOotd = dayData.ootd || {};
 
-    ['top', 'bottom', 'shoes', 'bag'].forEach(cat => {
+    ['outer', 'top', 'bottom', 'shoes', 'bag'].forEach(cat => {
       const container = document.getElementById(`ootdSelected_${cat}`);
       if (!container) return;
       container.innerHTML = '';
