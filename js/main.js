@@ -4698,48 +4698,78 @@ function getBooksMaster() {
   return JSON.parse(localStorage.getItem('mingle_books_data') || '[]');
 }
 
-function saveBooksMaster(data) {
-  localStorage.setItem('mingle_books_data', JSON.stringify(data));
-  renderBookShelf();
-  if (typeof db !== 'undefined' && db) db.collection('drawer_book').doc('master').set({ books: data }).catch(console.error);
-}
-
-// 구글 북스 검색
-async function searchGoogleBooks() {
-  const query = document.getElementById('bookSearchKeyword').value.trim();
+ const inputEl = document.getElementById('bookSearchKeyword');
+  const query = inputEl ? inputEl.value.trim() : '';
   const container = document.getElementById('bookSearchResults');
-  if (!query) return;
+  if (!container || !query) return;
 
   container.classList.remove('hidden');
-  container.innerHTML = '<div class="p-2 text-center text-stone-400">구글 도서관 뒤지는 중... 🔍</div>';
+  container.innerHTML = '<div class="p-2.5 text-center text-xs text-stone-400 animate-pulse">구글 도서관 뒤지는 중... 🔍</div>';
 
   try {
-    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=5`);
-    const data = await res.json();
+    // 1차: 일반 도서 검색
+    let url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=8&printType=books`;
+    let res = await fetch(url);
+    let data = await res.json();
+
+    // 2차: 결과 없으면 intitle: 제목 정밀 재검색
     if (!data.items || data.items.length === 0) {
-      container.innerHTML = '<div class="p-2 text-center text-stone-400">검색 결과가 없어요 😢</div>';
+      url = `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(query)}&maxResults=8&printType=books`;
+      res = await fetch(url);
+      data = await res.json();
+    }
+
+    if (data.error) {
+      container.innerHTML = `
+        <div class="p-2.5 text-center text-xs text-amber-700 bg-amber-50 rounded-xl space-y-1">
+          <p>구글 도서관 호출량이 일시적으로 초과되었어요 🥺</p>
+          <button type="button" onclick="document.getElementById('bookInputTitle').value = '${query.replace(/'/g, "\\'")}'; document.getElementById('bookSearchResults').classList.add('hidden');" class="text-[11px] font-bold text-emerald-800 underline">
+            👉 '${query}' 직접 입력으로 바로 채우기
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    if (!data.items || data.items.length === 0) {
+      container.innerHTML = `
+        <div class="p-2.5 text-center text-xs text-stone-400 bg-stone-50 rounded-xl space-y-1">
+          <p>검색 결과가 없어요 😢</p>
+          <button type="button" onclick="document.getElementById('bookInputTitle').value = '${query.replace(/'/g, "\\'")}'; document.getElementById('bookSearchResults').classList.add('hidden');" class="text-[11px] font-bold text-amber-800 underline">
+            👉 '${query}' 직접 등록하기
+          </button>
+        </div>
+      `;
       return;
     }
 
     container.innerHTML = data.items.map(item => {
-      const info = item.volumeInfo;
-      const title = info.title || '제목 없음';
-      const author = (info.authors || []).join(', ') || info.publisher || '저자 미상';
-      const cover = info.imageLinks ? info.imageLinks.thumbnail.replace('http:', 'https:') : 'https://via.placeholder.com/60x85?text=No+Cover';
+      const info = item.volumeInfo || {};
+      const title = (info.title || '제목 없음').replace(/"/g, '&quot;');
+      const author = ((info.authors || []).join(', ') || info.publisher || '저자 미상').replace(/"/g, '&quot;');
+      const cover = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail || '').replace('http:', 'https:') : 'https://via.placeholder.com/60x85?text=No+Cover';
       const pageCount = info.pageCount || 0;
 
       return `
-        <div onclick='selectGoogleBook(${JSON.stringify(title)}, ${JSON.stringify(author)}, ${JSON.stringify(cover)}, ${pageCount})' class="p-2 bg-white rounded-lg border border-stone-200 flex items-center gap-2 cursor-pointer hover:bg-emerald-50 transition-colors">
-          <img src="${cover}" class="w-8 h-11 object-cover rounded shadow-2xs shrink-0">
+        <div onclick="selectGoogleBook('${title.replace(/'/g, "\\'")}', '${author.replace(/'/g, "\\'")}', '${cover}', ${pageCount})" class="p-2 bg-white rounded-lg border border-stone-200 flex items-center gap-2.5 cursor-pointer hover:bg-emerald-50 transition-colors">
+          <img src="${cover}" class="w-8 h-11 object-cover rounded shadow-2xs shrink-0" onerror="this.src='https://via.placeholder.com/60x85?text=Cover'">
           <div class="min-w-0 flex-1">
-            <p class="font-bold text-stone-800 truncate">${title}</p>
-            <p class="text-[10px] text-stone-500 truncate">${author} · ${pageCount ? pageCount + 'p' : '페이지 미상'}</p>
+            <p class="font-bold text-xs text-stone-800 truncate">${title}</p>
+            <p class="text-[10px] text-stone-500 truncate">${author} · ${pageCount ? pageCount + '쪽' : '페이지 미상'}</p>
           </div>
         </div>
       `;
     }).join('');
   } catch (err) {
-    container.innerHTML = '<div class="p-2 text-center text-rose-500">검색 중 오류가 발생했습니다.</div>';
+    console.error(err);
+    container.innerHTML = `
+      <div class="p-2.5 text-center text-xs text-rose-500 bg-rose-50 rounded-xl space-y-1">
+        <p>도서 검색 중 네트워크 오류가 발생했어요.</p>
+        <button type="button" onclick="document.getElementById('bookInputTitle').value = '${query.replace(/'/g, "\\'") }'; document.getElementById('bookSearchResults').classList.add('hidden');" class="text-[11px] font-bold text-rose-800 underline">
+          👉 검색어('${query}')를 제목으로 직접 쓰기
+        </button>
+      </div>
+    `;
   }
 }
 
