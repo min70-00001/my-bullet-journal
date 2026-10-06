@@ -825,45 +825,59 @@ function setHobbySubTab(type) {
     }
 
     function toggleDynamicRoutineCheck(type, itemId, autoTime, autoCat, itemName) {
-      const dayData = getDayDataLocal(currentDate);
+      const dayData = (window.currentDayData && window.currentDayData.date === currentDate)
+        ? window.currentDayData
+        : getDayDataLocal(currentDate);
       if (!dayData.dynamicRoutineChecks) dayData.dynamicRoutineChecks = {};
       const nextVal = !dayData.dynamicRoutineChecks[itemId];
       dayData.dynamicRoutineChecks[itemId] = nextVal;
 
+      // 💡 1. 체크 상태를 먼저 안전하게 메모리와 로컬에 확정 저장!
+      saveDayDataLocal(currentDate, dayData);
+      window.currentDayData = dayData;
+
+      // 💡 2. 그 다음 타임테이블 자동 등록 실행 (덮어쓰기 영구 박멸)
       if (nextVal && autoTime) {
         autoFillTimetableNow(itemName, autoCat);
+      } else {
+        if (db) db.collection('diary_days').doc(currentDate).set(dayData, { merge: true }).catch(console.error);
       }
 
-      saveDayDataLocal(currentDate, dayData);
       renderDynamicRoutines();
-      if (db) db.collection('diary_days').doc(currentDate).set(dayData).catch(console.error);
-
       renderRoutineProgressTracker();
       renderCalendar();
     }
 
     function toggleCatCareTag(tag) {
-      const dayData = getDayDataLocal(currentDate);
+      const dayData = (window.currentDayData && window.currentDayData.date === currentDate)
+        ? window.currentDayData
+        : getDayDataLocal(currentDate);
       if (!dayData.catCareTags) dayData.catCareTags = {};
       dayData.catCareTags[tag] = !dayData.catCareTags[tag];
       saveDayDataLocal(currentDate, dayData);
+      window.currentDayData = dayData;
       renderDynamicRoutines();
-      if (db) db.collection('diary_days').doc(currentDate).set(dayData).catch(console.error);
+      if (db) db.collection('diary_days').doc(currentDate).set(dayData, { merge: true }).catch(console.error);
     }
 
     function completeAllMorningRoutines() {
       const defs = getRoutineDefs();
       const morningActive = defs.morning.filter(i => !i.paused);
-      const dayData = getDayDataLocal(currentDate);
+      const dayData = (window.currentDayData && window.currentDayData.date === currentDate)
+        ? window.currentDayData
+        : getDayDataLocal(currentDate);
       if (!dayData.dynamicRoutineChecks) dayData.dynamicRoutineChecks = {};
 
       morningActive.forEach(i => {
         dayData.dynamicRoutineChecks[i.id] = true;
       });
-      autoFillTimetableNow('아침루틴', 'routine');
+
+      // 💡 먼저 체크 상태 확정 저장
       saveDayDataLocal(currentDate, dayData);
+      window.currentDayData = dayData;
+
+      autoFillTimetableNow('아침루틴', 'routine');
       renderDynamicRoutines();
-      if (db) db.collection('diary_days').doc(currentDate).set(dayData).catch(console.error);
       renderRoutineProgressTracker();
       renderCalendar();
     }
@@ -1190,54 +1204,45 @@ function setHobbySubTab(type) {
       const acv3 = document.getElementById('mealAcv_3')?.checked || false;
       const count = (acv2 ? 1 : 0) + (acv3 ? 1 : 0);
 
-      const dayData = getDayDataLocal(currentDate);
+      const dayData = (window.currentDayData && window.currentDayData.date === currentDate)
+        ? window.currentDayData
+        : getDayDataLocal(currentDate);
       dayData.acvCount = count;
+      if (!dayData.health) dayData.health = {};
+      if (!dayData.health.meals) dayData.health.meals = [{}, {}, {}];
+      if (dayData.health.meals[1]) dayData.health.meals[1].acv = acv2;
+      if (dayData.health.meals[2]) dayData.health.meals[2].acv = acv3;
+
       saveDayDataLocal(currentDate, dayData);
+      window.currentDayData = dayData;
       renderDrinkTracker(dayData);
       saveDayData();
     }
 
-    function renderDrinkTracker(data) {
-      const waterEl = document.getElementById('drinkWaterDrops');
-      const acvEl = document.getElementById('drinkAcvDrops');
-      const coffeeEl = document.getElementById('drinkCoffeeDrops');
-      if (!waterEl) return;
-
-      const waterCount = data.waterCount || 0;
-      const acvCount = data.acvCount || 0;
-      const coffeeCount = data.coffeeCount || 0;
-
-      // 💧 물방울 6개
-      waterEl.innerHTML = [1, 2, 3, 4, 5, 6].map(i => `
-        <span onclick="toggleDrinkItem('waterCount', ${i})" class="transition-transform hover:scale-125 ${i <= waterCount ? 'opacity-100' : 'opacity-25 grayscale'}">💧</span>
-      `).join('');
-
-      // 🍏 애사비 2개
-      acvEl.innerHTML = [1, 2].map(i => `
-        <span onclick="toggleDrinkItem('acvCount', ${i})" class="transition-transform hover:scale-125 ${i <= acvCount ? 'opacity-100' : 'opacity-25 grayscale'}">🍏</span>
-      `).join('');
-
-      // ☕ 커피 1개
-      coffeeEl.innerHTML = `
-        <span onclick="toggleDrinkItem('coffeeCount', 1)" class="transition-transform hover:scale-125 ${coffeeCount >= 1 ? 'opacity-100' : 'opacity-25 grayscale'}">☕</span>
-      `;
-    }
-
     function toggleDrinkItem(key, idx) {
-      const dayData = getDayDataLocal(currentDate);
+      const dayData = (window.currentDayData && window.currentDayData.date === currentDate)
+        ? window.currentDayData
+        : getDayDataLocal(currentDate);
       let curr = dayData[key] || 0;
       let next = curr === idx ? idx - 1 : idx;
       dayData[key] = next;
 
-      // 상단 사과 직접 탭 시 식단 체크박스 연동
+      // 상단 사과 직접 탭 시 식단 체크박스 및 데이터 완벽 양방향 연동
       if (key === 'acvCount') {
-        if (document.getElementById('mealAcv_2')) document.getElementById('mealAcv_2').checked = (next >= 1);
-        if (document.getElementById('mealAcv_3')) document.getElementById('mealAcv_3').checked = (next >= 2);
+        const isAcv1 = next >= 1;
+        const isAcv2 = next >= 2;
+        if (document.getElementById('mealAcv_2')) document.getElementById('mealAcv_2').checked = isAcv1;
+        if (document.getElementById('mealAcv_3')) document.getElementById('mealAcv_3').checked = isAcv2;
+        if (!dayData.health) dayData.health = {};
+        if (!dayData.health.meals) dayData.health.meals = [{}, {}, {}];
+        if (dayData.health.meals[1]) dayData.health.meals[1].acv = isAcv1;
+        if (dayData.health.meals[2]) dayData.health.meals[2].acv = isAcv2;
       }
 
       saveDayDataLocal(currentDate, dayData);
+      window.currentDayData = dayData;
       renderDrinkTracker(dayData);
-      if (db) db.collection('diary_days').doc(currentDate).set(dayData).catch(console.error);
+      saveDayData();
     }
 
     // 독서 & 뜨개 시간 소급 & 수동 입력
@@ -2142,6 +2147,7 @@ function deleteClothFromCloset(id) {
             const data = doc.data() || {};
             data.date = dateStr;
             window.currentDayData = data;
+            saveDayDataLocal(dateStr, data);
             applyDayDataToUI(data);
           } else {
             // 해당 날짜에 기록이 없으면 깨끗하게 빈 화면으로 리셋!
