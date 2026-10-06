@@ -1219,6 +1219,37 @@ function setHobbySubTab(type) {
       saveDayData();
     }
 
+    function renderDrinkTracker(data) {
+      data = data || {};
+      const waterEl = document.getElementById('drinkWaterDrops');
+      const acvEl = document.getElementById('drinkAcvDrops');
+      const coffeeEl = document.getElementById('drinkCoffeeDrops');
+      if (!waterEl) return;
+
+      const waterCount = data.waterCount || 0;
+      const acvCount = data.acvCount || 0;
+      const coffeeCount = data.coffeeCount || 0;
+
+      // 💧 물방울 6개
+      waterEl.innerHTML = [1, 2, 3, 4, 5, 6].map(i => `
+        <span onclick="toggleDrinkItem('waterCount', ${i})" class="transition-transform hover:scale-125 ${i <= waterCount ? 'opacity-100' : 'opacity-25 grayscale'}">💧</span>
+      `).join('');
+
+      // 🍏 애사비 2개
+      if (acvEl) {
+        acvEl.innerHTML = [1, 2].map(i => `
+          <span onclick="toggleDrinkItem('acvCount', ${i})" class="transition-transform hover:scale-125 ${i <= acvCount ? 'opacity-100' : 'opacity-25 grayscale'}">🍏</span>
+        `).join('');
+      }
+
+      // ☕ 커피 1개
+      if (coffeeEl) {
+        coffeeEl.innerHTML = `
+          <span onclick="toggleDrinkItem('coffeeCount', 1)" class="transition-transform hover:scale-125 ${coffeeCount >= 1 ? 'opacity-100' : 'opacity-25 grayscale'}">☕</span>
+        `;
+      }
+    }
+
     function toggleDrinkItem(key, idx) {
       const dayData = (window.currentDayData && window.currentDayData.date === currentDate)
         ? window.currentDayData
@@ -1227,7 +1258,6 @@ function setHobbySubTab(type) {
       let next = curr === idx ? idx - 1 : idx;
       dayData[key] = next;
 
-      // 상단 사과 직접 탭 시 식단 체크박스 및 데이터 완벽 양방향 연동
       if (key === 'acvCount') {
         const isAcv1 = next >= 1;
         const isAcv2 = next >= 2;
