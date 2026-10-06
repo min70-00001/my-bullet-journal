@@ -3538,21 +3538,37 @@ function renderAnniversaries() {
     }
 
     function openBookModal() {
-      const title = prompt("책 제목을 입력해주세요:");
-      if (!title) return;
-      const author = prompt("저자 이름:");
-      const category = prompt("카테고리 (소설·문학 / 에세이·시 / 인문·철학 / 과학·기술 / 경제·경영 / 자기계발 / 예술·취미):", "소설·문학");
-      const startDate = prompt("독서 시작일 (YYYY-MM-DD):", currentDate);
-      const endDate = prompt("완독일 (읽는 중이면 엔터):", "");
-      const rating = prompt("별점 (예: ⭐⭐⭐⭐⭐):", "⭐⭐⭐⭐⭐");
-      const review = prompt("한 줄 서평 또는 인상 깊은 문장:");
-      
-      const newBook = { title, author, category, startDate, endDate, rating, review, createdAt: Date.now() };
-      const books = JSON.parse(localStorage.getItem('mingle_bookshelf') || '[]');
-      books.unshift(newBook);
-      localStorage.setItem('mingle_bookshelf', JSON.stringify(books));
-      renderBookShelf();
-      if (db) db.collection('bookshelf').add(newBook).catch(console.error);
+      const modal = document.getElementById('bookDetailModal');
+      if (!modal) return;
+
+      document.getElementById('bookEditId').value = '';
+      document.getElementById('bookModalTitle').innerHTML = '<span>📚</span> 도서 신규 등록';
+      document.getElementById('bookSearchSection')?.classList.remove('hidden');
+      document.getElementById('bookModalDeleteBtn')?.classList.add('hidden');
+      document.getElementById('bookHistorySection')?.classList.add('hidden');
+
+      document.getElementById('bookInputTitle').value = '';
+      document.getElementById('bookInputAuthor').value = '';
+      document.getElementById('bookInputTotalPage').value = '';
+      document.getElementById('bookCoverUrl').value = '';
+
+      const coverImg = document.getElementById('bookPreviewCover');
+      const icon = document.getElementById('bookPreviewIcon');
+      const text = document.getElementById('bookPreviewText');
+      if (coverImg) {
+        coverImg.src = '';
+        coverImg.classList.add('hidden');
+      }
+      if (icon) icon.classList.remove('hidden');
+      if (text) text.classList.remove('hidden');
+
+      if (document.getElementById('bookInputStatus')) document.getElementById('bookInputStatus').value = 'reading';
+      if (document.getElementById('bookInputStartDate')) document.getElementById('bookInputStartDate').value = (typeof currentDate !== 'undefined' ? currentDate : '');
+      if (document.getElementById('bookInputEndDate')) document.getElementById('bookInputEndDate').value = '';
+      if (document.getElementById('bookInputReview')) document.getElementById('bookInputReview').value = '';
+      if (document.getElementById('bookInputRating')) document.getElementById('bookInputRating').value = '5';
+
+      modal.classList.remove('hidden');
     }
 
     function renderKnittingShowroom() {
