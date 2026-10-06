@@ -4698,6 +4698,7 @@ function getBooksMaster() {
   return JSON.parse(localStorage.getItem('mingle_books_data') || '[]');
 }
 
+async function searchGoogleBooks() {
  const inputEl = document.getElementById('bookSearchKeyword');
   const query = inputEl ? inputEl.value.trim() : '';
   const container = document.getElementById('bookSearchResults');
