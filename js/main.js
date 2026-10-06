@@ -5534,7 +5534,14 @@ function renderSelectedDayExpenses() {
 
   if (labelEl) {
     const parts = targetDate.split('-');
-    labelEl.innerText = `${parseInt(parts[1], 10)}월 ${parseInt(parts[2], 10)}일`;
+    labelEl.innerHTML = `
+      <div class="flex items-center justify-between w-full">
+        <span>${parseInt(parts[1], 10)}월 ${parseInt(parts[2], 10)}일 지출</span>
+        <button type="button" onclick="openAddAccountBookExpenseModal('${targetDate}')" class="text-[11px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/70 px-2 py-0.5 rounded-lg transition shadow-2xs">
+          + 지출 추가
+        </button>
+      </div>
+    `;
   }
 
   let dayData = {};
@@ -5542,32 +5549,331 @@ function renderSelectedDayExpenses() {
     dayData = JSON.parse(localStorage.getItem('mingle_day_' + targetDate) || '{}');
   } catch(e) {}
 
-  const expenses = dayData.expenses || [];
+  const expenses = Array.isArray(dayData.expenses) ? dayData.expenses : [];
   listEl.innerHTML = '';
   let sum = 0;
 
   if (expenses.length === 0) {
-    listEl.innerHTML = '<p class="text-[11px] text-stone-300 italic text-center py-2">지출 내역이 없습니다 ✨</p>';
+    listEl.innerHTML = '<p class="text-[11px] text-stone-300 italic text-center py-3">지출 내역이 없습니다 ✨</p>';
   } else {
     expenses.forEach((item, idx) => {
       const amt = Number(item.amount) || 0;
       sum += amt;
+
       const row = document.createElement('div');
-      row.className = 'flex items-center justify-between bg-stone-50 border border-stone-150 rounded-xl px-2.5 py-1.5 text-xs text-stone-700';
+      row.className = 'flex items-center justify-between bg-stone-50 border border-stone-150 rounded-xl px-2.5 py-1.5 hover:bg-stone-100/70 cursor-pointer transition text-xs';
+      row.onclick = () => openEditAccountBookExpenseModal(targetDate, idx);
+
+      const rawCat = item.category || item.subCategory || '';
+      const displaySubCat = rawCat.includes('/') ? rawCat.split('/').pop().trim() : (rawCat || '기타');
+
       row.innerHTML = `
-        <div class="flex items-center gap-1.5 min-w-0">
+        <div class="flex items-center gap-1.5 min-w-0 flex-1">
           <span class="font-mono text-[10px] text-stone-400 shrink-0">${item.time || '--:--'}</span>
-          <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-medium shrink-0">${item.mainCat}/${item.subCat}</span>
-          <span class="truncate font-medium text-stone-800">${item.title || '지출'}</span>
-          <span class="text-[10px] text-stone-400 shrink-0">(${item.payMethod || '카드'})</span>
+          <span class="px-1.5 py-0.5 rounded bg-amber-100/60 text-amber-800 text-[10px] font-medium border border-amber-200/50 shrink-0">${displaySubCat}</span>
+          <span class="truncate font-medium text-stone-800">${item.title || item.memo || '지출'}</span>
+          <span class="text-[10px] text-stone-400 shrink-0">(${item.payMethod || item.payment || '카드'})</span>
         </div>
-        <span class="font-mono font-bold text-stone-900 shrink-0 ml-2">${amt.toLocaleString()}원</span>
+        <div class="flex items-center gap-1.5 shrink-0 ml-2">
+          <span class="font-mono font-bold text-stone-900">-${amt.toLocaleString()}원</span>
+          <button type="button" onclick="event.stopPropagation(); deleteAccountBookExpenseEntry('${targetDate}', ${idx})" class="text-stone-300 hover:text-rose-500 font-bold px-1 text-sm leading-none" title="삭제">&times;</button>
+        </div>
       `;
       listEl.appendChild(row);
     });
   }
 
   if (totalEl) totalEl.innerText = `${sum.toLocaleString()}원`;
+}
+
+// ➕ [가계부 서랍] 지출 추가 모달
+function openAddAccountBookExpenseModal(defaultDate) {
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : {};
+  const payMethods = typeof getStoredPayMethods === 'function' ? getStoredPayMethods() : ['현금', '카드', '계좌이체', '간편결제'];
+
+  let subCatList = [];
+  Object.keys(cats).forEach(k => {
+    (cats[k] || []).forEach(s => {
+      if (!subCatList.includes(s)) subCatList.push(s);
+    });
+  });
+  if (subCatList.length === 0) subCatList = ['식재료', '외식', '카페·간식', '쇼핑', '대중교통', '생활', '기타지출'];
+
+  const now = new Date();
+  const curTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  let modalEl = document.getElementById('modalAbExpenseAdd');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'modalAbExpenseAdd';
+    document.body.appendChild(modalEl);
+  }
+
+  modalEl.className = 'fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4';
+  modalEl.innerHTML = `
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full space-y-3.5 shadow-xl border border-stone-200">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+          <span>➕</span> 가계부 지출 추가
+        </h3>
+        <button type="button" onclick="document.getElementById('modalAbExpenseAdd').remove()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
+      </div>
+
+      <div class="space-y-2.5 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">날짜</label>
+            <input type="date" id="addAbExpDate" value="${defaultDate}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs">
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">시간</label>
+            <input type="text" id="addAbExpTime" value="${curTime}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono text-xs">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[10px] text-stone-500 font-medium block mb-1">카테고리 (소분류)</label>
+          <select id="addAbExpCat" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
+            ${subCatList.map(s => `<option value="${s}">${s}</option>`).join('')}
+          </select>
+        </div>
+
+        <div>
+          <label class="text-[10px] text-stone-500 font-medium block mb-1">지출 내용</label>
+          <input type="text" id="addAbExpTitle" placeholder="예: 맛있는 점심" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">결제수단</label>
+            <select id="addAbExpPay" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
+              ${payMethods.map(m => `<option value="${m}">${m}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">금액 (원)</label>
+            <input type="number" id="addAbExpAmt" placeholder="0" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono font-bold text-xs">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-1.5">
+        <button type="button" onclick="document.getElementById('modalAbExpenseAdd').remove()" class="flex-1 py-1.5 bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200 font-medium text-xs">취소</button>
+        <button type="button" onclick="saveNewAccountBookExpense()" class="flex-1 py-1.5 bg-stone-800 text-white rounded-xl hover:bg-stone-900 font-bold text-xs shadow-sm">추가하기</button>
+      </div>
+    </div>
+  `;
+
+  // 💡 가계부 추가 모달에서도 시간 칸 누르면 즉시 공란 처리!
+  const timeInp = document.getElementById('addAbExpTime');
+  if (timeInp) timeInp.onfocus = function() { this.value = ''; };
+}
+
+// 💾 [가계부 서랍] 신규 지출 저장
+function saveNewAccountBookExpense() {
+  const dateVal = document.getElementById('addAbExpDate').value;
+  const timeVal = document.getElementById('addAbExpTime').value.trim() || '12:00';
+  const catVal = document.getElementById('addAbExpCat').value;
+  const titleVal = document.getElementById('addAbExpTitle').value.trim();
+  const payVal = document.getElementById('addAbExpPay').value;
+  const amtVal = parseFloat(document.getElementById('addAbExpAmt').value) || 0;
+
+  if (!dateVal) { alert('날짜를 입력해주세요.'); return; }
+  if (amtVal <= 0) { alert('금액을 입력해주세요.'); return; }
+
+  let dayData = {};
+  try {
+    dayData = JSON.parse(localStorage.getItem('mingle_day_' + dateVal) || '{}');
+  } catch(e) {}
+  if (!Array.isArray(dayData.expenses)) dayData.expenses = [];
+
+  dayData.expenses.push({
+    id: Date.now(),
+    date: dateVal,
+    time: timeVal,
+    category: catVal,
+    subCategory: catVal,
+    title: titleVal || catVal,
+    memo: titleVal || catVal,
+    payMethod: payVal,
+    payment: payVal,
+    amount: amtVal
+  });
+
+  if (typeof saveDayDataLocal === 'function') saveDayDataLocal(dateVal, dayData);
+  if (typeof syncDayDataToFirebase === 'function') syncDayDataToFirebase(dateVal, dayData);
+
+  document.getElementById('modalAbExpenseAdd')?.remove();
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+}
+
+// ✏️ [가계부 서랍] 지출 수정 모달 (날짜/시간/소분류 변경 가능)
+function openEditAccountBookExpenseModal(dateStr, idx) {
+  let dayData = {};
+  try {
+    dayData = JSON.parse(localStorage.getItem('mingle_day_' + dateStr) || '{}');
+  } catch(e) {}
+  const list = Array.isArray(dayData.expenses) ? dayData.expenses : [];
+  const item = list[idx];
+  if (!item) return;
+
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : {};
+  const payMethods = typeof getStoredPayMethods === 'function' ? getStoredPayMethods() : ['현금', '카드', '계좌이체', '간편결제'];
+
+  let subCatList = [];
+  Object.keys(cats).forEach(k => {
+    (cats[k] || []).forEach(s => {
+      if (!subCatList.includes(s)) subCatList.push(s);
+    });
+  });
+  if (subCatList.length === 0) subCatList = ['식재료', '외식', '카페·간식', '쇼핑', '대중교통', '생활', '기타지출'];
+
+  const rawCat = item.category || item.subCategory || '';
+  const currentSub = rawCat.includes('/') ? rawCat.split('/').pop().trim() : rawCat;
+
+  let modalEl = document.getElementById('modalAbExpenseEdit');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'modalAbExpenseEdit';
+    document.body.appendChild(modalEl);
+  }
+
+  modalEl.className = 'fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4';
+  modalEl.innerHTML = `
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full space-y-3.5 shadow-xl border border-stone-200">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+          <span>✏️</span> 지출 내역 수정
+        </h3>
+        <button type="button" onclick="document.getElementById('modalAbExpenseEdit').remove()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
+      </div>
+
+      <div class="space-y-2.5 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">날짜</label>
+            <input type="date" id="editAbExpDate" value="${item.date || dateStr}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs">
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">시간</label>
+            <input type="text" id="editAbExpTime" value="${item.time || ''}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono text-xs">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[10px] text-stone-500 font-medium block mb-1">카테고리 (소분류)</label>
+          <select id="editAbExpCat" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
+            ${subCatList.map(s => `<option value="${s}" ${s === currentSub ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </div>
+
+        <div>
+          <label class="text-[10px] text-stone-500 font-medium block mb-1">지출 내용</label>
+          <input type="text" id="editAbExpTitle" value="${item.title || item.memo || ''}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">결제수단</label>
+            <select id="editAbExpPay" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
+              ${payMethods.map(m => `<option value="${m}" ${m === (item.payMethod \vert{}\vert{} item.payment) ? 'selected' : ''}>${m}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">금액 (원)</label>
+            <input type="number" id="editAbExpAmt" value="${item.amount || 0}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono font-bold text-xs">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-1.5">
+        <button type="button" onclick="document.getElementById('modalAbExpenseEdit').remove()" class="flex-1 py-1.5 bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200 font-medium text-xs">취소</button>
+        <button type="button" onclick="saveEditedAccountBookExpense('${dateStr}', ${idx})" class="flex-1 py-1.5 bg-stone-800 text-white rounded-xl hover:bg-stone-900 font-bold text-xs shadow-sm">수정 완료</button>
+      </div>
+    </div>
+  `;
+
+  const timeInp = document.getElementById('editAbExpTime');
+  if (timeInp) timeInp.onfocus = function() { this.value = ''; };
+}
+
+// 💾 [가계부 서랍] 지출 수정 저장 (날짜 이동까지 안전하게 처리)
+function saveEditedAccountBookExpense(oldDate, idx) {
+  let oldDayData = {};
+  try {
+    oldDayData = JSON.parse(localStorage.getItem('mingle_day_' + oldDate) || '{}');
+  } catch(e) {}
+  if (!Array.isArray(oldDayData.expenses) || !oldDayData.expenses[idx]) return;
+
+  const newDate = document.getElementById('editAbExpDate').value;
+  const newTime = document.getElementById('editAbExpTime').value.trim();
+  const newCat = document.getElementById('editAbExpCat').value;
+  const newTitle = document.getElementById('editAbExpTitle').value.trim();
+  const newPay = document.getElementById('editAbExpPay').value;
+  const newAmt = parseFloat(document.getElementById('editAbExpAmt').value) || 0;
+
+  if (newDate === oldDate) {
+    // 같은 날짜 내 수정
+    oldDayData.expenses[idx].time = newTime;
+    oldDayData.expenses[idx].category = newCat;
+    oldDayData.expenses[idx].subCategory = newCat;
+    oldDayData.expenses[idx].title = newTitle;
+    oldDayData.expenses[idx].memo = newTitle;
+    oldDayData.expenses[idx].payMethod = newPay;
+    oldDayData.expenses[idx].payment = newPay;
+    oldDayData.expenses[idx].amount = newAmt;
+
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(oldDate, oldDayData);
+    if (typeof syncDayDataToFirebase === 'function') syncDayDataToFirebase(oldDate, oldDayData);
+  } else {
+    // 날짜가 바뀐 경우: 이전 날짜에서 제거하고 새 날짜에 추가
+    const movedItem = oldDayData.expenses.splice(idx, 1)[0];
+    movedItem.date = newDate;
+    movedItem.time = newTime;
+    movedItem.category = newCat;
+    movedItem.subCategory = newCat;
+    movedItem.title = newTitle;
+    movedItem.memo = newTitle;
+    movedItem.payMethod = newPay;
+    movedItem.payment = newPay;
+    movedItem.amount = newAmt;
+
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(oldDate, oldDayData);
+    if (typeof syncDayDataToFirebase === 'function') syncDayDataToFirebase(oldDate, oldDayData);
+
+    let newDayData = {};
+    try {
+      newDayData = JSON.parse(localStorage.getItem('mingle_day_' + newDate) || '{}');
+    } catch(e) {}
+    if (!Array.isArray(newDayData.expenses)) newDayData.expenses = [];
+    newDayData.expenses.push(movedItem);
+
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(newDate, newDayData);
+    if (typeof syncDayDataToFirebase === 'function') syncDayDataToFirebase(newDate, newDayData);
+    window.abSelectedDate = newDate;
+  }
+
+  document.getElementById('modalAbExpenseEdit')?.remove();
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+}
+
+// 🗑️ [가계부 서랍] 지출 단건 삭제
+function deleteAccountBookExpenseEntry(dateStr, idx) {
+  if (!confirm('이 지출 내역을 삭제할까요?')) return;
+  let dayData = {};
+  try {
+    dayData = JSON.parse(localStorage.getItem('mingle_day_' + dateStr) || '{}');
+  } catch(e) {}
+  if (!Array.isArray(dayData.expenses)) return;
+
+  dayData.expenses.splice(idx, 1);
+  if (typeof saveDayDataLocal === 'function') saveDayDataLocal(dateStr, dayData);
+  if (typeof syncDayDataToFirebase === 'function') syncDayDataToFirebase(dateStr, dayData);
+
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
 }
 
 // 2. 월간 예산 렌더링
