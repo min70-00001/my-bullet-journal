@@ -4866,7 +4866,7 @@ function saveBookMaster() {
   }
 
   saveBooksMaster(books);
-  closeBookDetailModal();
+  document.getElementById('bookDetailModal')?.classList.add('hidden');
 }
 
 // 삭제 로직
@@ -6364,3 +6364,22 @@ if (origOpenDrawerBudget) {
     origOpenDrawerBudget();
   };
 }
+
+// ⚡ 하단 오늘 탭 누르면 진짜 오늘로 바로 점프!
+const origSwitchTabForToday = window.switchTab;
+window.switchTab = function(tab, subAction) {
+  if (tab === 'day') {
+    if (typeof jumpToRealToday === 'function') jumpToRealToday();
+  }
+  if (origSwitchTabForToday) origSwitchTabForToday(tab, subAction);
+};
+
+// ⚡ 도서 등록 시 완독일도 오늘 날짜 기본 세팅
+const origOpenBookModalForDates = window.openBookModal;
+window.openBookModal = function() {
+  if (origOpenBookModalForDates) origOpenBookModalForDates();
+  const endInp = document.getElementById('bookInputEndDate');
+  if (endInp && !endInp.value) {
+    endInp.value = typeof currentDate !== 'undefined' ? currentDate : '';
+  }
+};
