@@ -4694,57 +4694,52 @@ function confirmSaveBudgetSetting() {
 // 📚 구글 북스 API 검색 & 4단계 도서 책장 엔진
 // ==========================================
 
+// ==========================================
+// 📚 구글 북스 검색 & 4단계 도서 책장 엔진
+// ==========================================
+
 function getBooksMaster() {
   return JSON.parse(localStorage.getItem('mingle_books_data') || '[]');
 }
 
+function saveBooksMaster(data) {
+  localStorage.setItem('mingle_books_data', JSON.stringify(data));
+  if (typeof renderBookShelf === 'function') renderBookShelf();
+  if (typeof db !== 'undefined' && db) {
+    db.collection('drawer_book').doc('master').set({ books: data }).catch(console.error);
+  }
+}
+
+// 구글 북스 검색 (호출량 초과 대비 안전 처리 + 표지 링크 지원)
 async function searchGoogleBooks() {
- const inputEl = document.getElementById('bookSearchKeyword');
+  const inputEl = document.getElementById('bookSearchKeyword');
   const query = inputEl ? inputEl.value.trim() : '';
   const container = document.getElementById('bookSearchResults');
   if (!container || !query) return;
 
   container.classList.remove('hidden');
-  container.innerHTML = '<div class="p-2.5 text-center text-xs text-stone-400 animate-pulse">구글 도서관 뒤지는 중... 🔍</div>';
+  container.innerHTML = '<div class="p-2.5 text-center text-xs text-stone-400 animate-pulse">도서 검색 중... 🔍</div>';
 
   try {
-    // 1차: 일반 도서 검색
-    let url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=8&printType=books`;
+    let url = 'https://www.googleapis.com/books/v1/volumes?q=' + encodeURIComponent(query) + '&maxResults=8';
     let res = await fetch(url);
     let data = await res.json();
 
-    // 2차: 결과 없으면 intitle: 제목 정밀 재검색
-    if (!data.items || data.items.length === 0) {
-      url = `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(query)}&maxResults=8&printType=books`;
-      res = await fetch(url);
-      data = await res.json();
-    }
-
-    if (data.error) {
+    if (data.error || !data.items || data.items.length === 0) {
       container.innerHTML = `
-        <div class="p-2.5 text-center text-xs text-amber-700 bg-amber-50 rounded-xl space-y-1">
-          <p>구글 도서관 호출량이 일시적으로 초과되었어요 🥺</p>
-          <button type="button" onclick="document.getElementById('bookInputTitle').value = '${query.replace(/'/g, "\\'")}'; document.getElementById('bookSearchResults').classList.add('hidden');" class="text-[11px] font-bold text-emerald-800 underline">
-            👉 '${query}' 직접 입력으로 바로 채우기
-          </button>
+        <div class="p-3 text-center text-xs text-stone-600 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1.5">
+          <p class="font-bold text-amber-900">구글 도서관 호출이 원활하지 않아요 🥺</p>
+          <p class="text-[11px] text-stone-500">'${query}' 제목으로 바로 입력하고, 표지는 링크로 예쁘게 넣어보세요!</p>
+          <div class="flex gap-1.5 justify-center pt-1">
+            <button type="button" onclick="applyDirectBookTitle('${query.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-amber-200 text-amber-950 font-bold rounded-lg text-xs shadow-2xs">👉 제목 바로 적용</button>
+            <button type="button" onclick="promptCustomCoverUrl()" class="px-2.5 py-1 bg-white border border-amber-300 text-stone-700 font-bold rounded-lg text-xs shadow-2xs">🖼️ 표지 URL 넣기</button>
+          </div>
         </div>
       `;
       return;
     }
 
-    if (!data.items || data.items.length === 0) {
-      container.innerHTML = `
-        <div class="p-2.5 text-center text-xs text-stone-400 bg-stone-50 rounded-xl space-y-1">
-          <p>검색 결과가 없어요 😢</p>
-          <button type="button" onclick="document.getElementById('bookInputTitle').value = '${query.replace(/'/g, "\\'")}'; document.getElementById('bookSearchResults').classList.add('hidden');" class="text-[11px] font-bold text-amber-800 underline">
-            👉 '${query}' 직접 등록하기
-          </button>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = data.items.map(item => {
+    container.innerHTML = data.items.map(function(item) {
       const info = item.volumeInfo || {};
       const title = (info.title || '제목 없음').replace(/"/g, '&quot;');
       const author = ((info.authors || []).join(', ') || info.publisher || '저자 미상').replace(/"/g, '&quot;');
@@ -4764,14 +4759,39 @@ async function searchGoogleBooks() {
   } catch (err) {
     console.error(err);
     container.innerHTML = `
-      <div class="p-2.5 text-center text-xs text-rose-500 bg-rose-50 rounded-xl space-y-1">
-        <p>도서 검색 중 네트워크 오류가 발생했어요.</p>
-        <button type="button" onclick="document.getElementById('bookInputTitle').value = '${query.replace(/'/g, "\\'") }'; document.getElementById('bookSearchResults').classList.add('hidden');" class="text-[11px] font-bold text-rose-800 underline">
-          👉 검색어('${query}')를 제목으로 직접 쓰기
-        </button>
+      <div class="p-3 text-center text-xs text-stone-600 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1.5">
+        <p class="font-bold text-amber-900">검색 결과를 불러오지 못했어요 😢</p>
+        <button type="button" onclick="applyDirectBookTitle('${query.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-amber-200 text-amber-950 font-bold rounded-lg text-xs shadow-2xs">👉 '${query}' 제목으로 쓰기</button>
       </div>
     `;
   }
+}
+
+// 직접 제목 넣기 & 표지 URL 등록 헬퍼
+function applyDirectBookTitle(title) {
+  const inp = document.getElementById('bookInputTitle');
+  if (inp) inp.value = title;
+  document.getElementById('bookSearchResults')?.classList.add('hidden');
+}
+
+function promptCustomCoverUrl() {
+  const url = prompt('원하는 책 표지 이미지 주소(URL)를 붙여넣어 주세요:\n(네이버/구글 이미지 검색에서 "이미지 주소 복사")');
+  if (!url || !url.trim()) return;
+  const cleanUrl = url.trim();
+  const coverUrlInput = document.getElementById('bookCoverUrl');
+  if (coverUrlInput) coverUrlInput.value = cleanUrl;
+
+  const coverImg = document.getElementById('bookPreviewCover');
+  const icon = document.getElementById('bookPreviewIcon');
+  const text = document.getElementById('bookPreviewText');
+
+  if (coverImg) {
+    coverImg.src = cleanUrl;
+    coverImg.classList.remove('hidden');
+  }
+  if (icon) icon.classList.add('hidden');
+  if (text) text.classList.add('hidden');
+  document.getElementById('bookSearchResults')?.classList.add('hidden');
 }
 
 function selectGoogleBook(title, author, cover, pageCount) {
@@ -4779,7 +4799,7 @@ function selectGoogleBook(title, author, cover, pageCount) {
   document.getElementById('bookInputAuthor').value = author;
   document.getElementById('bookInputTotalPage').value = pageCount || '';
   document.getElementById('bookCoverUrl').value = cover;
-  
+
   const coverImg = document.getElementById('bookPreviewCover');
   const icon = document.getElementById('bookPreviewIcon');
   const text = document.getElementById('bookPreviewText');
@@ -4790,125 +4810,33 @@ function selectGoogleBook(title, author, cover, pageCount) {
     if (icon) icon.classList.add('hidden');
     if (text) text.classList.add('hidden');
   }
-  document.getElementById('bookSearchResults').classList.add('hidden');
+  document.getElementById('bookSearchResults')?.classList.add('hidden');
 }
 
-// 모달 열기 (신규 등록)
-function openBookModal() {
-  document.getElementById('bookEditId').value = '';
-  document.getElementById('bookModalTitle').innerHTML = '<span>📚</span> 도서 신규 등록';
-  document.getElementById('bookSearchSection').classList.remove('hidden');
-  document.getElementById('bookModalDeleteBtn').classList.add('hidden');
-  document.getElementById('bookHistorySection').classList.add('hidden');
-
-  document.getElementById('bookInputTitle').value = '';
-  document.getElementById('bookInputAuthor').value = '';
-  document.getElementById('bookInputTotalPage').value = '';
-  document.getElementById('bookCoverUrl').value = '';
-
-  // 기본 표지 박스로 초기화
-  const coverImg = document.getElementById('bookPreviewCover');
-  const icon = document.getElementById('bookPreviewIcon');
-  const text = document.getElementById('bookPreviewText');
-  if (coverImg) {
-    coverImg.src = '';
-    coverImg.classList.add('hidden');
-  }
-  if (icon) icon.classList.remove('hidden');
-  if (text) text.classList.remove('hidden');
-
-  document.getElementById('bookInputStatus').value = 'reading';
-  document.getElementById('bookInputStartDate').value = typeof currentDate !== 'undefined' ? currentDate : '';
-  document.getElementById('bookInputEndDate').value = '';
-  document.getElementById('bookInputReview').value = '';
-  document.getElementById('bookInputRating').value = '5';
-
-  document.getElementById('bookDetailModal').classList.remove('hidden');
-}
-
-// 모달 열기 (기존 도서 상세/수정)
-function openBookEditModal(id) {
-  const books = getBooksMaster();
-  const book = books.find(b => b.id === id);
-  if (!book) return;
-
-  document.getElementById('bookEditId').value = book.id;
-  document.getElementById('bookModalTitle').innerHTML = '<span>📖</span> 도서 상세 및 수정';
-  document.getElementById('bookSearchSection').classList.add('hidden');
-  document.getElementById('bookModalDeleteBtn').classList.remove('hidden');
-
-  document.getElementById('bookInputTitle').value = book.title;
-  document.getElementById('bookInputAuthor').value = book.author;
-  document.getElementById('bookInputTotalPage').value = book.totalPage || '';
-  document.getElementById('bookCoverUrl').value = book.cover || '';
-  const coverImg = document.getElementById('bookPreviewCover');
-  const icon = document.getElementById('bookPreviewIcon');
-  const text = document.getElementById('bookPreviewText');
-  if (book.cover && !book.cover.includes('placeholder')) {
-    coverImg.src = book.cover;
-    coverImg.classList.remove('hidden');
-    if (icon) icon.classList.add('hidden');
-    if (text) text.classList.add('hidden');
-  } else {
-    coverImg.classList.add('hidden');
-    if (icon) icon.classList.remove('hidden');
-    if (text) text.classList.remove('hidden');
-  }
-
-  document.getElementById('bookInputStatus').value = book.status || 'reading';
-  document.getElementById('bookInputStartDate').value = book.startDate || '';
-  document.getElementById('bookInputEndDate').value = book.endDate || '';
-  document.getElementById('bookInputReview').value = book.review || '';
-  document.getElementById('bookInputRating').value = book.rating || '5';
-
-  // 독서 히스토리 렌더링
-  const historySec = document.getElementById('bookHistorySection');
-  const historyList = document.getElementById('bookHistoryList');
-  if (book.history && book.history.length > 0) {
-    historySec.classList.remove('hidden');
-    historyList.innerHTML = book.history.map(h => `
-      <div class="flex justify-between items-center py-0.5 border-b border-stone-200/50">
-        <span>📅 ${h.date}</span>
-        <span class="font-mono font-bold text-emerald-800">${h.startPage}p ~ ${h.endPage}p (${h.pagesRead}쪽)</span>
-        <span class="text-stone-400 font-mono">${h.duration || ''}</span>
-      </div>
-    `).join('');
-  } else {
-    historySec.classList.remove('hidden');
-    historyList.innerHTML = '<div class="text-stone-400 text-center py-1">아직 기록된 일일 독서로그가 없어요.</div>';
-  }
-
-  document.getElementById('bookDetailModal').classList.remove('hidden');
-}
-
-function closeBookDetailModal() {
-  document.getElementById('bookDetailModal').classList.add('hidden');
-}
-
-// 저장 로직
+// 도서 저장 로직
 function saveBookMaster() {
-  const title = document.getElementById('bookInputTitle').value.trim();
+  const title = document.getElementById('bookInputTitle')?.value.trim();
   if (!title) {
     alert('도서명을 입력해주세요!');
     return;
   }
 
   const books = getBooksMaster();
-  const editId = document.getElementById('bookEditId').value;
+  const editId = document.getElementById('bookEditId')?.value;
   const bookData = {
     title,
-    author: document.getElementById('bookInputAuthor').value.trim(),
-    totalPage: parseInt(document.getElementById('bookInputTotalPage').value) || 0,
-    cover: document.getElementById('bookCoverUrl').value,
-    status: document.getElementById('bookInputStatus').value,
-    startDate: document.getElementById('bookInputStartDate').value,
-    endDate: document.getElementById('bookInputEndDate').value,
-    rating: document.getElementById('bookInputRating').value,
-    review: document.getElementById('bookInputReview').value.trim()
+    author: document.getElementById('bookInputAuthor')?.value.trim() || '저자 미상',
+    totalPage: parseInt(document.getElementById('bookInputTotalPage')?.value, 10) || 0,
+    cover: document.getElementById('bookCoverUrl')?.value || '',
+    status: document.getElementById('bookInputStatus')?.value || 'reading',
+    startDate: document.getElementById('bookInputStartDate')?.value || '',
+    endDate: document.getElementById('bookInputEndDate')?.value || '',
+    rating: document.getElementById('bookInputRating')?.value || '5',
+    review: document.getElementById('bookInputReview')?.value.trim() || ''
   };
 
   if (editId) {
-    const idx = books.findIndex(b => b.id == editId);
+    const idx = books.findIndex(b => String(b.id) === String(editId));
     if (idx !== -1) {
       books[idx] = { ...books[idx], ...bookData };
     }
