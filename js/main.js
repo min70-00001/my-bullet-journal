@@ -5534,13 +5534,15 @@ function renderSelectedDayExpenses() {
 
   if (labelEl) {
     const parts = targetDate.split('-');
-    labelEl.innerHTML = `
-      <div class="flex items-center justify-between w-full">
-        <span>${parseInt(parts[1], 10)}월 ${parseInt(parts[2], 10)}일 지출</span>
-        <button type="button" onclick="openAddAccountBookExpenseModal('${targetDate}')" class="text-[11px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/70 px-2 py-0.5 rounded-lg transition shadow-2xs">
-          + 지출 추가
-        </button>
-      </div>
+    labelEl.innerText = `${parseInt(parts[1], 10)}월 ${parseInt(parts[2], 10)}일 지출`;
+  }
+
+  // 💡 기존 우측 총액 자리에 시원하고 예쁜 '+ 지출 추가' 버튼 배치!
+  if (totalEl) {
+    totalEl.innerHTML = `
+      <button type="button" onclick="openAddAccountBookExpenseModal('${targetDate}')" class="text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 px-2.5 py-1 rounded-xl transition shadow-2xs flex items-center gap-1">
+        <span>➕</span> 지출 추가
+      </button>
     `;
   }
 
@@ -5581,23 +5583,25 @@ function renderSelectedDayExpenses() {
       `;
       listEl.appendChild(row);
     });
-  }
 
-  if (totalEl) totalEl.innerText = `${sum.toLocaleString()}원`;
+    // 💡 목록 맨 아래에 깔끔하게 들어가는 일별 지출 합계 줄!
+    const totalRow = document.createElement('div');
+    totalRow.className = 'flex items-center justify-between pt-2 border-t border-dashed border-stone-200 text-xs px-1 text-stone-500 font-medium';
+    totalRow.innerHTML = `
+      <span>일별 합계</span>
+      <span class="font-mono font-bold text-stone-900 text-sm">-${sum.toLocaleString()}원</span>
+    `;
+    listEl.appendChild(totalRow);
+  }
 }
 
-// ➕ [가계부 서랍] 지출 추가 모달
+// ➕ [가계부 서랍] 지출 추가 모달 (대분류-소분류 동적 연동)
 function openAddAccountBookExpenseModal(defaultDate) {
-  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : {};
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
+  const mainCats = Object.keys(cats);
+  const defaultMain = mainCats[0] || '식비';
+  const defaultSubs = cats[defaultMain] || ['식재료'];
   const payMethods = typeof getStoredPayMethods === 'function' ? getStoredPayMethods() : ['현금', '카드', '계좌이체', '간편결제'];
-
-  let subCatList = [];
-  Object.keys(cats).forEach(k => {
-    (cats[k] || []).forEach(s => {
-      if (!subCatList.includes(s)) subCatList.push(s);
-    });
-  });
-  if (subCatList.length === 0) subCatList = ['식재료', '외식', '카페·간식', '쇼핑', '대중교통', '생활', '기타지출'];
 
   const now = new Date();
   const curTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -5631,11 +5635,19 @@ function openAddAccountBookExpenseModal(defaultDate) {
           </div>
         </div>
 
-        <div>
-          <label class="text-[10px] text-stone-500 font-medium block mb-1">카테고리 (소분류)</label>
-          <select id="addAbExpCat" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
-            ${subCatList.map(s => `<option value="${s}">${s}</option>`).join('')}
-          </select>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">대분류</label>
+            <select id="addAbExpMainCat" onchange="onAbAddMainCatChange()" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs font-medium">
+              ${mainCats.map(m => `<option value="${m}">${m}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">소분류</label>
+            <select id="addAbExpSubCat" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs font-medium">
+              ${defaultSubs.map(s => `<option value="${s}">${s}</option>`).join('')}
+            </select>
+          </div>
         </div>
 
         <div>
@@ -5664,16 +5676,25 @@ function openAddAccountBookExpenseModal(defaultDate) {
     </div>
   `;
 
-  // 💡 가계부 추가 모달에서도 시간 칸 누르면 즉시 공란 처리!
   const timeInp = document.getElementById('addAbExpTime');
   if (timeInp) timeInp.onfocus = function() { this.value = ''; };
+}
+
+// 🔄 가계부 추가 모달 대분류 변경 시 소분류 셀렉트 갱신
+function onAbAddMainCatChange() {
+  const mainVal = document.getElementById('addAbExpMainCat').value;
+  const subSelect = document.getElementById('addAbExpSubCat');
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
+  const subs = cats[mainVal] || ['기타'];
+  subSelect.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
 }
 
 // 💾 [가계부 서랍] 신규 지출 저장
 function saveNewAccountBookExpense() {
   const dateVal = document.getElementById('addAbExpDate').value;
   const timeVal = document.getElementById('addAbExpTime').value.trim() || '12:00';
-  const catVal = document.getElementById('addAbExpCat').value;
+  const mainCat = document.getElementById('addAbExpMainCat').value;
+  const subCat = document.getElementById('addAbExpSubCat').value;
   const titleVal = document.getElementById('addAbExpTitle').value.trim();
   const payVal = document.getElementById('addAbExpPay').value;
   const amtVal = parseFloat(document.getElementById('addAbExpAmt').value) || 0;
@@ -5687,14 +5708,17 @@ function saveNewAccountBookExpense() {
   } catch(e) {}
   if (!Array.isArray(dayData.expenses)) dayData.expenses = [];
 
+  const fullCategory = `${mainCat}/${subCat}`;
+
   dayData.expenses.push({
     id: Date.now(),
     date: dateVal,
     time: timeVal,
-    category: catVal,
-    subCategory: catVal,
-    title: titleVal || catVal,
-    memo: titleVal || catVal,
+    mainCat: mainCat,
+    category: fullCategory,
+    subCategory: subCat,
+    title: titleVal || subCat,
+    memo: titleVal || subCat,
     payMethod: payVal,
     payment: payVal,
     amount: amtVal
@@ -5708,7 +5732,7 @@ function saveNewAccountBookExpense() {
   if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
 }
 
-// ✏️ [가계부 서랍] 지출 수정 모달 (날짜/시간/소분류 변경 가능)
+// ✏️ [가계부 서랍] 지출 수정 모달 (대분류-소분류 동적 연동)
 function openEditAccountBookExpenseModal(dateStr, idx) {
   let dayData = {};
   try {
@@ -5718,19 +5742,27 @@ function openEditAccountBookExpenseModal(dateStr, idx) {
   const item = list[idx];
   if (!item) return;
 
-  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : {};
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
+  const mainCats = Object.keys(cats);
   const payMethods = typeof getStoredPayMethods === 'function' ? getStoredPayMethods() : ['현금', '카드', '계좌이체', '간편결제'];
 
-  let subCatList = [];
-  Object.keys(cats).forEach(k => {
-    (cats[k] || []).forEach(s => {
-      if (!subCatList.includes(s)) subCatList.push(s);
-    });
-  });
-  if (subCatList.length === 0) subCatList = ['식재료', '외식', '카페·간식', '쇼핑', '대중교통', '생활', '기타지출'];
-
   const rawCat = item.category || item.subCategory || '';
-  const currentSub = rawCat.includes('/') ? rawCat.split('/').pop().trim() : rawCat;
+  let curMain = item.mainCat || '';
+  let curSub = '';
+
+  if (rawCat.includes('/')) {
+    const parts = rawCat.split('/');
+    if (!curMain) curMain = parts[0].trim();
+    curSub = parts[1].trim();
+  } else {
+    curSub = rawCat;
+    if (!curMain) {
+      curMain = mainCats.find(k => (cats[k] || []).includes(curSub)) || mainCats[0] || '식비';
+    }
+  }
+  if (!curMain) curMain = mainCats[0] || '식비';
+
+  const subOptions = cats[curMain] || [curSub || '기타'];
 
   let modalEl = document.getElementById('modalAbExpenseEdit');
   if (!modalEl) {
@@ -5761,11 +5793,19 @@ function openEditAccountBookExpenseModal(dateStr, idx) {
           </div>
         </div>
 
-        <div>
-          <label class="text-[10px] text-stone-500 font-medium block mb-1">카테고리 (소분류)</label>
-          <select id="editAbExpCat" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
-            ${subCatList.map(s => `<option value="${s}" ${s === currentSub ? 'selected' : ''}>${s}</option>`).join('')}
-          </select>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">대분류</label>
+            <select id="editAbExpMainCat" onchange="onAbEditMainCatChange()" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs font-medium">
+              ${mainCats.map(m => `<option value="${m}" ${m === curMain ? 'selected' : ''}>${m}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">소분류</label>
+            <select id="editAbExpSubCat" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs font-medium">
+              ${subOptions.map(s => `<option value="${s}" ${s === curSub ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>
         </div>
 
         <div>
@@ -5777,7 +5817,7 @@ function openEditAccountBookExpenseModal(dateStr, idx) {
           <div>
             <label class="text-[10px] text-stone-500 font-medium block mb-1">결제수단</label>
             <select id="editAbExpPay" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
-            ${payMethods.map(m => `<option value="${m}" ${m === (item.payMethod || item.payment) ? 'selected' : ''}>${m}</option>`).join('')}
+              ${payMethods.map(m => `<option value="${m}" ${m === (item.payMethod \vert{}\vert{} item.payment) ? 'selected' : ''}>${m}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -5798,7 +5838,16 @@ function openEditAccountBookExpenseModal(dateStr, idx) {
   if (timeInp) timeInp.onfocus = function() { this.value = ''; };
 }
 
-// 💾 [가계부 서랍] 지출 수정 저장 (날짜 이동까지 안전하게 처리)
+// 🔄 가계부 수정 모달 대분류 변경 시 소분류 셀렉트 갱신
+function onAbEditMainCatChange() {
+  const mainVal = document.getElementById('editAbExpMainCat').value;
+  const subSelect = document.getElementById('editAbExpSubCat');
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
+  const subs = cats[mainVal] || ['기타'];
+  subSelect.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
+}
+
+// 💾 [가계부 서랍] 지출 수정 저장 (대분류/소분류 통합 저장)
 function saveEditedAccountBookExpense(oldDate, idx) {
   let oldDayData = {};
   try {
@@ -5808,16 +5857,19 @@ function saveEditedAccountBookExpense(oldDate, idx) {
 
   const newDate = document.getElementById('editAbExpDate').value;
   const newTime = document.getElementById('editAbExpTime').value.trim();
-  const newCat = document.getElementById('editAbExpCat').value;
+  const mainCat = document.getElementById('editAbExpMainCat').value;
+  const subCat = document.getElementById('editAbExpSubCat').value;
   const newTitle = document.getElementById('editAbExpTitle').value.trim();
   const newPay = document.getElementById('editAbExpPay').value;
   const newAmt = parseFloat(document.getElementById('editAbExpAmt').value) || 0;
 
+  const fullCategory = `${mainCat}/${subCat}`;
+
   if (newDate === oldDate) {
-    // 같은 날짜 내 수정
     oldDayData.expenses[idx].time = newTime;
-    oldDayData.expenses[idx].category = newCat;
-    oldDayData.expenses[idx].subCategory = newCat;
+    oldDayData.expenses[idx].mainCat = mainCat;
+    oldDayData.expenses[idx].category = fullCategory;
+    oldDayData.expenses[idx].subCategory = subCat;
     oldDayData.expenses[idx].title = newTitle;
     oldDayData.expenses[idx].memo = newTitle;
     oldDayData.expenses[idx].payMethod = newPay;
@@ -5827,12 +5879,12 @@ function saveEditedAccountBookExpense(oldDate, idx) {
     if (typeof saveDayDataLocal === 'function') saveDayDataLocal(oldDate, oldDayData);
     if (typeof syncDayDataToFirebase === 'function') syncDayDataToFirebase(oldDate, oldDayData);
   } else {
-    // 날짜가 바뀐 경우: 이전 날짜에서 제거하고 새 날짜에 추가
     const movedItem = oldDayData.expenses.splice(idx, 1)[0];
     movedItem.date = newDate;
     movedItem.time = newTime;
-    movedItem.category = newCat;
-    movedItem.subCategory = newCat;
+    movedItem.mainCat = mainCat;
+    movedItem.category = fullCategory;
+    movedItem.subCategory = subCat;
     movedItem.title = newTitle;
     movedItem.memo = newTitle;
     movedItem.payMethod = newPay;
