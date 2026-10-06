@@ -5777,7 +5777,7 @@ function openEditAccountBookExpenseModal(dateStr, idx) {
           <div>
             <label class="text-[10px] text-stone-500 font-medium block mb-1">결제수단</label>
             <select id="editAbExpPay" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
-              ${payMethods.map(m => `<option value="${m}" ${m === (item.payMethod \vert{}\vert{} item.payment) ? 'selected' : ''}>${m}</option>`).join('')}
+            ${payMethods.map(m => `<option value="${m}" ${m === (item.payMethod || item.payment) ? 'selected' : ''}>${m}</option>`).join('')}
             </select>
           </div>
           <div>
