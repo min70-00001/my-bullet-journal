@@ -5534,16 +5534,12 @@ function renderSelectedDayExpenses() {
 
   if (labelEl) {
     const parts = targetDate.split('-');
-    labelEl.innerText = `${parseInt(parts[1], 10)}월 ${parseInt(parts[2], 10)}일 지출`;
+    labelEl.innerText = parseInt(parts[1], 10) + '월 ' + parseInt(parts[2], 10) + '일';
   }
 
-  // 💡 기존 우측 총액 자리에 시원하고 예쁜 '+ 지출 추가' 버튼 배치!
+  // 💡 심플한 '+ 지출 추가' 텍스트 버튼 배치
   if (totalEl) {
-    totalEl.innerHTML = `
-      <button type="button" onclick="openAddAccountBookExpenseModal('${targetDate}')" class="text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 px-2.5 py-1 rounded-xl transition shadow-2xs flex items-center gap-1">
-        <span>➕</span> 지출 추가
-      </button>
-    `;
+    totalEl.innerHTML = '<button type="button" onclick="openAddAccountBookExpenseModal(\'' + targetDate + '\')" class="text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 px-2.5 py-1 rounded-xl transition shadow-2xs">+ 지출 추가</button>';
   }
 
   let dayData = {};
@@ -5577,19 +5573,19 @@ function renderSelectedDayExpenses() {
           <span class="text-[10px] text-stone-400 shrink-0">(${item.payMethod || item.payment || '카드'})</span>
         </div>
         <div class="flex items-center gap-1.5 shrink-0 ml-2">
-          <span class="font-mono font-bold text-stone-900">-${amt.toLocaleString()}원</span>
+          <span class="font-mono font-bold text-stone-900">${amt.toLocaleString()}원</span>
           <button type="button" onclick="event.stopPropagation(); deleteAccountBookExpenseEntry('${targetDate}', ${idx})" class="text-stone-300 hover:text-rose-500 font-bold px-1 text-sm leading-none" title="삭제">&times;</button>
         </div>
       `;
       listEl.appendChild(row);
     });
 
-    // 💡 목록 맨 아래에 깔끔하게 들어가는 일별 지출 합계 줄!
+    // 💡 마이너스(-) 뺀 단정한 일별 합계 줄
     const totalRow = document.createElement('div');
     totalRow.className = 'flex items-center justify-between pt-2 border-t border-dashed border-stone-200 text-xs px-1 text-stone-500 font-medium';
     totalRow.innerHTML = `
       <span>일별 합계</span>
-      <span class="font-mono font-bold text-stone-900 text-sm">-${sum.toLocaleString()}원</span>
+      <span class="font-mono font-bold text-stone-900 text-sm">${sum.toLocaleString()}원</span>
     `;
     listEl.appendChild(totalRow);
   }
