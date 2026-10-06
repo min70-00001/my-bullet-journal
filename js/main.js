@@ -4992,6 +4992,11 @@ function setExpenseNowTime() {
   const hh = String(now.getHours()).padStart(2, '0');
   const mm = String(now.getMinutes()).padStart(2, '0');
   timeInput.value = `${hh}:${mm}`;
+
+  // 💡 클릭하거나 터치(포커스)하면 기존 시간 싹 비워서 편하게 입력 가능!
+  timeInput.onfocus = function() {
+    this.value = '';
+  };
 }
 
 // 대분류 변경 시 소분류 셀렉트박스 동적 업데이트
