@@ -5035,17 +5035,23 @@ function renderExpenseWidget() {
         totalSum += amt;
 
         const row = document.createElement('div');
-        row.className = 'flex items-center justify-between bg-white border border-stone-150 rounded-xl px-2.5 py-1.5 text-xs text-stone-700 shadow-2xs';
+        row.className = 'flex items-center justify-between bg-white border border-stone-150 rounded-xl px-2.5 py-1.5 shadow-2xs hover:bg-stone-50 cursor-pointer transition';
+        row.onclick = () => openEditTodayExpenseModal(idx);
+
+        // 카테고리에서 슬래시(/) 앞의 대분류 제거하고 소분류만 깔끔하게 추출
+        const rawCat = item.category || item.subCategory || '';
+        const displaySubCat = rawCat.includes('/') ? rawCat.split('/').pop().trim() : (rawCat || '기타');
+
         row.innerHTML = `
-          <div class="flex items-center gap-1.5 min-w-0">
+          <div class="flex items-center gap-1.5 min-w-0 flex-1">
             <span class="font-mono text-[10px] text-stone-400 shrink-0">${item.time || '--:--'}</span>
-            <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 text-[10px] font-medium border border-amber-200/50 shrink-0">${item.mainCat}/${item.subCat}</span>
-            <span class="truncate font-medium text-stone-800">${item.title || '지출'}</span>
-            <span class="text-[10px] text-stone-400 shrink-0">(${item.payMethod || '카드'})</span>
+            <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 text-[10px] font-medium border border-amber-200/50 shrink-0">${displaySubCat}</span>
+            <span class="truncate font-medium text-stone-800 text-xs">${item.title || item.memo || '지출'}</span>
+            <span class="text-[10px] text-stone-400 shrink-0">(${item.payMethod || item.payment || '카드'})</span>
           </div>
           <div class="flex items-center gap-1.5 shrink-0 ml-2">
-            <span class="font-mono font-semibold text-stone-900">${amt.toLocaleString()}원</span>
-            <button onclick="deleteExpenseEntry(${idx})" class="text-stone-300 hover:text-red-500 font-bold px-1 text-sm leading-none">×</button>
+            <span class="font-mono font-semibold text-stone-900 text-xs">${amt.toLocaleString()}원</span>
+            <button type="button" onclick="event.stopPropagation(); deleteExpenseEntry(${idx})" class="text-stone-300 hover:text-rose-500 font-bold px-1 text-sm leading-none" title="삭제">&times;</button>
           </div>
         `;
         container.appendChild(row);
@@ -5067,6 +5073,115 @@ function renderExpenseWidget() {
   } catch(err) {
     console.warn('renderExpenseWidget 에러 패스:', err);
   }
+}
+
+// ✏️ [오늘의 지출] 상세 수정 모달 (소분류 단독 표시)
+function openEditTodayExpenseModal(idx) {
+  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
+  let dayData = (window.currentDayData && window.currentDayData.date === curDate) ? window.currentDayData : {};
+  const list = Array.isArray(dayData.expenses) ? dayData.expenses : [];
+  const item = list[idx];
+  if (!item) return;
+
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : {};
+  const payMethods = typeof getStoredPayMethods === 'function' ? getStoredPayMethods() : ['현금', '카드', '계좌이체', '간편결제'];
+
+  // 대분류 없이 소분류만 모으기
+  let subCatList = [];
+  Object.keys(cats).forEach(k => {
+    (cats[k] || []).forEach(s => {
+      if (!subCatList.includes(s)) subCatList.push(s);
+    });
+  });
+  if (subCatList.length === 0) subCatList = ['식재료', '외식', '카페·간식', '쇼핑', '대중교통', '생활', '기타지출'];
+
+  const rawCat = item.category || item.subCategory || '';
+  const currentSub = rawCat.includes('/') ? rawCat.split('/').pop().trim() : rawCat;
+
+  let modalEl = document.getElementById('modalTodayExpenseEdit');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'modalTodayExpenseEdit';
+    document.body.appendChild(modalEl);
+  }
+
+  modalEl.className = 'fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4';
+  modalEl.innerHTML = `
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full space-y-3.5 shadow-xl border border-stone-200">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+          <span>✏️</span> 지출 내역 수정
+        </h3>
+        <button type="button" onclick="document.getElementById('modalTodayExpenseEdit').remove()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
+      </div>
+
+      <div class="space-y-2.5 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">시간</label>
+            <input type="text" id="editTodayExpTime" value="${item.time || ''}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono text-xs">
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">카테고리</label>
+            <select id="editTodayExpCat" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
+              ${subCatList.map(s => `<option value="${s}" ${s === currentSub ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[10px] text-stone-500 font-medium block mb-1">지출 내용</label>
+          <input type="text" id="editTodayExpTitle" value="${item.title || item.memo || ''}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">결제수단</label>
+            <select id="editTodayExpPay" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
+              ${payMethods.map(m => `<option value="${m}" ${m === (item.payMethod \vert{}\vert{} item.payment) ? 'selected' : ''}>${m}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">금액 (원)</label>
+            <input type="number" id="editTodayExpAmt" value="${item.amount || 0}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono font-bold text-xs">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-1.5">
+        <button type="button" onclick="document.getElementById('modalTodayExpenseEdit').remove()" class="flex-1 py-1.5 bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200 font-medium text-xs">취소</button>
+        <button type="button" onclick="saveEditedTodayExpense(${idx})" class="flex-1 py-1.5 bg-stone-800 text-white rounded-xl hover:bg-stone-900 font-bold text-xs shadow-sm">수정 완료</button>
+      </div>
+    </div>
+  `;
+}
+
+// 💾 오늘 지출 수정 내용 저장 & 동기화
+function saveEditedTodayExpense(idx) {
+  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
+  let dayData = (window.currentDayData && window.currentDayData.date === curDate) ? window.currentDayData : null;
+  if (!dayData || !Array.isArray(dayData.expenses) || !dayData.expenses[idx]) return;
+
+  const newTime = document.getElementById('editTodayExpTime').value.trim();
+  const newCat = document.getElementById('editTodayExpCat').value;
+  const newTitle = document.getElementById('editTodayExpTitle').value.trim();
+  const newPay = document.getElementById('editTodayExpPay').value;
+  const newAmt = parseFloat(document.getElementById('editTodayExpAmt').value) || 0;
+
+  dayData.expenses[idx].time = newTime;
+  dayData.expenses[idx].category = newCat;
+  dayData.expenses[idx].subCategory = newCat;
+  dayData.expenses[idx].title = newTitle;
+  dayData.expenses[idx].memo = newTitle;
+  dayData.expenses[idx].payMethod = newPay;
+  dayData.expenses[idx].payment = newPay;
+  dayData.expenses[idx].amount = newAmt;
+
+  if (typeof saveDayDataLocal === 'function') saveDayDataLocal(curDate, dayData);
+  if (typeof syncDayDataToFirebase === 'function') syncDayDataToFirebase(curDate, dayData);
+
+  document.getElementById('modalTodayExpenseEdit')?.remove();
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
 }
 
 // 지출 새 항목 추가
