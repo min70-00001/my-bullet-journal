@@ -888,10 +888,11 @@ function setHobbySubTab(type) {
       let clubItem = defs.evening.find(i => i.id === 'club_special');
       if (isClub) {
         if (!clubItem) {
-          defs.evening.push({ id: 'club_special', cat: '🧶 마무리', name: '달보드레(독서모임)', autoTime: true, autoCat: 'bookclub', paused: false });
+          defs.evening.push({ id: 'club_special', cat: '🧶 마무리', name: '달보드레(독서모임)', autoTime: false, autoCat: 'bookclub', paused: false });
           saveRoutineDefs(defs);
         } else {
           clubItem.paused = false;
+          clubItem.autoTime = false; // 💡 타임테이블 자동 등록 해제!
           saveRoutineDefs(defs);
         }
       } else {
