@@ -6414,3 +6414,4 @@ window.openBookModal = function() {
     }
   }
 })();
+}
