@@ -5638,8 +5638,8 @@ function openAddAccountBookExpenseModal(defaultDate) {
           <input type="date" id="addAbExpDate" value="${defaultDate}" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 focus:outline-stone-400 bg-white">
         </div>
         <div>
-          <label class="text-[10px] text-stone-500 font-medium block mb-1">시간 (숫자 4자리 자동완성)</label>
-          <input type="text" id="addAbExpTime" value="${curTime}" maxlength="5" placeholder="예: 1430" 
+          <label class="text-[10px] text-stone-500 font-medium block mb-1">시간</label>
+          <input type="text" id="addAbExpTime" value="${curTime}" maxlength="5" placeholder="12:00" 
                  oninput="handleTimeAutoFormat(this)"
                  class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 font-mono focus:outline-stone-400 bg-white">
         </div>
@@ -5686,7 +5686,7 @@ function openAddAccountBookExpenseModal(defaultDate) {
   `;
 }
 
-// ⚡ [스마트 시간 자동완성] 숫자 4자리 입력 시 00:00 형태로 자동 변환!
+// ⚡ 숫자 입력 시 00:00 자동 포맷팅
 function handleTimeAutoFormat(el) {
   let val = el.value.replace(/[^0-9]/g, '');
   if (val.length > 4) val = val.slice(0, 4);
@@ -5697,7 +5697,7 @@ function handleTimeAutoFormat(el) {
   }
 }
 
-// ⚡ [가계부 지출 저장] 빈틈없는 데이터 주입 및 클라우드 동기화
+// ⚡ [가계부 지출 저장] 날짜 정규화 + 모든 저장소 및 전역 데이터 즉시 반영
 function saveNewAccountBookExpense() {
   const dateInp = document.getElementById('addAbExpDate');
   const timeInp = document.getElementById('addAbExpTime');
@@ -5712,15 +5712,18 @@ function saveNewAccountBookExpense() {
     return;
   }
 
-  const expDate = dateInp && dateInp.value ? dateInp.value : (window.abSelectedDate || currentDate);
+  // 날짜 형식 통일 (YYYY-MM-DD)
+  let rawDate = dateInp && dateInp.value ? dateInp.value : (window.abSelectedDate || currentDate);
+  let expDate = rawDate.replace(/\./g, '-').replace(/\s+/g, '').replace(/-$/, '');
+  if (expDate.split('-').length === 3) {
+    const parts = expDate.split('-');
+    expDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+  }
+
   const now = new Date();
   const defaultTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   let expTime = timeInp && timeInp.value.trim() ? timeInp.value.trim() : defaultTime;
-
-  // 혹시 4자리 숫자로만 되어 있으면 00:00 형태로 보정
-  if (/^\d{4}$/.test(expTime)) {
-    expTime = expTime.slice(0, 2) + ':' + expTime.slice(2);
-  }
+  if (/^\d{4}$/.test(expTime)) expTime = expTime.slice(0, 2) + ':' + expTime.slice(2);
 
   const expTitle = titleInp && titleInp.value.trim() ? titleInp.value.trim() : '미기재 지출';
   const expAmt = Number(amtInp.value);
@@ -5728,7 +5731,6 @@ function saveNewAccountBookExpense() {
   const expSubCat = subCatInp ? subCatInp.value : '식재료';
   const expPay = payInp ? payInp.value : '카드';
 
-  // 새 지출 데이터 객체
   const newExpense = {
     id: 'exp_' + Date.now(),
     date: expDate,
@@ -5743,34 +5745,43 @@ function saveNewAccountBookExpense() {
     payMethod: expPay
   };
 
-  // 가능한 모든 가계부 배열에 안전하게 밀어넣기
-  if (Array.isArray(window.accountExpenses)) window.accountExpenses.unshift(newExpense);
+  // 1. 전역 배열 동기화
+  if (!window.accountExpenses) window.accountExpenses = [];
+  window.accountExpenses.unshift(newExpense);
   if (Array.isArray(window.abExpenses)) window.abExpenses.unshift(newExpense);
   if (Array.isArray(window.expenses)) window.expenses.unshift(newExpense);
 
-  // 로컬 스토리지 키들 전부 업데이트
-  try {
-    const list = window.accountExpenses || window.abExpenses || [newExpense];
-    localStorage.setItem('accountExpenses', JSON.stringify(list));
-    localStorage.setItem('abExpenses', JSON.stringify(list));
-    localStorage.setItem('expenses', JSON.stringify(list));
-
-    if (typeof autoSaveToCloud === 'function') autoSaveToCloud();
-    if (typeof syncDataToFirebase === 'function') syncDataToFirebase();
-  } catch (e) {
-    console.error('지출 저장 실패:', e);
+  // 2. 날짜별 객체 구조(expenses[date]) 지원
+  if (typeof expenses === 'object' && !Array.isArray(expenses) && expenses !== null) {
+    if (!expenses[expDate]) expenses[expDate] = [];
+    expenses[expDate].unshift(newExpense);
   }
 
-  // 모달 닫기
+  // 3. 로컬스토리지 저장
+  try {
+    localStorage.setItem('accountExpenses', JSON.stringify(window.accountExpenses));
+    if (window.abExpenses) localStorage.setItem('abExpenses', JSON.stringify(window.abExpenses));
+    if (window.expenses) localStorage.setItem('expenses', JSON.stringify(window.expenses));
+  } catch (e) {
+    console.error(e);
+  }
+
+  // 4. 클라우드 자동 저장 트리거
+  if (typeof autoSaveToCloud === 'function') autoSaveToCloud();
+  if (typeof saveExpensesToFirebase === 'function') saveExpensesToFirebase();
+  if (typeof syncDataToFirebase === 'function') syncDataToFirebase();
+
+  // 5. 모달 닫기
   const modal = document.getElementById('modalAbExpenseAdd');
   if (modal) modal.remove();
 
-  // 화면 즉시 리프레시
+  // 6. 화면 갱신
   if (typeof renderAccountCalendar === 'function') renderAccountCalendar();
   if (typeof renderSelectedDayExpenses === 'function') renderSelectedDayExpenses();
   if (typeof renderBudgetStatus === 'function') renderBudgetStatus();
   if (typeof renderDrawerLobby === 'function') renderDrawerLobby();
   if (typeof renderExpenses === 'function') renderExpenses();
+  if (typeof renderAccountBookView === 'function') renderAccountBookView();
 }
 
 // 🔄 가계부 추가 모달 대분류 변경 시 소분류 셀렉트 갱신
