@@ -6384,45 +6384,34 @@ window.openBookModal = function() {
   }
 };
 
-// ⚡ [1] 하단 '서랍' 탭 누르면 무조건 4칸 로비로 강제 복귀!
-document.addEventListener('DOMContentLoaded', () => {
-  setupDrawerTabShortcut();
-});
-// 혹시 이미 로드된 후라도 즉시 실행
-setTimeout(setupDrawerTabShortcut, 500);
-
-function setupDrawerTabShortcut() {
-  // 하단 탭 바에서 '서랍' 글자나 아이콘이 있는 버튼 찾기
-  const navBtns = document.querySelectorAll('nav button, footer button, .bottom-nav button, button');
-  navBtns.forEach(btn => {
-    if (btn.innerText && btn.innerText.includes('서랍')) {
-      btn.addEventListener('click', (e) => {
-        // 1. 기존에 등록된 모든 서랍 뒤로가기 함수들 일괄 실행
-        if (typeof backToDrawerLobby === 'function') backToDrawerLobby();
-        if (typeof closeDrawerDetail === 'function') closeDrawerDetail();
-        if (typeof closeDrawerSubView === 'function') closeDrawerSubView();
-        if (typeof renderDrawerLobby === 'function') renderDrawerLobby();
-
-        // 2. 가계부, 책장, 뜨개 등 열려있는 모든 상세 뷰 무조건 숨기기
-        const viewIds = [
-          'accountBookView', 'bookShelfView', 'knittingView', 'memoView',
-          'drawerDetailView', 'accountBookDetailView', 'bookshelfDetailView'
-        ];
-        viewIds.forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.classList.add('hidden');
-        });
-
-        // 3. 서랍 메인 4칸 로비 화면 무조건 활성화
-        const lobby = document.getElementById('drawerLobbyView') || 
-                      document.getElementById('drawersLobby') || 
-                      document.getElementById('drawerMainView') ||
-                      document.querySelector('[id*="drawer"][id*="Lobby"]');
-        if (lobby) lobby.classList.remove('hidden');
-      }, true); // 캡처링 모드로 최우선 가로채기
+// ⚡ 하단 탭 전환 시: 오늘 일일페이지 & 서랍 4칸 로비 무조건 강제 이동
+(function() {
+  const origSwitchTab = window.switchTab;
+  window.switchTab = function(tab, subAction) {
+    // 1. '오늘' 탭 누르면 진짜 오늘 날짜로 점프
+    if (tab === 'day') {
+      if (typeof jumpToRealToday === 'function') jumpToRealToday();
     }
-  });
-}
+
+    // 기존 탭 전환 실행
+    if (origSwitchTab) origSwitchTab(tab, subAction);
+
+    // 2. '서랍' 탭 누르면 무조건 4칸 로비(drawerHubGrid) 표시 & 안쪽 서랍 화면 숨김
+    if (tab === 'drawer') {
+      // 4칸 로비 허브 나타나게 하기
+      const hubGrid = document.getElementById('drawerHubGrid');
+      if (hubGrid) hubGrid.classList.remove('hidden');
+
+      // 들어가 있던 안쪽 서브 뷰들 싹 숨기기
+      const subContainers = document.querySelectorAll('#view-drawer > div:not(#drawerHubGrid)');
+      subContainers.forEach(el => el.classList.add('hidden'));
+
+      // 혹시 서랍 뒤로가기 함수가 있다면 안전하게 호출
+      if (typeof exitDrawerSub === 'function') exitDrawerSub();
+      if (typeof closeDrawerSubView === 'function') closeDrawerSubView();
+    }
+  };
+})();
 
 // ⚡ [2] 도서 등록 시 완독일도 현재 날짜 자동 세팅
 (function() {
