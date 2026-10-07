@@ -6384,35 +6384,48 @@ window.openBookModal = function() {
   }
 };
 
-// ⚡ 하단 탭 전환 시: 오늘 일일페이지 & 서랍 4칸 로비만 단독 노출!
+// ⚡ 하단 탭 전환 시: 오늘 일일페이지 & 서랍 4칸 로비 완벽 복귀
 (function() {
   const origSwitchTab = window.switchTab;
   window.switchTab = function(tab, subAction) {
+    // 1. '오늘' 탭 누르면 진짜 오늘 날짜로 점프
     if (tab === 'day') {
       if (typeof jumpToRealToday === 'function') jumpToRealToday();
     }
 
+    // 기존 탭 전환 실행
     if (origSwitchTab) origSwitchTab(tab, subAction);
 
+    // 2. '서랍' 탭 누르면 서브 화면 전부 강제 종료하고 로비 허브만 노출!
     if (tab === 'drawer') {
-      // 1. 기존 '서랍장으로 돌아가기' 버튼이 있으면 강제 클릭
-      const backBtn = document.querySelector('#view-drawer button[onclick*="Lobby"], #view-drawer button[onclick*="exit"], #view-drawer button[onclick*="close"], #view-drawer button[onclick*="drawerHub"]');
-      if (backBtn) {
-        backBtn.click();
-      }
+      // (1) 뒤로가기 함수가 있다면 강제 실행
+      if (typeof exitDrawerSub === 'function') exitDrawerSub();
+      if (typeof backToDrawerHub === 'function') backToDrawerHub();
+      if (typeof closeDrawerSub === 'function') closeDrawerSub();
 
-      // 2. 4칸 로비만 보이고 나머지 직계 자식(div, section 등) 전부 숨기기
+      // (2) 4개 서랍 서브 화면 ID 강제 숨김
+      ['budget', 'book', 'knit', 'note'].forEach(subKey => {
+        const el1 = document.getElementById('drawerSub-' + subKey);
+        const el2 = document.getElementById('drawer-' + subKey);
+        const el3 = document.getElementById('drawerSubView-' + subKey);
+        const el4 = document.getElementById('drawerDetail-' + subKey);
+        if (el1) el1.classList.add('hidden');
+        if (el2) el2.classList.add('hidden');
+        if (el3) el3.classList.add('hidden');
+        if (el4) el4.classList.add('hidden');
+      });
+
+      // (3) view-drawer 안쪽에서 drawerHubGrid가 아닌 모든 자식 숨기기
       const viewDrawer = document.getElementById('view-drawer');
       if (viewDrawer) {
         Array.from(viewDrawer.children).forEach(child => {
-          if (child.id === 'drawerHubGrid') {
-            child.classList.remove('hidden');
-          } else {
+          if (child.id !== 'drawerHubGrid') {
             child.classList.add('hidden');
           }
         });
       }
 
+      // (4) 4칸 로비 허브 격자 뷰만 시원하게 노출
       const hubGrid = document.getElementById('drawerHubGrid');
       if (hubGrid) hubGrid.classList.remove('hidden');
     }
