@@ -5631,61 +5631,124 @@ function openAddAccountBookExpenseModal(defaultDate) {
         <button type="button" onclick="document.getElementById('modalAbExpenseAdd').remove()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
       </div>
 
-      <div class="space-y-2.5 text-xs">
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">날짜</label>
-            <input type="date" id="addAbExpDate" value="${defaultDate}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs">
-          </div>
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">시간</label>
-            <input type="text" id="addAbExpTime" value="${curTime}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono text-xs">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">대분류</label>
-            <select id="addAbExpMainCat" onchange="onAbAddMainCatChange()" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs font-medium">
-              ${mainCats.map(m => `<option value="${m}">${m}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">소분류</label>
-            <select id="addAbExpSubCat" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs font-medium">
-              ${defaultSubs.map(s => `<option value="${s}">${s}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-
+    <div class="space-y-2.5 text-xs">
+      <div class="grid grid-cols-2 gap-2">
         <div>
-          <label class="text-[10px] text-stone-500 font-medium block mb-1">지출 내용</label>
-          <input type="text" id="addAbExpTitle" placeholder="예: 맛있는 점심" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs">
+          <label class="text-[10px] text-stone-500 font-medium block mb-1">날짜</label>
+          <input type="date" id="addAbExpDate" value="${defaultDate}" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 focus:outline-stone-400 bg-white">
         </div>
+        <div>
+          <label class="text-[10px] text-stone-500 font-medium block mb-1">시간</label>
+          <input type="time" id="addAbExpTime" value="${curTime}" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 font-mono focus:outline-stone-400 bg-white">
+        </div>
+      </div>
 
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">결제수단</label>
-            <select id="addAbExpPay" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
-              ${payMethods.map(m => `<option value="${m}">${m}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">금액 (원)</label>
-            <input type="number" id="addAbExpAmt" placeholder="0" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono font-bold text-xs">
-          </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[10px] text-stone-500 font-medium block mb-1">대분류</label>
+          <select id="addAbExpMainCat" onchange="onAbAddMainCatChange()" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 focus:outline-stone-400 bg-white">
+            ${mainCats.map(m => `<option value="${m}">${m}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] text-stone-500 font-medium block mb-1">소분류</label>
+          <select id="addAbExpSubCat" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 bg-white text-xs font-medium focus:outline-stone-400">
+            ${defaultSubs.map(s => `<option value="${s}">${s}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="text-[10px] text-stone-500 font-medium block mb-1">지출 내용</label>
+        <input type="text" id="addAbExpTitle" placeholder="예: 맛있는 점심" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 focus:outline-stone-400 bg-white">
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[10px] text-stone-500 font-medium block mb-1">결제수단</label>
+          <select id="addAbExpPay" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 bg-white text-xs focus:outline-stone-400">
+            ${payMethods.map(m => `<option value="${m}">${m}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] text-stone-500 font-medium block mb-1">금액 (원)</label>
+          <input type="number" id="addAbExpAmt" placeholder="0" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 font-mono focus:outline-stone-400 bg-white">
         </div>
       </div>
 
       <div class="flex gap-2 pt-1.5">
-        <button type="button" onclick="document.getElementById('modalAbExpenseAdd').remove()" class="flex-1 py-1.5 bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200 font-medium text-xs">취소</button>
-        <button type="button" onclick="saveNewAccountBookExpense()" class="flex-1 py-1.5 bg-stone-800 text-white rounded-xl hover:bg-stone-900 font-bold text-xs shadow-sm">추가하기</button>
+        <button type="button" onclick="document.getElementById('modalAbExpenseAdd').remove()" class="flex-1 py-1.5 bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200 font-medium transition">취소</button>
+        <button type="button" onclick="saveNewAccountBookExpense()" class="flex-1 py-1.5 bg-stone-800 text-white rounded-xl hover:bg-stone-900 font-medium shadow-sm transition">저장</button>
       </div>
     </div>
   `;
+}
 
+// ⚡ [가계부 지출 저장] 파이어베이스 클라우드 동기화 포함 완전체
+function saveNewAccountBookExpense() {
+  const dateInp = document.getElementById('addAbExpDate');
   const timeInp = document.getElementById('addAbExpTime');
-  if (timeInp) timeInp.onfocus = function() { this.value = ''; };
+  const titleInp = document.getElementById('addAbExpTitle');
+  const amtInp = document.getElementById('addAbExpAmt');
+  const mainCatInp = document.getElementById('addAbExpMainCat');
+  const subCatInp = document.getElementById('addAbExpSubCat');
+  const payInp = document.getElementById('addAbExpPay');
+
+  if (!amtInp || !amtInp.value || Number(amtInp.value) <= 0) {
+    alert('금액을 올바르게 입력해 주세요!');
+    return;
+  }
+
+  const expDate = dateInp ? dateInp.value : (window.abSelectedDate || currentDate);
+  const now = new Date();
+  const defaultTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const expTime = (timeInp && timeInp.value) ? timeInp.value : defaultTime;
+  const expTitle = (titleInp && titleInp.value.trim()) ? titleInp.value.trim() : '미기재 지출';
+  const expAmt = Number(amtInp.value);
+  const expMainCat = mainCatInp ? mainCatInp.value : '기타';
+  const expSubCat = subCatInp ? subCatInp.value : '기타';
+  const expPay = payInp ? payInp.value : '카드';
+
+  // 새 지출 데이터 객체 생성
+  const newExpense = {
+    id: 'exp_' + Date.now(),
+    date: expDate,
+    time: expTime,
+    memo: expTitle,
+    title: expTitle,
+    amount: expAmt,
+    mainCategory: expMainCat,
+    subCategory: expSubCat,
+    category: expSubCat,
+    paymentMethod: expPay,
+    payMethod: expPay
+  };
+
+  // 기존 가계부 지출 배열에 추가
+  if (!window.accountExpenses) window.accountExpenses = [];
+  window.accountExpenses.unshift(newExpense);
+
+  // 로컬 스토리지 및 파이어베이스 클라우드 완벽 동기화
+  try {
+    localStorage.setItem('accountExpenses', JSON.stringify(window.accountExpenses));
+    if (typeof autoSaveToCloud === 'function') {
+      autoSaveToCloud();
+    } else if (typeof syncDataToFirebase === 'function') {
+      syncDataToFirebase();
+    }
+  } catch (e) {
+    console.error('가계부 저장 중 오류:', e);
+  }
+
+  // 모달 닫기
+  const modal = document.getElementById('modalAbExpenseAdd');
+  if (modal) modal.remove();
+
+  // 화면 즉각 리렌더링
+  if (typeof renderAccountCalendar === 'function') renderAccountCalendar();
+  if (typeof renderSelectedDayExpenses === 'function') renderSelectedDayExpenses();
+  if (typeof renderBudgetStatus === 'function') renderBudgetStatus();
+  if (typeof renderDrawerLobby === 'function') renderDrawerLobby();
 }
 
 // 🔄 가계부 추가 모달 대분류 변경 시 소분류 셀렉트 갱신
