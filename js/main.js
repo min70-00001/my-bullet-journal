@@ -1,45 +1,385 @@
+// ==========================================
+// 🚀 [0] 파이어베이스 및 전역 설정 (Global Config)
+// ==========================================
 const firebaseConfig = {
-      apiKey: "AIzaSyAXwjdZmy6Ij62RVyKww9UUalgUynyBqaA",
-      authDomain: "mingle-bullet-journal.firebaseapp.com",
-      projectId: "mingle-bullet-journal",
-      storageBucket: "mingle-bullet-journal.firebasestorage.app",
-      messagingSenderId: "975275683110",
-      appId: "1:975275683110:web:638400c7bdcdc0cd6f25e7",
-      measurementId: "G-5TGYM6V8LQ"
-    };
+  apiKey: "AIzaSyAXwjdZmy6Ij62RVyKww9UUalgUynyBqaA",
+  authDomain: "mingle-bullet-journal.firebaseapp.com",
+  projectId: "mingle-bullet-journal",
+  storageBucket: "mingle-bullet-journal.firebasestorage.app",
+  messagingSenderId: "975275683110",
+  appId: "1:975275683110:web:638400c7bdcdc0cd6f25e7",
+  measurementId: "G-5TGYM6V8LQ"
+};
 
-    // 대한민국 법정 공휴일 & 대체휴일 DB
-    const KR_HOLIDAYS = {
-      "01-01": "신정",
-      "03-01": "삼일절",
-      "05-05": "어린이날",
-      "06-06": "현충일",
-      "08-15": "광복절",
-      "10-03": "개천절",
-      "10-09": "한글날",
-      "12-25": "크리스마스",
-      "2026-02-16": "설날연휴",
-      "2026-02-17": "설날",
-      "2026-02-18": "설날연휴",
-      "2026-05-24": "부처님오신날",
-      "2026-05-25": "대체휴일",
-      "2026-09-24": "추석연휴",
-      "2026-09-25": "추석",
-      "2026-09-26": "추석연휴",
-      "2026-10-05": "대체휴일"
-    };
+let db = null;
 
-    // 7대 우선순위 약속/일정 카테고리 정의
-    const EVENT_CATEGORIES = [
-      { key: 'family', label: '가족모임', icon: '🏠', bg: 'bg-amber-100 text-amber-900 border-amber-300' },
-      { key: 'pet', label: '반려케어', icon: '🐾', bg: 'bg-stone-200 text-stone-800 border-stone-300' },
-      { key: 'friend', label: '친구모임', icon: '☕', bg: 'bg-orange-100 text-orange-900 border-orange-300' },
-      { key: 'bookclub', label: '독서모임', icon: '📖', bg: 'bg-indigo-100 text-indigo-900 border-indigo-300' },
-      { key: 'vacation', label: '휴가여행', icon: '✈️', bg: 'bg-emerald-100 text-emerald-900 border-emerald-300' },
-      { key: 'work', label: '업무외근', icon: '💼', bg: 'bg-sky-100 text-sky-900 border-sky-300' },
-      { key: 'etc', label: '기타약속', icon: '⭐', bg: 'bg-rose-100 text-rose-900 border-rose-300' }
-    ];
+// ==========================================
+// 🗓️ [1] 전역 상태 변수 (State Variables)
+// ==========================================
+const now = new Date();
+const REAL_TODAY_STR = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+let currentDate = localStorage.getItem('mingle_last_view_date') || REAL_TODAY_STR;
 
+// 각 기능별 현재 보고 있는 연/월 상태
+let calYear = now.getFullYear(), calMonth = now.getMonth();
+let moodYear = now.getFullYear(), moodMonth = now.getMonth();
+let habitYear = now.getFullYear(), habitMonth = now.getMonth();
+let routineYear = now.getFullYear(), routineMonth = now.getMonth();
+let healthYear = now.getFullYear(), healthMonth = now.getMonth();
+
+// 뷰 모드 및 필터 상태
+let timetableViewMode = 'grid';
+let habitViewMode = 'week';
+let eventFilterMode = '30';
+let ticketFilterMode = '30';
+let anniversaryFilterMode = '30';
+
+// 타임테이블 및 입력 제어 상태
+let activeHourStr = null;
+let activeBlockIdx = null;
+let selectedDurationMinutes = 10;
+let currentSelectedCategoryKey = null;
+
+// 파이어베이스 구독(Listener) 해제 함수 모음
+let unsubscribeDay = null;
+let unsubscribeTasks = null;
+let unsubscribeBooks = null;
+let unsubscribeKnits = null;
+let unsubscribeHabits = null;
+let unsubscribeRoutines = null;
+let unsubscribeCalEvents = null;
+let unsubscribeTickets = null;
+let unsubscribeRoutineDef = null;
+
+// ==========================================
+// 🛠️ [2] 공통 스마트 유틸리티 (Utilities)
+// ==========================================
+// 은은한 회색 연필 아이콘 (수정용)
+const EDIT_SVG_ICON = `
+  <svg class="w-3 h-3 text-stone-400 hover:text-stone-700 fill-none stroke-current stroke-2 inline-block shrink-0 transition-colors" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+  </svg>
+`;
+
+// 시간 자동 포맷팅 (숫자 4자리 -> HH:mm)
+function formatSmartTimeInput(el) {
+  if (!el) return;
+  let val = el.value.replace(/[^0-9]/g, '');
+  if (val.length >= 4) {
+    let hh = parseInt(val.slice(0, 2), 10);
+    let mm = parseInt(val.slice(2, 4), 10);
+    if (isNaN(hh) || hh > 23) hh = 23;
+    if (isNaN(mm) || mm > 59) mm = 59;
+    el.value = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+  } else {
+    el.value = val;
+  }
+}
+
+// ==========================================
+// 🚀 [3] 앱 초기화 및 네비게이션 코어 (App Init & Nav)
+// ==========================================
+window.addEventListener('DOMContentLoaded', () => {
+  initFirebase();
+  
+  // 날짜 세팅
+  const dateInput = document.getElementById('currentDateInput');
+  if (dateInput) dateInput.value = currentDate;
+  updateDateLabel();
+  
+  // 기본 화면 렌더링
+  initTimetableGrid();
+  if (typeof renderFavPlaceChips === 'function') renderFavPlaceChips();
+  if (typeof renderOotdChips === 'function') renderOotdChips();
+  if (typeof initCalEventCategoryButtons === 'function') initCalEventCategoryButtons();
+
+  // 데이터 구독 시작
+  subscribeDayData(currentDate);
+  subscribeTodayTasks(currentDate);
+  
+  if (typeof subscribeArchives === 'function') subscribeArchives();
+  if (typeof subscribeHabitData === 'function') subscribeHabitData();
+  if (typeof subscribeRoutineMaster === 'function') subscribeRoutineMaster();
+  if (typeof subscribeCalendarEvents === 'function') subscribeCalendarEvents();
+  if (typeof subscribeTicketData === 'function') subscribeTicketData();
+  if (typeof subscribeRoutineDefinitions === 'function') subscribeRoutineDefinitions();
+  if (typeof subscribeAccountBookSettings === 'function') subscribeAccountBookSettings();
+  if (typeof subscribeAnniversaries === 'function') subscribeAnniversaries();
+  if (typeof subscribeClosetData === 'function') subscribeClosetData();
+
+  // 탭 상태 스마트 복원 (서랍장 내부 기억 포함!)
+  setTimeout(() => {
+    const savedTab = localStorage.getItem('mingle_active_tab') || 'day';
+    switchTab(savedTab);
+  }, 100);
+});
+
+function initFirebase() {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    const syncStatus = document.getElementById('syncStatus');
+    if (syncStatus) {
+      syncStatus.innerText = '☁️ 동기화됨';
+      syncStatus.className = 'text-[10px] text-emerald-600 font-bold';
+    }
+  } catch (e) {
+    console.error("Firebase 초기화 에러:", e);
+    const syncStatus = document.getElementById('syncStatus');
+    if (syncStatus) {
+      syncStatus.innerText = '⚠️ 동기화오류';
+      syncStatus.className = 'text-[10px] text-rose-500 font-medium';
+    }
+  }
+}
+
+// 탭 전환 코어 함수 (서랍장 새로고침 기억)
+function switchTab(tab) {
+  if (!tab) tab = 'day';
+  localStorage.setItem('mingle_active_tab', tab);
+
+  // 모든 뷰 숨기기
+  ['day', 'calendar', 'tracker', 'drawer'].forEach(t => {
+    const view = document.getElementById(`view-${t}`);
+    const nav = document.getElementById(`nav-${t}`);
+    if (view) view.classList.add('hidden');
+    if (nav) nav.className = 'text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5';
+  });
+
+  // 선택된 뷰 보이기
+  const activeView = document.getElementById(`view-${tab}`);
+  const activeNav = document.getElementById(`nav-${tab}`);
+  if (activeView) activeView.classList.remove('hidden');
+  if (activeNav) activeNav.className = 'text-stone-800 py-1 flex flex-col items-center gap-0.5 font-bold';
+
+  // 탭별 데이터 갱신
+  if (tab === 'day') {
+    if (currentDate !== REAL_TODAY_STR) jumpToRealToday();
+  } else if (tab === 'tracker') {
+    if (typeof renderHabits === 'function') renderHabits();
+    if (typeof renderMoodTracker === 'function') renderMoodTracker();
+    if (typeof renderRoutineProgressTracker === 'function') renderRoutineProgressTracker();
+    if (typeof renderHealthTracker === 'function') renderHealthTracker();
+  } else if (tab === 'calendar') {
+    if (typeof renderCalendar === 'function') renderCalendar();
+    if (typeof renderUpcomingEvents === 'function') renderUpcomingEvents();
+    if (typeof renderTicketList === 'function') renderTicketList();
+    if (typeof renderAnniversaries === 'function') renderAnniversaries();
+  } else if (tab === 'drawer') {
+    // 서랍장은 마지막으로 보던 서브탭 기억해서 열기!
+    const savedSubTab = sessionStorage.getItem('mingle_drawer_subtab');
+    if (savedSubTab && typeof enterDrawerSub === 'function') {
+      enterDrawerSub(savedSubTab);
+    } else if (typeof backToDrawerHub === 'function') {
+      backToDrawerHub();
+    }
+  }
+}
+
+// ==========================================
+// 📅 [4] 날짜 조작 및 헤더 (Date Management)
+// ==========================================
+function onDateChanged(val) {
+  currentDate = val;
+  updateDateLabel();
+  subscribeDayData(currentDate);
+  subscribeTodayTasks(currentDate);
+  if(typeof renderDayHabitList === 'function') renderDayHabitList();
+  if(typeof renderDayRoutineTodos === 'function') renderDayRoutineTodos();
+  if(typeof calculateDDays === 'function') calculateDDays();
+  if(typeof updateTodaySpecialBanner === 'function') updateTodaySpecialBanner();
+}
+
+function changeDate(delta) {
+  const parts = currentDate.split('-');
+  const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10) + delta);
+  const mStr = (d.getMonth() + 1) < 10 ? `0${d.getMonth() + 1}` : `${d.getMonth() + 1}`;
+  const dStr = d.getDate() < 10 ? `0${d.getDate()}` : `${d.getDate()}`;
+  currentDate = `${d.getFullYear()}-${mStr}-${dStr}`;
+  localStorage.setItem('mingle_last_view_date', currentDate);
+  
+  const dateInput = document.getElementById('currentDateInput');
+  if (dateInput) dateInput.value = currentDate;
+  onDateChanged(currentDate);
+}
+
+function jumpToRealToday() {
+  currentDate = REAL_TODAY_STR;
+  localStorage.setItem('mingle_last_view_date', currentDate);
+  const dateInput = document.getElementById('currentDateInput');
+  if (dateInput) dateInput.value = currentDate;
+  onDateChanged(currentDate);
+}
+
+function updateDateLabel() {
+  const parts = currentDate.split('-');
+  const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+  
+  document.getElementById('currentYearMonthLabel').innerText = `${d.getFullYear()}. ${(d.getMonth() + 1) < 10 ? '0' + (d.getMonth() + 1) : (d.getMonth() + 1)}`;
+  document.getElementById('currentDateLabel').innerText = `${d.getMonth() + 1}월 ${d.getDate()}일 ${days[d.getDay()]}`;
+
+  const btn = document.getElementById('todayJumpBtn');
+  if (btn) {
+    if (currentDate !== REAL_TODAY_STR) btn.classList.remove('hidden');
+    else btn.classList.add('hidden');
+  }
+}
+
+// ==========================================
+// ⭐ [5] 오늘의 할 일 (Daily To-Do)
+// ==========================================
+function subscribeTodayTasks(dateStr) {
+  if (unsubscribeTasks) unsubscribeTasks();
+  migrateUnfinishedTasks(dateStr);
+  renderTodayTasks(getTodayTasksLocal(dateStr));
+
+  if (!db) return;
+  unsubscribeTasks = db.collection('today_tasks').doc(dateStr)
+    .onSnapshot((doc) => {
+      if (doc.exists) {
+        const tasks = doc.data().tasks || [];
+        saveTodayTasksLocal(dateStr, tasks);
+        renderTodayTasks(tasks);
+      }
+    }, err => console.error(err));
+}
+
+function migrateUnfinishedTasks(todayStr) {
+  const all = JSON.parse(localStorage.getItem('mingle_today_tasks') || '{}');
+  if (all[todayStr] && all[todayStr].length > 0) return;
+
+  const parts = todayStr.split('-');
+  const prevD = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10) - 1);
+  const pmStr = (prevD.getMonth() + 1) < 10 ? `0${prevD.getMonth() + 1}` : `${prevD.getMonth() + 1}`;
+  const pdStr = prevD.getDate() < 10 ? `0${prevD.getDate()}` : `${prevD.getDate()}`;
+  const prevDateStr = `${prevD.getFullYear()}-${pmStr}-${pdStr}`;
+
+  const prevTasks = all[prevDateStr] || [];
+  const unfinished = prevTasks.filter(t => !t.done);
+
+  if (unfinished.length > 0) {
+    const migrated = unfinished.map(t => ({ ...t, id: Date.now() + Math.random(), isMigrated: true }));
+    all[todayStr] = migrated;
+    localStorage.setItem('mingle_today_tasks', JSON.stringify(all));
+    if (db) db.collection('today_tasks').doc(todayStr).set({ tasks: migrated }).catch(console.error);
+  }
+}
+
+function getTodayTasksLocal(dateStr) {
+  const all = JSON.parse(localStorage.getItem('mingle_today_tasks') || '{}');
+  return all[dateStr] || [];
+}
+
+function saveTodayTasksLocal(dateStr, tasks) {
+  const all = JSON.parse(localStorage.getItem('mingle_today_tasks') || '{}');
+  all[dateStr] = tasks;
+  localStorage.setItem('mingle_today_tasks', JSON.stringify(all));
+}
+
+function saveTodayTasks(tasks) {
+  saveTodayTasksLocal(currentDate, tasks);
+  renderTodayTasks(tasks);
+  if (db) db.collection('today_tasks').doc(currentDate).set({ tasks }).catch(console.error);
+}
+
+function addTodayTask() {
+  const input = document.getElementById('newTodayTaskInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const tasks = getTodayTasksLocal(currentDate);
+  tasks.push({ text, done: false, important: false, id: Date.now() });
+  input.value = '';
+  saveTodayTasks(tasks);
+}
+
+function toggleTodayTask(id) {
+  const tasks = getTodayTasksLocal(currentDate);
+  const idx = tasks.findIndex(t => t.id === id);
+  if (idx > -1) {
+    tasks[idx].done = !tasks[idx].done;
+    saveTodayTasks(tasks);
+  }
+}
+
+function openTodayTaskEditModal(id) {
+  const tasks = getTodayTasksLocal(currentDate);
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  
+  document.getElementById('todayTaskEditId').value = id;
+  document.getElementById('todayTaskEditTitle').value = task.text;
+  document.getElementById('todayTaskEditImportant').checked = !!task.important;
+  document.getElementById('todayTaskEditModal').classList.remove('hidden');
+}
+
+function closeTodayTaskEditModal() {
+  document.getElementById('todayTaskEditModal').classList.add('hidden');
+}
+
+function saveTodayTaskEdit() {
+  const id = parseFloat(document.getElementById('todayTaskEditId').value);
+  const newText = document.getElementById('todayTaskEditTitle').value.trim();
+  const isImportant = document.getElementById('todayTaskEditImportant').checked;
+  
+  if (!newText) return alert("할 일 내용을 입력해주세요!");
+
+  const tasks = getTodayTasksLocal(currentDate);
+  const idx = tasks.findIndex(t => t.id === id);
+  if (idx > -1) {
+    tasks[idx].text = newText;
+    tasks[idx].important = isImportant;
+    saveTodayTasks(tasks);
+  }
+  closeTodayTaskEditModal();
+}
+
+function deleteTodayTaskEdit() {
+  if (!confirm("이 할 일을 삭제할까요?")) return;
+  const id = parseFloat(document.getElementById('todayTaskEditId').value);
+  let tasks = getTodayTasksLocal(currentDate);
+  tasks = tasks.filter(t => t.id !== id);
+  saveTodayTasks(tasks);
+  closeTodayTaskEditModal();
+}
+
+function renderTodayTasks(tasks) {
+  const list = document.getElementById('todayTaskList');
+  if (!list) return;
+  
+  document.getElementById('todayTaskCount').innerText = `${tasks.length}건`;
+  if (tasks.length === 0) {
+    list.innerHTML = `<p class="text-[11px] text-stone-300 py-2 text-center">오늘만의 특별한 일정이 있나요? ✍️</p>`;
+    return;
+  }
+
+  // 1순위: 미완료 & 중요(⭐), 2순위: 미완료 일반, 3순위: 완료
+  const sorted = [...tasks].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    if (a.important !== b.important) return a.important ? -1 : 1;
+    return 0;
+  });
+
+  list.innerHTML = sorted.map(t => `
+    <div class="flex items-center justify-between p-1.5 rounded-lg bg-stone-50 border border-stone-100 text-xs transition-colors hover:bg-stone-100/70">
+      <label class="flex items-center gap-2 flex-1 min-w-0 pr-1 cursor-pointer">
+        <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodayTask(${t.id})" class="rounded text-amber-500 w-3.5 h-3.5">
+        <span class="${t.done ? 'line-through text-stone-300' : 'text-stone-700 font-medium'} truncate flex items-center gap-1">
+          ${t.important ? '<span class="text-amber-500">⭐</span>' : ''}
+          ${t.isMigrated ? '<span class="text-amber-600 font-bold mr-0.5" title="어제 이월된 할 일">&gt;</span>' : ''}
+          ${t.text}
+        </span>
+      </label>
+      <button type="button" onclick="openTodayTaskEditModal(${t.id})" class="p-1 rounded text-stone-400 hover:bg-white hover:text-stone-700 shadow-2xs border border-transparent hover:border-stone-200 transition" title="수정/중요도">
+        ${EDIT_SVG_ICON}
+      </button>
+    </div>
+  `).join('');
+}
+
+// ==========================================
+// ⏱️ [6] 타임테이블 (Timetable & Category Blocks)
+// ==========================================
 const CATEGORY_STYLES = {
   routine: 'border-amber-300 bg-amber-100 text-amber-900 font-bold',
   meal: 'border-orange-300 bg-orange-100 text-orange-900 font-bold',
@@ -83,1551 +423,746 @@ const SUB_CATEGORIES = {
   etc: { title: '💭 기타 세부 항목', items: ['자유기록', '돌발', '정리', '기타'] }
 };
 
-    const MOOD_META = {
-      happy: { icon: '🥰', label: '최고', bg: 'bg-amber-100 border-amber-300 text-amber-900' },
-      calm: { icon: '🌿', label: '평온', bg: 'bg-emerald-100 border-emerald-300 text-emerald-900' },
-      soso: { icon: '⛅', label: '보통', bg: 'bg-sky-100 border-sky-300 text-sky-900' },
-      tired: { icon: '🌧️', label: '지침', bg: 'bg-stone-200 border-stone-300 text-stone-700' },
-      proud: { icon: '✨', label: '뿌듯', bg: 'bg-rose-100 border-rose-300 text-rose-900' },
-      gloomy: { icon: '💧', label: '우울', bg: 'bg-indigo-100 border-indigo-300 text-indigo-900' },
-      sad: { icon: '😢', label: '슬픔', bg: 'bg-blue-100 border-blue-300 text-blue-900' },
-      sick: { icon: '🩹', label: '아픔', bg: 'bg-red-100 border-red-300 text-red-900' }
-    };
-
-    // 은은한 모노톤 SVG 연필 수정 아이콘 생성기
-    const EDIT_SVG_ICON = `
-      <svg class="w-3 h-3 text-stone-400 hover:text-stone-700 fill-none stroke-current stroke-2 inline-block shrink-0 transition-colors" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 20h9"/>
-        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-      </svg>
-    `;
-
-    const now = new Date();
-    const REAL_TODAY_STR = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    let currentDate = localStorage.getItem('mingle_last_view_date') || REAL_TODAY_STR;
-
-
-    let calYear = new Date().getFullYear();
-    let calMonth = new Date().getMonth();
-    let moodYear = new Date().getFullYear();
-    let moodMonth = new Date().getMonth();
-    let habitYear = new Date().getFullYear();
-    let habitMonth = new Date().getMonth();
-    let routineYear = new Date().getFullYear();
-    let routineMonth = new Date().getMonth();
-    let healthYear = new Date().getFullYear();
-    let healthMonth = new Date().getMonth();
-
-    let timetableViewMode = 'grid';
-    let habitViewMode = 'week';
-    let anniversaryFilterMode = '30';
-    let eventFilterMode = '30';
-    let ticketFilterMode = '30';
-
-    let selectedCalEventCategory = 'family';
-    let calEventRepeatDays = [];
-    let selectedTicketType = 'bus';
-    let activePlaceInputId = 'ticketDepartPlace';
-    let editingEventId = null;
-    let editingTicketId = null;
-    let manualTimeTarget = { text: '독서', cat: 'hobby' };
-
-    let db = null;
-    let activeHourStr = null;
-    let activeBlockIdx = null;
-    let selectedDurationMinutes = 10;
-    let currentSelectedCategoryKey = null;
-
-    let selectedWeeklyDays = [];
-    let knitTimerStartTime = null;
-    let bookTimerStartTime = null;
-    let routineModalTarget = 'morning';
-
-    let unsubscribeDay = null;
-    let unsubscribeTasks = null;
-    let unsubscribeBooks = null;
-    let unsubscribeKnits = null;
-    let unsubscribeHabits = null;
-    let unsubscribeRoutines = null;
-    let unsubscribeCalEvents = null;
-    let unsubscribeTickets = null;
-    let unsubscribeRoutineDef = null;
-
-    window.addEventListener('DOMContentLoaded', () => {
-  // 이전 접속 탭 안전 복원
-  setTimeout(() => {
-    try {
-      const saved = localStorage.getItem('mingle_active_tab');
-      if (saved && typeof switchTab === 'function') {
-        switchTab(saved);
-      }
-    } catch (e) {}
-  }, 100);
-      initFirebase();
-      document.getElementById('currentDateInput').value = currentDate;
-      updateDateLabel();
-      initTimetableGrid();
-      initCalEventCategoryButtons();
-      renderFavPlaceChips();
-      renderOotdChips();
-      
-      subscribeDayData(currentDate);
-      subscribeTodayTasks(currentDate);
-      subscribeArchives();
-      subscribeHabitData();
-      subscribeRoutineMaster();
-      subscribeCalendarEvents();
-      subscribeTicketData();
-      subscribeRoutineDefinitions();
-      subscribeAccountBookSettings();
-      subscribeAnniversaries();
-      subscribeClosetData();
-
-      renderCalendar();
-      renderAnniversaries();
-      renderUpcomingEvents();
-      renderMoodTracker();
-      renderRoutineProgressTracker();
-      renderHealthTracker();
-      calculateDDays();
-      // 이전 접속 날짜 및 활성 탭 복원
-  const savedDate = localStorage.getItem('mingle_active_date');
-  if (savedDate && typeof loadDayData === 'function') {
-    currentDate = savedDate;
-    const dateInput = document.getElementById('currentDateInput');
-    if (dateInput) dateInput.value = currentDate;
-    if (typeof updateDateLabel === 'function') updateDateLabel();
-    loadDayData(currentDate);
+function setTimetableView(mode) {
+  timetableViewMode = mode;
+  if (mode === 'grid') {
+    document.getElementById('timetableGridView').classList.remove('hidden');
+    document.getElementById('timetableTimelineView').classList.add('hidden');
+    document.getElementById('viewBtnGrid').className = 'px-2 py-1 rounded-lg font-bold bg-white text-stone-800 shadow-xs';
+    document.getElementById('viewBtnCard').className = 'px-2 py-1 rounded-lg font-medium text-stone-500';
+  } else {
+    document.getElementById('timetableGridView').classList.add('hidden');
+    document.getElementById('timetableTimelineView').classList.remove('hidden');
+    document.getElementById('viewBtnCard').className = 'px-2 py-1 rounded-lg font-bold bg-white text-stone-800 shadow-xs';
+    document.getElementById('viewBtnGrid').className = 'px-2 py-1 rounded-lg font-medium text-stone-500';
+    renderVerticalTimeline();
   }
+}
 
-  // 서랍 화면 초기화 및 이전 접속 탭 복원
-  if (typeof backToDrawerHub === 'function') backToDrawerHub();
-  const savedTab = localStorage.getItem('mingle_active_tab') || 'day';
-  switchTab(savedTab);
-    });
+function initTimetableGrid() {
+  const container = document.getElementById('gridRowsContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let h = 7; h <= 24; h++) {
+    const hourStr = h < 10 ? `0${h}` : `${h}`;
+    const row = document.createElement('div');
+    row.className = 'grid grid-cols-7 gap-1 items-center';
+    row.innerHTML = `<span class="text-[10px] font-mono font-bold text-stone-400 text-center">${hourStr}</span>` +
+      [0, 1, 2, 3, 4, 5].map(b => `
+        <button id="cell_${hourStr}_${b}" onclick="openCategoryModal('${hourStr}', ${b})" class="grid-cell rounded-md border border-stone-200 bg-stone-50 hover:border-amber-400 text-[9px] flex items-center justify-center p-0.5 truncate text-stone-600 font-medium"></button>
+      `).join('');
+    container.appendChild(row);
+  }
+}
 
-    function initFirebase() {
-      try {
-        if (!firebase.apps.length) {
-          firebase.initializeApp(firebaseConfig);
-        }
-        db = firebase.firestore();
-        document.getElementById('syncStatus').innerText = '☁️ 동기화됨';
-        document.getElementById('syncStatus').className = 'text-[10px] text-emerald-600 font-bold';
-      } catch (e) {
-        console.error("Firebase 초기화 에러:", e);
-        document.getElementById('syncStatus').innerText = '⚠️ 동기화오류';
-        document.getElementById('syncStatus').className = 'text-[10px] text-rose-500 font-medium';
-      }
+function setSessionDuration(mins) {
+  selectedDurationMinutes = mins;
+  [10, 20, 30, 40, 50, 60].forEach(m => {
+    const btn = document.getElementById(`dur_${m}`);
+    if (btn) {
+      btn.className = m === mins ? 'py-1 rounded-lg border border-amber-300 bg-amber-100 text-amber-900 font-bold' : 'py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600';
     }
-
-    function switchTab(tab, subAction) {
-  if (!tab) tab = 'day';
-  try {
-    localStorage.setItem('mingle_active_tab', tab);
-  } catch(e) {}
-
-  ['day', 'calendar', 'tracker', 'drawer'].forEach(t => {
-    const view = document.getElementById(`view-${t}`);
-    const nav = document.getElementById(`nav-${t}`);
-    if (view) view.classList.add('hidden');
-    if (nav) nav.className = 'text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5';
   });
+}
 
-  const activeView = document.getElementById(`view-${tab}`);
-  const activeNav = document.getElementById(`nav-${tab}`);
-  if (activeView) activeView.classList.remove('hidden');
-  if (activeNav) activeNav.className = 'text-stone-800 py-1 flex flex-col items-center gap-0.5';
+function openCategoryModal(hourStr, blockIdx) {
+  activeHourStr = hourStr;
+  activeBlockIdx = blockIdx;
+  setSessionDuration(10);
+  const min = blockIdx * 10;
+  const timeStr = `${hourStr}:${min === 0 ? '00' : min}`;
+  document.getElementById('categoryModalTimeTitle').innerText = `${timeStr} 일정 등록`;
+  showMainCategories();
+  document.getElementById('categoryModal').classList.remove('hidden');
+}
 
-  if (tab === 'tracker') {
-    if (typeof renderHabits === 'function') renderHabits();
-    if (typeof renderMoodTracker === 'function') renderMoodTracker();
-    if (typeof renderRoutineProgressTracker === 'function') renderRoutineProgressTracker();
-    if (typeof renderHealthTracker === 'function') renderHealthTracker();
-  } else if (tab === 'calendar') {
-    if (typeof renderCalendar === 'function') renderCalendar();
-    if (typeof renderUpcomingEvents === 'function') renderUpcomingEvents();
-    if (typeof renderTicketList === 'function') renderTicketList();
-    if (typeof renderAnniversaries === 'function') renderAnniversaries();
-  } else if (tab === 'drawer') {
-    // 서랍 로비로 들어갈 때는 가계부 display를 확실하게 none으로 숨김
-    const bMod = document.getElementById('drawerBudgetModule');
-    if (bMod) bMod.style.display = 'none';
-    if (typeof backToDrawerHub === 'function') backToDrawerHub();
+function showMainCategories() {
+  document.getElementById('categoryStep1').classList.remove('hidden');
+  document.getElementById('categoryStep2').classList.add('hidden');
+  document.getElementById('categoryBackBtn').classList.add('hidden');
+  currentSelectedCategoryKey = null;
+}
+
+function openSubCategory(categoryKey) {
+  currentSelectedCategoryKey = categoryKey;
+  const conf = SUB_CATEGORIES[categoryKey];
+  if (!conf) return;
+
+  document.getElementById('categoryStep1').classList.add('hidden');
+  document.getElementById('categoryStep2').classList.remove('hidden');
+  document.getElementById('categoryBackBtn').classList.remove('hidden');
+  document.getElementById('subCategoryHeader').innerText = conf.title;
+  document.getElementById('categoryCustomInput').value = '';
+
+  const btnContainer = document.getElementById('subCategoryButtons');
+  const style = CATEGORY_STYLES[categoryKey];
+
+  btnContainer.innerHTML = conf.items.map(item => `
+    <button onclick="selectDirect('${item}', '${categoryKey}')" class="p-2.5 rounded-xl border ${style} hover:opacity-85 text-center text-xs truncate transition-all">
+      ${item}
+    </button>
+  `).join('');
+}
+
+function selectDirect(text, categoryKey) {
+  if (activeHourStr !== null && activeBlockIdx !== null) {
+    const blocksCount = Math.max(1, Math.round(selectedDurationMinutes / 10));
+    let startH = parseInt(activeHourStr, 10);
+    let startB = activeBlockIdx;
+
+    for (let i = 0; i < blocksCount; i++) {
+      let currH = startH + Math.floor((startB + i) / 6);
+      let currB = (startB + i) % 6;
+      if (currH > 24) break;
+      const hStr = currH < 10 ? `0${currH}` : `${currH}`;
+      setBlockData(hStr, currB, text, categoryKey);
+    }
+    saveDayData();
+    closeCategoryModal();
+    if (timetableViewMode === 'timeline') renderVerticalTimeline();
   }
 }
 
-// 📦 서랍 세부 모듈 열기 & 새로고침 기억
-function openDrawerModule(modName) {
-  try {
-    sessionStorage.setItem('mingle_drawer_subtab', modName);
-  } catch(e) {}
+function selectCustomSubInput() {
+  const val = document.getElementById('categoryCustomInput').value.trim();
+  if (!val) return;
+  selectDirect(val, currentSelectedCategoryKey || 'custom');
 }
 
-// 📦 서랍 로비로 돌아갈 때 서브탭 기억 초기화
-const origBackToDrawerHub = typeof backToDrawerHub === 'function' ? backToDrawerHub : null;
-backToDrawerHub = function() {
-  try { sessionStorage.removeItem('mingle_drawer_subtab'); } catch(e) {}
-  if (origBackToDrawerHub) origBackToDrawerHub();
-};
-
-function setHobbySubTab(type) {
-      if (type === 'book') {
-        document.getElementById('hobbyBookModule').classList.remove('hidden');
-        document.getElementById('hobbyKnitModule').classList.add('hidden');
-        document.getElementById('hobbySubTabBook').className = 'flex-1 py-2 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 shadow-xs transition-all';
-        document.getElementById('hobbySubTabKnit').className = 'flex-1 py-2 rounded-xl text-xs font-medium text-stone-500 transition-all';
-        renderBookShelf();
-      } else {
-        document.getElementById('hobbyBookModule').classList.add('hidden');
-        document.getElementById('hobbyKnitModule').classList.remove('hidden');
-        document.getElementById('hobbySubTabKnit').className = 'flex-1 py-2 rounded-xl text-xs font-bold bg-rose-100 text-rose-900 shadow-xs transition-all';
-        document.getElementById('hobbySubTabBook').className = 'flex-1 py-2 rounded-xl text-xs font-medium text-stone-500 transition-all';
-        renderKnittingShowroom();
-      }
-    }
-
-    function onDateChanged(val) {
-      currentDate = val;
-      updateDateLabel();
-      subscribeDayData(currentDate);
-      subscribeTodayTasks(currentDate);
-      renderDayHabitList();
-      renderDayRoutineTodos();
-      calculateDDays();
-      updateTodaySpecialBanner();
-    }
-
-    function changeDate(delta) {
-      const parts = currentDate.split('-');
-      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10) + delta);
-      const mStr = (d.getMonth() + 1) < 10 ? `0${d.getMonth() + 1}` : `${d.getMonth() + 1}`;
-      const dStr = d.getDate() < 10 ? `0${d.getDate()}` : `${d.getDate()}`;
-      currentDate = `${d.getFullYear()}-${mStr}-${dStr}`;
-            localStorage.setItem('mingle_last_view_date', currentDate);
-
-      document.getElementById('currentDateInput').value = currentDate;
-      updateDateLabel();
-      subscribeDayData(currentDate);
-      subscribeTodayTasks(currentDate);
-      renderDayHabitList();
-      renderDayRoutineTodos();
-      calculateDDays();
-      updateTodaySpecialBanner();
-    }
-
-    function jumpToRealToday() {
-  const now = new Date();
-  const realToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  currentDate = realToday;
-      localStorage.setItem('mingle_last_view_date', currentDate);
-
-  const dateInput = document.getElementById('currentDateInput');
-  if (dateInput) dateInput.value = currentDate;
-  
-  if (typeof updateDateLabel === 'function') updateDateLabel();
-  if (typeof subscribeDayData === 'function') subscribeDayData(currentDate);
-  if (typeof subscribeTodayTasks === 'function') subscribeTodayTasks(currentDate);
-  if (typeof renderDayHabitList === 'function') renderDayHabitList();
-  if (typeof renderDayRoutineTodos === 'function') renderDayRoutineTodos();
-  if (typeof calculateDDays === 'function') calculateDDays();
-  if (typeof updateTodaySpecialBanner === 'function') updateTodaySpecialBanner();
+function closeCategoryModal() {
+  document.getElementById('categoryModal').classList.add('hidden');
 }
 
+function clearCurrentBlock() {
+  if (activeHourStr !== null && activeBlockIdx !== null) {
+    setBlockData(activeHourStr, activeBlockIdx, '', '');
+    saveDayData();
+    closeCategoryModal();
+    if (timetableViewMode === 'timeline') renderVerticalTimeline();
+  }
+}
 
-    function updateDateLabel() {
-      const parts = currentDate.split('-');
-      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-      const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
-      
-      document.getElementById('currentYearMonthLabel').innerText = `${d.getFullYear()}. ${(d.getMonth() + 1) < 10 ? '0' + (d.getMonth() + 1) : (d.getMonth() + 1)}`;
-      document.getElementById('currentDateLabel').innerText = `${d.getMonth() + 1}월 ${d.getDate()}일 ${days[d.getDay()]}`;
+function setBlockData(hourStr, blockIdx, text, category = 'custom') {
+  const cell = document.getElementById(`cell_${hourStr}_${blockIdx}`);
+  if (!cell) return;
+  if (text) {
+    cell.innerText = text;
+    cell.dataset.category = category;
+    const style = CATEGORY_STYLES[category] || CATEGORY_STYLES.custom;
+    cell.className = `grid-cell rounded-md border ${style} text-[9px] flex items-center justify-center p-0.5 truncate`;
+  } else {
+    cell.innerText = '';
+    cell.dataset.category = '';
+    cell.className = 'grid-cell rounded-md border border-stone-200 bg-stone-50 hover:border-amber-400 text-[9px] flex items-center justify-center p-0.5 truncate text-stone-600 font-medium';
+  }
+}
 
-      const btn = document.getElementById('todayJumpBtn');
-      if (btn) {
-        if (currentDate !== REAL_TODAY_STR) btn.classList.remove('hidden');
-        else btn.classList.add('hidden');
-      }
-    }
+function renderVerticalTimeline() {
+  const container = document.getElementById('timetableTimelineView');
+  const dayData = getDayDataLocal(currentDate);
+  const blocks = dayData.timetable || {};
+  const mergedList = [];
+  let currentSession = null;
 
-    function downloadDateCard() {
-      const parts = currentDate.split('-');
-      const monthNum = parseInt(parts[1], 10);
-      const dayNum = parseInt(parts[2], 10);
-      const text = `${monthNum}월 ${dayNum}일`;
+  for (let h = 7; h <= 24; h++) {
+    const hStr = h < 10 ? `0${h}` : `${h}`;
+    for (let b = 0; b < 6; b++) {
+      const key = `${hStr}_${b}`;
+      const val = blocks[key];
+      const text = typeof val === 'object' ? val.text : val;
+      const cat = typeof val === 'object' ? val.category : 'custom';
 
-      const canvas = document.createElement('canvas');
-      canvas.width = 1080;
-      canvas.height = 1080;
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 1080, 1080);
-      ctx.fillStyle = '#000000';
-      ctx.font = '900 170px Pretendard, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, 540, 540);
-
-      const link = document.createElement('a');
-      link.download = `date_card_${currentDate}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    }
-
-    // 오늘의 할 일 (스크롤 박멸 오가닉 높이 & 텍스트 터치 수정)
-    function subscribeTodayTasks(dateStr) {
-      if (unsubscribeTasks) unsubscribeTasks();
-      migrateUnfinishedTasks(dateStr);
-      renderTodayTasks(getTodayTasksLocal(dateStr));
-
-      if (!db) return;
-      unsubscribeTasks = db.collection('today_tasks').doc(dateStr)
-        .onSnapshot((doc) => {
-          if (doc.exists) {
-            const tasks = doc.data().tasks || [];
-            saveTodayTasksLocal(dateStr, tasks);
-            renderTodayTasks(tasks);
-          }
-        }, err => console.error(err));
-    }
-
-    function migrateUnfinishedTasks(todayStr) {
-      const all = JSON.parse(localStorage.getItem('mingle_today_tasks') || '{}');
-      if (all[todayStr] && all[todayStr].length > 0) return;
-
-      const parts = todayStr.split('-');
-      const prevD = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10) - 1);
-      const pmStr = (prevD.getMonth() + 1) < 10 ? `0${prevD.getMonth() + 1}` : `${prevD.getMonth() + 1}`;
-      const pdStr = prevD.getDate() < 10 ? `0${prevD.getDate()}` : `${prevD.getDate()}`;
-      const prevDateStr = `${prevD.getFullYear()}-${pmStr}-${pdStr}`;
-
-      const prevTasks = all[prevDateStr] || [];
-      const unfinished = prevTasks.filter(t => !t.done);
-
-      if (unfinished.length > 0) {
-        const migrated = unfinished.map(t => ({ ...t, id: Date.now() + Math.random(), isMigrated: true }));
-        all[todayStr] = migrated;
-        localStorage.setItem('mingle_today_tasks', JSON.stringify(all));
-        if (db) db.collection('today_tasks').doc(todayStr).set({ tasks: migrated }).catch(console.error);
-      }
-    }
-
-    function getTodayTasksLocal(dateStr) {
-      const all = JSON.parse(localStorage.getItem('mingle_today_tasks') || '{}');
-      return all[dateStr] || [];
-    }
-
-    function saveTodayTasksLocal(dateStr, tasks) {
-      const all = JSON.parse(localStorage.getItem('mingle_today_tasks') || '{}');
-      all[dateStr] = tasks;
-      localStorage.setItem('mingle_today_tasks', JSON.stringify(all));
-    }
-
-    function saveTodayTasks(tasks) {
-      saveTodayTasksLocal(currentDate, tasks);
-      renderTodayTasks(tasks);
-      if (db) db.collection('today_tasks').doc(currentDate).set({ tasks }).catch(console.error);
-    }
-
-    function addTodayTask() {
-      const input = document.getElementById('newTodayTaskInput');
-      const text = input.value.trim();
-      if (!text) return;
-      const tasks = getTodayTasksLocal(currentDate);
-      tasks.push({ text, done: false, id: Date.now() });
-      input.value = '';
-      saveTodayTasks(tasks);
-    }
-
-    function toggleTodayTask(idx) {
-      const tasks = getTodayTasksLocal(currentDate);
-      if (tasks[idx]) {
-        tasks[idx].done = !tasks[idx].done;
-        saveTodayTasks(tasks);
-      }
-    }
-
-    function editTodayTask(idx) {
-      const tasks = getTodayTasksLocal(currentDate);
-      if (!tasks[idx]) return;
-      const newText = prompt("할 일 내용을 수정해주세요:", tasks[idx].text);
-      if (newText === null || !newText.trim()) return;
-      tasks[idx].text = newText.trim();
-      saveTodayTasks(tasks);
-    }
-
-    function deleteTodayTask(idx) {
-      const tasks = getTodayTasksLocal(currentDate);
-      tasks.splice(idx, 1);
-      saveTodayTasks(tasks);
-    }
-
-    function renderTodayTasks(tasks) {
-      const list = document.getElementById('todayTaskList');
-      document.getElementById('todayTaskCount').innerText = `${tasks.length}건`;
-      if (tasks.length === 0) {
-        list.innerHTML = `<p class="text-[11px] text-stone-300 py-2 text-center">오늘만의 특별한 일정이 있나요? ✍️</p>`;
-        return;
-      }
-      list.innerHTML = tasks.map((t, idx) => `
-        <div class="flex items-center justify-between p-1.5 rounded-lg bg-stone-50 border border-stone-100 text-xs">
-          <div class="flex items-center gap-2 flex-1 min-w-0 pr-1">
-            <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodayTask(${idx})" class="rounded text-amber-500 cursor-pointer">
-            <span onclick="editTodayTask(${idx})" class="${t.done ? 'line-through text-stone-300' : 'text-stone-700 font-medium'} truncate cursor-pointer hover:underline" title="클릭하여 내용 수정">
-              ${t.isMigrated ? '<span class="text-amber-600 font-bold mr-0.5" title="어제 이월된 할 일">&gt;</span>' : ''}${t.text}
-            </span>
-          </div>
-          <button onclick="deleteTodayTask(${idx})" class="text-stone-300 hover:text-stone-500 px-1 text-xs shrink-0">✕</button>
-        </div>
-      `).join('');
-    }
-
-    // 타임테이블
-    function setTimetableView(mode) {
-      timetableViewMode = mode;
-      if (mode === 'grid') {
-        document.getElementById('timetableGridView').classList.remove('hidden');
-        document.getElementById('timetableTimelineView').classList.add('hidden');
-        document.getElementById('viewBtnGrid').className = 'px-2 py-1 rounded-lg font-bold bg-white text-stone-800 shadow-xs';
-        document.getElementById('viewBtnCard').className = 'px-2 py-1 rounded-lg font-medium text-stone-500';
-      } else {
-        document.getElementById('timetableGridView').classList.add('hidden');
-        document.getElementById('timetableTimelineView').classList.remove('hidden');
-        document.getElementById('viewBtnCard').className = 'px-2 py-1 rounded-lg font-bold bg-white text-stone-800 shadow-xs';
-        document.getElementById('viewBtnGrid').className = 'px-2 py-1 rounded-lg font-medium text-stone-500';
-        renderVerticalTimeline();
-      }
-    }
-
-    function initTimetableGrid() {
-      const container = document.getElementById('gridRowsContainer');
-      container.innerHTML = '';
-      for (let h = 7; h <= 24; h++) {
-        const hourStr = h < 10 ? `0${h}` : `${h}`;
-        const row = document.createElement('div');
-        row.className = 'grid grid-cols-7 gap-1 items-center';
-        row.innerHTML = `<span class="text-[10px] font-mono font-bold text-stone-400 text-center">${hourStr}</span>` +
-          [0, 1, 2, 3, 4, 5].map(b => `
-            <button id="cell_${hourStr}_${b}" onclick="openCategoryModal('${hourStr}', ${b})" class="grid-cell rounded-md border border-stone-200 bg-stone-50 hover:border-amber-400 text-[9px] flex items-center justify-center p-0.5 truncate text-stone-600 font-medium"></button>
-          `).join('');
-        container.appendChild(row);
-      }
-    }
-
-    function setSessionDuration(mins) {
-      selectedDurationMinutes = mins;
-      [10, 20, 30, 40, 50, 60].forEach(m => {
-        const btn = document.getElementById(`dur_${m}`);
-        if (btn) {
-          if (m === mins) {
-            btn.className = 'py-1 rounded-lg border border-amber-300 bg-amber-100 text-amber-900 font-bold';
-          } else {
-            btn.className = 'py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600';
-          }
-        }
-      });
-    }
-
-    function openCategoryModal(hourStr, blockIdx) {
-      activeHourStr = hourStr;
-      activeBlockIdx = blockIdx;
-      setSessionDuration(10);
-      const min = blockIdx * 10;
-      const timeStr = `${hourStr}:${min === 0 ? '00' : min}`;
-      document.getElementById('categoryModalTimeTitle').innerText = `${timeStr} 일정 등록`;
-      showMainCategories();
-      document.getElementById('categoryModal').classList.remove('hidden');
-    }
-
-    function showMainCategories() {
-      document.getElementById('categoryStep1').classList.remove('hidden');
-      document.getElementById('categoryStep2').classList.add('hidden');
-      document.getElementById('categoryBackBtn').classList.add('hidden');
-      currentSelectedCategoryKey = null;
-    }
-
-    function openSubCategory(categoryKey) {
-      currentSelectedCategoryKey = categoryKey;
-      const conf = SUB_CATEGORIES[categoryKey];
-      if (!conf) return;
-
-      document.getElementById('categoryStep1').classList.add('hidden');
-      document.getElementById('categoryStep2').classList.remove('hidden');
-      document.getElementById('categoryBackBtn').classList.remove('hidden');
-      document.getElementById('subCategoryHeader').innerText = conf.title;
-      document.getElementById('categoryCustomInput').value = '';
-
-      const btnContainer = document.getElementById('subCategoryButtons');
-      const style = CATEGORY_STYLES[categoryKey];
-
-      btnContainer.innerHTML = conf.items.map(item => `
-        <button onclick="selectDirect('${item}', '${categoryKey}')" class="p-2.5 rounded-xl border ${style} hover:opacity-85 text-center text-xs truncate transition-all">
-          ${item}
-        </button>
-      `).join('');
-    }
-
-    function selectDirect(text, categoryKey) {
-      if (activeHourStr !== null && activeBlockIdx !== null) {
-        const blocksCount = Math.max(1, Math.round(selectedDurationMinutes / 10));
-        let startH = parseInt(activeHourStr, 10);
-        let startB = activeBlockIdx;
-
-        for (let i = 0; i < blocksCount; i++) {
-          let currH = startH + Math.floor((startB + i) / 6);
-          let currB = (startB + i) % 6;
-          if (currH > 24) break;
-          const hStr = currH < 10 ? `0${currH}` : `${currH}`;
-          setBlockData(hStr, currB, text, categoryKey);
-        }
-
-        saveDayData();
-        closeCategoryModal();
-        if (timetableViewMode === 'timeline') renderVerticalTimeline();
-      }
-    }
-
-    function selectCustomSubInput() {
-      const val = document.getElementById('categoryCustomInput').value.trim();
-      if (!val) return;
-      selectDirect(val, currentSelectedCategoryKey || 'custom');
-    }
-
-    function closeCategoryModal() {
-      document.getElementById('categoryModal').classList.add('hidden');
-    }
-
-    function clearCurrentBlock() {
-      if (activeHourStr !== null && activeBlockIdx !== null) {
-        setBlockData(activeHourStr, activeBlockIdx, '', '');
-        saveDayData();
-        closeCategoryModal();
-        if (timetableViewMode === 'timeline') renderVerticalTimeline();
-      }
-    }
-
-    function setBlockData(hourStr, blockIdx, text, category = 'custom') {
-      const cell = document.getElementById(`cell_${hourStr}_${blockIdx}`);
-      if (!cell) return;
       if (text) {
-        cell.innerText = text;
-        cell.dataset.category = category;
-        const style = CATEGORY_STYLES[category] || CATEGORY_STYLES.custom;
-        cell.className = `grid-cell rounded-md border ${style} text-[9px] flex items-center justify-center p-0.5 truncate`;
-      } else {
-        cell.innerText = '';
-        cell.dataset.category = '';
-        cell.className = 'grid-cell rounded-md border border-stone-200 bg-stone-50 hover:border-amber-400 text-[9px] flex items-center justify-center p-0.5 truncate text-stone-600 font-medium';
-      }
-    }
-
-    // 버티컬 타임라인 뷰
-    function renderVerticalTimeline() {
-      const container = document.getElementById('timetableTimelineView');
-      const dayData = getDayDataLocal(currentDate);
-      const blocks = dayData.timetable || {};
-      
-      const mergedList = [];
-      let currentSession = null;
-
-      for (let h = 7; h <= 24; h++) {
-        const hStr = h < 10 ? `0${h}` : `${h}`;
-        for (let b = 0; b < 6; b++) {
-          const key = `${hStr}_${b}`;
-          const val = blocks[key];
-          const text = typeof val === 'object' ? val.text : val;
-          const cat = typeof val === 'object' ? val.category : 'custom';
-
-          if (text) {
-            if (currentSession && currentSession.text === text && currentSession.cat === cat) {
-              currentSession.endH = hStr;
-              currentSession.endB = b;
-              currentSession.duration += 10;
-            } else {
-              if (currentSession) mergedList.push(currentSession);
-              currentSession = {
-                text,
-                cat,
-                startH: hStr,
-                startB: b,
-                endH: hStr,
-                endB: b,
-                duration: 10
-              };
-            }
-          } else {
-            if (currentSession) {
-              mergedList.push(currentSession);
-              currentSession = null;
-            }
-          }
-        }
-      }
-      if (currentSession) mergedList.push(currentSession);
-
-      if (mergedList.length === 0) {
-        container.innerHTML = `<div class="p-8 text-center text-xs text-stone-400 border border-dashed border-stone-200 rounded-2xl">아직 기록된 일정이 없어요. 모눈 뷰에서 톡 눌러 등록해보세요 ⏱️</div>`;
-        return;
-      }
-
-      container.innerHTML = `
-        <div class="relative pl-6 space-y-2 border-l-2 border-dashed border-stone-200 ml-3 py-1">
-          ${mergedList.map(s => {
-            const startMin = s.startB * 10;
-            let endB_next = s.endB + 1;
-            let endH_num = parseInt(s.endH, 10);
-            if (endB_next >= 6) {
-              endB_next = 0;
-              endH_num++;
-            }
-            const endH_str = endH_num < 10 ? `0${endH_num}` : `${endH_num}`;
-            const endMin = endB_next * 10;
-
-            const timeLabel = `${s.startH}:${startMin === 0 ? '00' : startMin} ~ ${endH_str}:${endMin === 0 ? '00' : endMin}`;
-            const markerStyle = TIMELINE_MARKER_STYLES[s.cat] || TIMELINE_MARKER_STYLES.custom;
-
-            return `
-              <div class="relative group">
-                <div class="absolute -left-[31px] top-2 w-2.5 h-2.5 rounded-full bg-white border-2 border-amber-400"></div>
-                <div class="p-2.5 rounded-xl border border-stone-200/70 ${markerStyle} shadow-2xs flex items-center justify-between transition-all cursor-pointer hover:opacity-90">
-                  <div onclick="editTimelineSession('${s.startH}', ${s.startB}, ${s.duration}, '${s.text.replace(/'/g, "\\'")}', '${s.cat}')" class="min-w-0 pr-2 flex-1" title="클릭하여 내용 수정">
-                    <div class="flex items-center gap-1.5">
-                      <span class="font-mono text-[10px] text-stone-500 font-semibold">${timeLabel}</span>
-                      <span class="text-[9px] bg-white/80 px-1.5 py-0.2 rounded-full font-bold text-stone-600 border border-stone-200/60">${s.duration}분</span>
-                    </div>
-                    <div class="font-bold text-xs mt-0.5 tracking-tight flex items-center gap-1">
-                      <span>${s.text}</span>
-                      ${EDIT_SVG_ICON}
-                    </div>
-                  </div>
-                  <button onclick="clearSessionBlocks('${s.startH}', ${s.startB}, ${s.duration})" title="이 덩어리 삭제" class="text-stone-300 hover:text-stone-600 text-xs px-1 shrink-0">✕</button>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `;
-    }
-
-    function editTimelineSession(startH, startB, duration, currentText, cat) {
-      const newText = prompt("일정 내용을 수정해주세요:", currentText);
-      if (newText === null || !newText.trim()) return;
-      const blocksCount = Math.round(duration / 10);
-      let sH = parseInt(startH, 10);
-      let sB = startB;
-
-      for (let i = 0; i < blocksCount; i++) {
-        let currH = sH + Math.floor((sB + i) / 6);
-        let currB = (sB + i) % 6;
-        if (currH > 24) break;
-        const hStr = currH < 10 ? `0${currH}` : `${currH}`;
-        setBlockData(hStr, currB, newText.trim(), cat);
-      }
-      saveDayData();
-      renderVerticalTimeline();
-    }
-
-    function clearSessionBlocks(startH, startB, duration) {
-      const blocksCount = Math.round(duration / 10);
-      let sH = parseInt(startH, 10);
-      let sB = startB;
-
-      for (let i = 0; i < blocksCount; i++) {
-        let currH = sH + Math.floor((sB + i) / 6);
-        let currB = (sB + i) % 6;
-        if (currH > 24) break;
-        const hStr = currH < 10 ? `0${currH}` : `${currH}`;
-        setBlockData(hStr, currB, '', '');
-      }
-      saveDayData();
-      renderVerticalTimeline();
-    }
-
-    // 동적 루틴 & 카테고리 완전 관리
-    const DEFAULT_ROUTINES = {
-      categories: {
-        morning: ['🌤️ 기상·비움', '⚖️ 바디·건강', '🎒 외출·출근'],
-        evening: ['🧹 정리·바디', '🌿 반려·어항', '🧶 마무리']
-      },
-      morning: [
-        { id: 'm1', cat: '🌤️ 기상·비움', name: '화장실', autoTime: false, autoCat: 'routine', paused: false },
-        { id: 'm2', cat: '🌤️ 기상·비움', name: '미온수 한 잔', autoTime: false, autoCat: 'routine', paused: false },
-        { id: 'm3', cat: '⚖️ 바디·건강', name: '체중체크', autoTime: false, autoCat: 'routine', paused: false },
-        { id: 'm4', cat: '⚖️ 바디·건강', name: '비타민', autoTime: false, autoCat: 'routine', paused: false },
-        { id: 'm5', cat: '⚖️ 바디·건강', name: '아침식사', autoTime: true, autoCat: 'meal', paused: false },
-        { id: 'm6', cat: '🎒 외출·출근', name: '이부자리 정리', autoTime: false, autoCat: 'routine', paused: false },
-        { id: 'm7', cat: '🎒 외출·출근', name: '출근준비', autoTime: true, autoCat: 'routine', paused: false }
-      ],
-      evening: [
-        { id: 'e1', cat: '🧹 정리·바디', name: '정리', autoTime: true, autoCat: 'routine', paused: false },
-        { id: 'e2', cat: '🧹 정리·바디', name: '설거지', autoTime: true, autoCat: 'routine', paused: false },
-        { id: 'e3', cat: '🧹 정리·바디', name: '샤워', autoTime: true, autoCat: 'routine', paused: false },
-        { id: 'e4', cat: '🧹 정리·바디', name: '스킨케어', autoTime: true, autoCat: 'selfcare', paused: false },
-        { id: 'e5', cat: '🌿 반려·어항', name: '냥냥타임', autoTime: true, autoCat: 'routine', paused: false, isCatTime: true },
-        { id: 'e6', cat: '🌿 반려·어항', name: '어항', autoTime: true, autoCat: 'routine', paused: false },
-        { id: 'e7', cat: '🌿 반려·어항', name: '화분', autoTime: true, autoCat: 'routine', paused: false },
-        { id: 'e8', cat: '🧶 마무리', name: '독서', autoTime: true, autoCat: 'hobby', paused: false },
-        { id: 'e9', cat: '🧶 마무리', name: '뜨개', autoTime: true, autoCat: 'hobby', paused: false },
-        { id: 'e10', cat: '🧶 마무리', name: '일기', autoTime: true, autoCat: 'selfcare', paused: false }
-      ]
-    };
-
-    function subscribeRoutineDefinitions() {
-      renderDynamicRoutines();
-      if (!db) return;
-      if (unsubscribeRoutineDef) unsubscribeRoutineDef();
-      unsubscribeRoutineDef = db.collection('routine_definitions').doc('master')
-        .onSnapshot(doc => {
-          if (doc.exists) {
-            localStorage.setItem('mingle_routine_defs', JSON.stringify(doc.data()));
-            renderDynamicRoutines();
-          }
-        }, err => console.error(err));
-    }
-
-    function getRoutineDefs() {
-      const defs = JSON.parse(localStorage.getItem('mingle_routine_defs') || JSON.stringify(DEFAULT_ROUTINES));
-      if (!defs.categories) {
-        defs.categories = DEFAULT_ROUTINES.categories;
-      }
-      return defs;
-    }
-
-    function saveRoutineDefs(defs) {
-      localStorage.setItem('mingle_routine_defs', JSON.stringify(defs));
-      renderDynamicRoutines();
-      if (db) db.collection('routine_definitions').doc('master').set(defs).catch(console.error);
-    }
-
-    // 휴식 모드 토글 (🍃 휴식)
-    function toggleRoutineRest(type) {
-      const dayData = getDayDataLocal(currentDate);
-      if (!dayData.routineRest) dayData.routineRest = {};
-      dayData.routineRest[type] = !dayData.routineRest[type];
-      saveDayDataLocal(currentDate, dayData);
-      renderDynamicRoutines();
-      if (db) db.collection('diary_days').doc(currentDate).set(dayData).catch(console.error);
-      renderRoutineProgressTracker();
-      renderCalendar();
-    }
-
-    function autoFillTimetableNow(text, category = 'routine') {
-      const now = new Date();
-      let h = now.getHours();
-      if (h < 7) h = 7;
-      if (h > 24) h = 24;
-      const hStr = h < 10 ? `0${h}` : `${h}`;
-      const b = Math.floor(now.getMinutes() / 10);
-      setBlockData(hStr, b, text, category);
-      saveDayData();
-      if (timetableViewMode === 'timeline') renderVerticalTimeline();
-    }
-
-    function toggleDynamicRoutineCheck(type, itemId, autoTime, autoCat, itemName) {
-      const dayData = (window.currentDayData && window.currentDayData.date === currentDate)
-        ? window.currentDayData
-        : getDayDataLocal(currentDate);
-      if (!dayData.dynamicRoutineChecks) dayData.dynamicRoutineChecks = {};
-      const nextVal = !dayData.dynamicRoutineChecks[itemId];
-      dayData.dynamicRoutineChecks[itemId] = nextVal;
-
-      // 💡 1. 체크 상태를 먼저 안전하게 메모리와 로컬에 확정 저장!
-      saveDayDataLocal(currentDate, dayData);
-      window.currentDayData = dayData;
-
-      // 💡 2. 그 다음 타임테이블 자동 등록 실행 (덮어쓰기 영구 박멸)
-      if (nextVal && autoTime) {
-        autoFillTimetableNow(itemName, autoCat);
-      } else {
-        if (db) db.collection('diary_days').doc(currentDate).set(dayData, { merge: true }).catch(console.error);
-      }
-
-      renderDynamicRoutines();
-      renderRoutineProgressTracker();
-      renderCalendar();
-    }
-
-    function toggleCatCareTag(tag) {
-      const dayData = (window.currentDayData && window.currentDayData.date === currentDate)
-        ? window.currentDayData
-        : getDayDataLocal(currentDate);
-      if (!dayData.catCareTags) dayData.catCareTags = {};
-      dayData.catCareTags[tag] = !dayData.catCareTags[tag];
-      saveDayDataLocal(currentDate, dayData);
-      window.currentDayData = dayData;
-      renderDynamicRoutines();
-      if (db) db.collection('diary_days').doc(currentDate).set(dayData, { merge: true }).catch(console.error);
-    }
-
-    function completeAllMorningRoutines() {
-      const defs = getRoutineDefs();
-      const morningActive = defs.morning.filter(i => !i.paused);
-      const dayData = (window.currentDayData && window.currentDayData.date === currentDate)
-        ? window.currentDayData
-        : getDayDataLocal(currentDate);
-      if (!dayData.dynamicRoutineChecks) dayData.dynamicRoutineChecks = {};
-
-      morningActive.forEach(i => {
-        dayData.dynamicRoutineChecks[i.id] = true;
-      });
-
-      // 💡 먼저 체크 상태 확정 저장
-      saveDayDataLocal(currentDate, dayData);
-      window.currentDayData = dayData;
-
-      autoFillTimetableNow('아침루틴', 'routine');
-      renderDynamicRoutines();
-      renderRoutineProgressTracker();
-      renderCalendar();
-    }
-
-    function toggleBookClubMode() {
-      const isClub = document.getElementById('bookClubToggle')?.checked;
-      const defs = getRoutineDefs();
-      let clubItem = defs.evening.find(i => i.id === 'club_special');
-      if (isClub) {
-        if (!clubItem) {
-          defs.evening.push({ id: 'club_special', cat: '🧶 마무리', name: '달보드레(독서모임)', autoTime: false, autoCat: 'bookclub', paused: false });
-          saveRoutineDefs(defs);
+        if (currentSession && currentSession.text === text && currentSession.cat === cat) {
+          currentSession.endH = hStr;
+          currentSession.endB = b;
+          currentSession.duration += 10;
         } else {
-          clubItem.paused = false;
-          clubItem.autoTime = false; // 💡 타임테이블 자동 등록 해제!
-          saveRoutineDefs(defs);
+          if (currentSession) mergedList.push(currentSession);
+          currentSession = { text, cat, startH: hStr, startB: b, endH: hStr, endB: b, duration: 10 };
         }
       } else {
-        if (clubItem) {
-          clubItem.paused = true;
-          saveRoutineDefs(defs);
-        }
-      }
-    }
-
-    function renderDynamicRoutines() {
-      const defs = getRoutineDefs();
-      const dayData = getDayDataLocal(currentDate);
-      const checks = dayData.dynamicRoutineChecks || {};
-      const catTags = dayData.catCareTags || {};
-      const rest = dayData.routineRest || {};
-
-      // 아침 루틴
-      const mWrapper = document.getElementById('morningRoutineContentWrapper');
-      const mRestBtn = document.getElementById('morningRestBtn');
-      if (mRestBtn) {
-        mRestBtn.className = rest.morning 
-          ? 'text-[10px] bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap'
-          : 'text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap';
-      }
-
-      if (rest.morning) {
-        document.getElementById('morningProgressBadge').innerText = '휴식 🍃';
-        mWrapper.innerHTML = `
-          <div class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-center text-emerald-900 text-xs font-semibold">
-            ☕ 오늘은 아침 루틴 없이 편안히 쉬어가는 날이에요! (통계 제외)
-          </div>
-        `;
-      } else {
-        const activeMorning = defs.morning.filter(i => !i.paused);
-        const categories = defs.categories?.morning || [...new Set(activeMorning.map(i => i.cat))];
-        let doneCount = activeMorning.filter(i => checks[i.id]).length;
-        let pct = activeMorning.length > 0 ? Math.round((doneCount / activeMorning.length) * 100) : 0;
-        document.getElementById('morningProgressBadge').innerText = `${pct}%`;
-
-        mWrapper.innerHTML = `
-          <div class="space-y-2 text-xs">
-            ${categories.map(cat => {
-              const items = activeMorning.filter(i => i.cat === cat);
-              if (items.length === 0) return '';
-              return `
-                <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
-                  <span class="text-[11px] font-bold text-stone-600">${cat}</span>
-                  <div class="flex items-center gap-2 flex-wrap">
-                    ${items.map(i => `
-                      <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap">
-                        <input type="checkbox" ${checks[i.id] ? 'checked' : ''} onchange="toggleDynamicRoutineCheck('morning', '${i.id}', ${i.autoTime}, '${i.autoCat}', '${i.name}')" class="rounded text-amber-500">
-                        <span class="text-[11px] ${checks[i.id] ? 'line-through text-stone-300' : 'text-stone-700'}">${i.name}</span>
-                      </label>
-                    `).join('')}
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        `;
-      }
-
-      // 저녁 루틴
-      const eWrapper = document.getElementById('eveningRoutineContentWrapper');
-      const eRestBtn = document.getElementById('eveningRestBtn');
-      if (eRestBtn) {
-        eRestBtn.className = rest.evening 
-          ? 'text-[10px] bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap'
-          : 'text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap';
-      }
-
-      if (rest.evening) {
-        document.getElementById('eveningProgressBadge').innerText = '휴식 🍃';
-        eWrapper.innerHTML = `
-          <div class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-center text-emerald-900 text-xs font-semibold">
-            🛋️ 오늘은 저녁 루틴 없이 푹 쉬는 힐링 데이예요! (통계 제외)
-          </div>
-        `;
-      } else {
-        const activeEvening = defs.evening.filter(i => !i.paused);
-        const categories = defs.categories?.evening || [...new Set(activeEvening.map(i => i.cat))];
-        let doneCount = activeEvening.filter(i => checks[i.id]).length;
-        let pct = activeEvening.length > 0 ? Math.round((doneCount / activeEvening.length) * 100) : 0;
-        document.getElementById('eveningProgressBadge').innerText = `${pct}%`;
-
-        eWrapper.innerHTML = `
-          <div class="space-y-2 text-xs">
-            ${categories.map(cat => {
-              const items = activeEvening.filter(i => i.cat === cat);
-              if (items.length === 0) return '';
-              return `
-                <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
-                  <span class="text-[11px] font-bold text-stone-600">${cat}</span>
-                  <div class="flex items-center gap-2 flex-wrap">
-                    ${items.map(i => `
-                      <div class="flex items-center gap-1">
-                        <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap">
-                          <input type="checkbox" ${checks[i.id] ? 'checked' : ''} onchange="toggleDynamicRoutineCheck('evening', '${i.id}', ${i.autoTime}, '${i.autoCat}', '${i.name}')" class="rounded text-indigo-500">
-                          <span class="text-[11px] ${checks[i.id] ? 'line-through text-stone-300' : 'text-stone-700'}">${i.name}</span>
-                        </label>
-                        ${i.isCatTime ? `
-                          <div class="inline-flex gap-0.5 ml-1 text-[9px]">
-                            <button onclick="toggleCatCareTag('brush')" class="px-1 py-0.2 rounded border ${catTags.brush ? 'bg-amber-200 border-amber-300 font-bold' : 'bg-white border-stone-200 text-stone-400'}">빗질</button>
-                            <button onclick="toggleCatCareTag('treat')" class="px-1 py-0.2 rounded border ${catTags.treat ? 'bg-amber-200 border-amber-300 font-bold' : 'bg-white border-stone-200 text-stone-400'}">간식</button>
-                            <button onclick="toggleCatCareTag('play')" class="px-1 py-0.2 rounded border ${catTags.play ? 'bg-amber-200 border-amber-300 font-bold' : 'bg-white border-stone-200 text-stone-400'}">사냥</button>
-                          </div>
-                        ` : ''}
-                      </div>
-                    `).join('')}
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        `;
-      }
-    }
-
-    // 루틴 설정 팝업 & 카테고리 관리
-    function openRoutineCustomModal(type) {
-      routineModalTarget = type;
-      document.getElementById('routineModalHeaderTitle').innerText = 
-        type === 'morning' ? '☀️ 아침 루틴 설정' : '🌙 저녁 루틴 설정';
-      document.getElementById('categoryManagerArea').classList.add('hidden');
-      updateRoutineCustomCatSelect();
-      renderRoutineModalItems();
-      document.getElementById('routineCustomModal').classList.remove('hidden');
-    }
-
-    function closeRoutineCustomModal() {
-      document.getElementById('routineCustomModal').classList.add('hidden');
-    }
-
-    function updateRoutineCustomCatSelect() {
-      const catSelect = document.getElementById('newRoutineCustomCat');
-      const defs = getRoutineDefs();
-      const cats = defs.categories?.[routineModalTarget] || [];
-      catSelect.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
-    }
-
-    function toggleCategoryManagerSection() {
-      const area = document.getElementById('categoryManagerArea');
-      const isHidden = area.classList.toggle('hidden');
-      if (!isHidden) renderCategoryManagerList();
-    }
-
-    function renderCategoryManagerList() {
-      const container = document.getElementById('categoryManagerList');
-      const defs = getRoutineDefs();
-      const cats = defs.categories?.[routineModalTarget] || [];
-
-      container.innerHTML = cats.map((cat, idx) => `
-        <div class="flex items-center justify-between p-1 rounded bg-white border border-amber-200 text-xs">
-          <span onclick="editCategoryName(${idx})" class="font-bold text-amber-950 truncate cursor-pointer hover:underline flex items-center gap-1" title="클릭하여 수정">
-            <span>${cat}</span> ${EDIT_SVG_ICON}
-          </span>
-          <div class="flex items-center gap-1 shrink-0">
-            <button onclick="moveCategoryOrder(${idx}, -1)" class="text-stone-400 hover:text-stone-700 text-[10px] px-0.5">▲</button>
-            <button onclick="moveCategoryOrder(${idx}, 1)" class="text-stone-400 hover:text-stone-700 text-[10px] px-0.5">▼</button>
-            <button onclick="deleteCategory(${idx})" class="text-stone-300 hover:text-rose-500 text-xs px-1">✕</button>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function promptAddNewCategory() {
-      const name = prompt("새로운 카테고리(그룹) 이름을 입력해주세요:\n(예: 🧘 폼롤러·요가, 🐾 집사케어)");
-      if (!name || !name.trim()) return;
-      const defs = getRoutineDefs();
-      if (!defs.categories) defs.categories = { morning: [], evening: [] };
-      if (!defs.categories[routineModalTarget]) defs.categories[routineModalTarget] = [];
-      defs.categories[routineModalTarget].push(name.trim());
-      saveRoutineDefs(defs);
-      updateRoutineCustomCatSelect();
-      renderCategoryManagerList();
-    }
-
-    function editCategoryName(idx) {
-      const defs = getRoutineDefs();
-      const oldName = defs.categories[routineModalTarget][idx];
-      const newName = prompt("카테고리 이름을 수정해주세요:", oldName);
-      if (!newName || !newName.trim()) return;
-
-      defs.categories[routineModalTarget][idx] = newName.trim();
-      defs[routineModalTarget].forEach(item => {
-        if (item.cat === oldName) item.cat = newName.trim();
-      });
-
-      saveRoutineDefs(defs);
-      updateRoutineCustomCatSelect();
-      renderCategoryManagerList();
-      renderRoutineModalItems();
-    }
-
-    function moveCategoryOrder(idx, delta) {
-      const defs = getRoutineDefs();
-      const list = defs.categories[routineModalTarget];
-      const targetIdx = idx + delta;
-      if (targetIdx < 0 || targetIdx >= list.length) return;
-      const temp = list[idx];
-      list[idx] = list[targetIdx];
-      list[targetIdx] = temp;
-      saveRoutineDefs(defs);
-      updateRoutineCustomCatSelect();
-      renderCategoryManagerList();
-    }
-
-    function deleteCategory(idx) {
-      if (!confirm("이 카테고리를 삭제할까요?\n소속된 루틴 항목들은 기본 카테고리로 유지됩니다.")) return;
-      const defs = getRoutineDefs();
-      defs.categories[routineModalTarget].splice(idx, 1);
-      saveRoutineDefs(defs);
-      updateRoutineCustomCatSelect();
-      renderCategoryManagerList();
-    }
-
-    function renderRoutineModalItems() {
-      const container = document.getElementById('routineModalItemList');
-      const defs = getRoutineDefs();
-      const list = defs[routineModalTarget] || [];
-
-      container.innerHTML = list.map((item, idx) => `
-        <div class="p-2 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-between gap-1.5">
-          <div class="flex-1 min-w-0 flex items-center gap-1">
-            <span class="text-[9px] bg-stone-200 text-stone-600 px-1 py-0.2 rounded font-bold shrink-0">${item.cat}</span>
-            <span onclick="editRoutineItemName('${item.id}')" class="text-xs font-semibold ${item.paused ? 'line-through text-stone-400' : 'text-stone-800'} cursor-pointer hover:text-amber-800 truncate flex items-center gap-1" title="클릭하여 이름 수정">
-              <span>${item.name}</span> ${EDIT_SVG_ICON}
-            </span>
-          </div>
-          <div class="flex items-center gap-1 shrink-0">
-            <button onclick="moveRoutineItemOrder('${item.id}', -1)" title="위로" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▲</button>
-            <button onclick="moveRoutineItemOrder('${item.id}', 1)" title="아래로" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▼</button>
-            <button onclick="togglePauseRoutineItem('${item.id}')" title="숨김/재개" class="p-1 rounded bg-white border border-stone-200 hover:bg-stone-100 inline-flex items-center">
-              <svg class="w-2.5 h-2.5 ${item.paused ? 'text-stone-300' : 'text-stone-600'} fill-current" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
-            </button>
-            <button onclick="deleteRoutineItem('${item.id}')" class="text-stone-300 hover:text-rose-500 text-xs px-1">✕</button>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function moveRoutineItemOrder(id, delta) {
-      const defs = getRoutineDefs();
-      const list = defs[routineModalTarget];
-      const idx = list.findIndex(i => i.id === id);
-      if (idx === -1) return;
-      const targetIdx = idx + delta;
-      if (targetIdx < 0 || targetIdx >= list.length) return;
-      const temp = list[idx];
-      list[idx] = list[targetIdx];
-      list[targetIdx] = temp;
-      saveRoutineDefs(defs);
-      renderRoutineModalItems();
-    }
-
-    function addNewCustomRoutineItem() {
-      const input = document.getElementById('newRoutineCustomName');
-      const name = input.value.trim();
-      if (!name) return;
-      const cat = document.getElementById('newRoutineCustomCat').value;
-      const defs = getRoutineDefs();
-
-      defs[routineModalTarget].push({
-        id: 'c_' + Date.now(),
-        cat,
-        name,
-        autoTime: true,
-        autoCat: 'routine',
-        paused: false
-      });
-
-      input.value = '';
-      saveRoutineDefs(defs);
-      renderRoutineModalItems();
-    }
-
-    function editRoutineItemName(id) {
-      const defs = getRoutineDefs();
-      const target = defs[routineModalTarget].find(i => i.id === id);
-      if (!target) return;
-      const newName = prompt("루틴 이름을 수정해주세요:", target.name);
-      if (!newName || !newName.trim()) return;
-      target.name = newName.trim();
-      saveRoutineDefs(defs);
-      renderRoutineModalItems();
-    }
-
-    function togglePauseRoutineItem(id) {
-      const defs = getRoutineDefs();
-      const target = defs[routineModalTarget].find(i => i.id === id);
-      if (target) {
-        target.paused = !target.paused;
-        saveRoutineDefs(defs);
-        renderRoutineModalItems();
-      }
-    }
-
-    function deleteRoutineItem(id) {
-      if (!confirm("정말 이 루틴을 완전히 삭제할까요?")) return;
-      const defs = getRoutineDefs();
-      defs[routineModalTarget] = defs[routineModalTarget].filter(i => i.id !== id);
-      saveRoutineDefs(defs);
-      renderRoutineModalItems();
-    }
-
-    // 식단 🍏 애사비 ↔ 상단 드링크 트래커 스마트 자동연동
-    function onMealAcvChange() {
-      const acv2 = document.getElementById('mealAcv_2')?.checked || false;
-      const acv3 = document.getElementById('mealAcv_3')?.checked || false;
-      const count = (acv2 ? 1 : 0) + (acv3 ? 1 : 0);
-
-      const dayData = (window.currentDayData && window.currentDayData.date === currentDate)
-        ? window.currentDayData
-        : getDayDataLocal(currentDate);
-      dayData.acvCount = count;
-      if (!dayData.health) dayData.health = {};
-      if (!dayData.health.meals) dayData.health.meals = [{}, {}, {}];
-      if (dayData.health.meals[1]) dayData.health.meals[1].acv = acv2;
-      if (dayData.health.meals[2]) dayData.health.meals[2].acv = acv3;
-
-      saveDayDataLocal(currentDate, dayData);
-      window.currentDayData = dayData;
-      renderDrinkTracker(dayData);
-      saveDayData();
-    }
-
-    function renderDrinkTracker(data) {
-      data = data || {};
-      const waterEl = document.getElementById('drinkWaterDrops');
-      const acvEl = document.getElementById('drinkAcvDrops');
-      const coffeeEl = document.getElementById('drinkCoffeeDrops');
-      if (!waterEl) return;
-
-      const waterCount = data.waterCount || 0;
-      const acvCount = data.acvCount || 0;
-      const coffeeCount = data.coffeeCount || 0;
-
-      // 💧 물방울 6개
-      waterEl.innerHTML = [1, 2, 3, 4, 5, 6].map(i => `
-        <span onclick="toggleDrinkItem('waterCount', ${i})" class="transition-transform hover:scale-125 ${i <= waterCount ? 'opacity-100' : 'opacity-25 grayscale'}">💧</span>
-      `).join('');
-
-      // 🍏 애사비 2개
-      if (acvEl) {
-        acvEl.innerHTML = [1, 2].map(i => `
-          <span onclick="toggleDrinkItem('acvCount', ${i})" class="transition-transform hover:scale-125 ${i <= acvCount ? 'opacity-100' : 'opacity-25 grayscale'}">🍏</span>
-        `).join('');
-      }
-
-      // ☕ 커피 1개
-      if (coffeeEl) {
-        coffeeEl.innerHTML = `
-          <span onclick="toggleDrinkItem('coffeeCount', 1)" class="transition-transform hover:scale-125 ${coffeeCount >= 1 ? 'opacity-100' : 'opacity-25 grayscale'}">☕</span>
-        `;
-      }
-    }
-
-    function toggleDrinkItem(key, idx) {
-      const dayData = (window.currentDayData && window.currentDayData.date === currentDate)
-        ? window.currentDayData
-        : getDayDataLocal(currentDate);
-      let curr = dayData[key] || 0;
-      let next = curr === idx ? idx - 1 : idx;
-      dayData[key] = next;
-
-      if (key === 'acvCount') {
-        const isAcv1 = next >= 1;
-        const isAcv2 = next >= 2;
-        if (document.getElementById('mealAcv_2')) document.getElementById('mealAcv_2').checked = isAcv1;
-        if (document.getElementById('mealAcv_3')) document.getElementById('mealAcv_3').checked = isAcv2;
-        if (!dayData.health) dayData.health = {};
-        if (!dayData.health.meals) dayData.health.meals = [{}, {}, {}];
-        if (dayData.health.meals[1]) dayData.health.meals[1].acv = isAcv1;
-        if (dayData.health.meals[2]) dayData.health.meals[2].acv = isAcv2;
-      }
-
-      saveDayDataLocal(currentDate, dayData);
-      window.currentDayData = dayData;
-      renderDrinkTracker(dayData);
-      saveDayData();
-    }
-
-    // 독서 & 뜨개 시간 소급 & 수동 입력
-    function resetKnitRow() {
-      if (confirm("뜨개 단수를 0단으로 리셋할까요?")) {
-        document.getElementById('knitRowCount').innerText = "0";
-        saveDayData();
-      }
-    }
-
-    function toggleKnitTimer() {
-      const btn = document.getElementById('knitTimerBtn');
-      if (!knitTimerStartTime) {
-        knitTimerStartTime = new Date();
-        btn.innerText = "종료 ⏹";
-        btn.className = "text-[10px] bg-rose-700 hover:bg-rose-800 text-white font-bold py-1.5 rounded-lg shadow-2xs animate-pulse";
-      } else {
-        const endTime = new Date();
-        const diffMins = Math.round((endTime - knitTimerStartTime) / (1000 * 60));
-        knitTimerStartTime = null;
-        btn.innerText = "시작 ▶";
-        btn.className = "text-[10px] bg-rose-500 hover:bg-rose-600 text-white font-bold py-1.5 rounded-lg shadow-2xs";
-
-        if (diffMins > 0) {
-          quickAddMinutes("뜨개", "hobby", diffMins);
+        if (currentSession) {
+          mergedList.push(currentSession);
+          currentSession = null;
         }
       }
     }
+  }
+  if (currentSession) mergedList.push(currentSession);
 
-    function toggleBookTimer() {
-      const btn = document.getElementById('bookTimerBtn');
-      if (!bookTimerStartTime) {
-        bookTimerStartTime = new Date();
-        btn.innerText = "종료 ⏹";
-        btn.className = "text-[10px] bg-emerald-800 hover:bg-emerald-900 text-white font-bold py-1.5 rounded-lg shadow-2xs animate-pulse";
-      } else {
-        const endTime = new Date();
-        const diffMins = Math.round((endTime - bookTimerStartTime) / (1000 * 60));
-        bookTimerStartTime = null;
-        btn.innerText = "시작 ▶";
-        btn.className = "text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg shadow-2xs";
+  if (mergedList.length === 0) {
+    container.innerHTML = `<div class="p-8 text-center text-xs text-stone-400 border border-dashed border-stone-200 rounded-2xl">아직 기록된 일정이 없어요. 모눈 뷰에서 톡 눌러 등록해보세요 ⏱️</div>`;
+    return;
+  }
 
-        if (diffMins > 0) {
-          quickAddMinutes("독서", "hobby", diffMins);
-        }
-      }
-    }
-
-    function quickAddMinutes(text, category, mins) {
-      const now = new Date();
-      let h = now.getHours();
-      if (h < 7) h = 7;
-      if (h > 24) h = 24;
-      const b = Math.floor(now.getMinutes() / 10);
-      const blocksCount = Math.max(1, Math.round(mins / 10));
-
-      for (let i = 0; i < blocksCount; i++) {
-        let currH = h + Math.floor((b + i) / 6);
-        let currB = (b + i) % 6;
-        if (currH > 24) break;
-        const hStr = currH < 10 ? `0${currH}` : `${currH}`;
-        setBlockData(hStr, currB, text, category);
-      }
-      saveDayData();
-      if (timetableViewMode === 'timeline') renderVerticalTimeline();
-      alert(`✨ ${text} ${mins}분이 타임테이블에 반영되었어요!`);
-    }
-
-    function openManualTimeModal(text, cat) {
-      manualTimeTarget = { text, cat };
-      document.getElementById('manualTimeModalTitle').innerText = `${text} 시간 직접 입력`;
-      const now = new Date();
-      const hStr = now.getHours() < 10 ? `0${now.getHours()}` : `${now.getHours()}`;
-      const mStr = now.getMinutes() < 10 ? `0${now.getMinutes()}` : `${now.getMinutes()}`;
-      document.getElementById('manualStartTime').value = `${hStr}:${mStr}`;
-      document.getElementById('manualTimeModal').classList.remove('hidden');
-    }
-
-    function closeManualTimeModal() {
-      document.getElementById('manualTimeModal').classList.add('hidden');
-    }
-
-    function confirmManualTimeSave() {
-      const timeVal = document.getElementById('manualStartTime').value;
-      const dur = parseInt(document.getElementById('manualDurationSelect').value, 10);
-      if (!timeVal) return;
-
-      const [hPart, mPart] = timeVal.split(':').map(Number);
-      let startH = Math.max(7, Math.min(24, hPart));
-      let startB = Math.floor(mPart / 10);
-      const blocksCount = Math.max(1, Math.round(dur / 10));
-
-      for (let i = 0; i < blocksCount; i++) {
-        let currH = startH + Math.floor((startB + i) / 6);
-        let currB = (startB + i) % 6;
-        if (currH > 24) break;
-        const hStr = currH < 10 ? `0${currH}` : `${currH}`;
-        setBlockData(hStr, currB, manualTimeTarget.text, manualTimeTarget.cat);
-      }
-      saveDayData();
-      closeManualTimeModal();
-      if (timetableViewMode === 'timeline') renderVerticalTimeline();
-      alert(`✨ ${manualTimeTarget.text} ${dur}분이 오차 없이 기록되었어요!`);
-    }
-
-    function updateKnitRow(delta) {
-      const el = document.getElementById('knitRowCount');
-      let val = Math.max(0, parseInt(el.innerText || '0') + delta);
-      el.innerText = val;
-      saveDayData();
-    }
-
-    // 데일리 TO-DO (첫날 / 말일 / 분기, 미니멀 파스텔 텍스트 뱃지, 스크롤 박멸 오가닉 높이)
-    function onRoutineTypeChange(val) {
-      const selector = document.getElementById('weeklyDaysSelector');
-      if (val === 'weekly') {
-        selector.classList.remove('hidden');
-        selectedWeeklyDays = [];
-        renderWeekDayChips();
-      } else {
-        selector.classList.add('hidden');
-      }
-    }
-
-    function toggleWeekDayChip(dayNum) {
-      const idx = selectedWeeklyDays.indexOf(dayNum);
-      if (idx > -1) {
-        selectedWeeklyDays.splice(idx, 1);
-      } else {
-        selectedWeeklyDays.push(dayNum);
-      }
-      renderWeekDayChips();
-    }
-
-    function renderWeekDayChips() {
-      [0, 1, 2, 3, 4, 5, 6].forEach(d => {
-        const chip = document.getElementById(`wd_chip_${d}`);
-        if (chip) {
-          if (selectedWeeklyDays.includes(d)) {
-            chip.className = 'px-2 py-1 rounded-lg border border-amber-300 bg-amber-100 text-amber-900 font-bold';
-          } else {
-            chip.className = 'px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium';
-          }
-        }
-      });
-    }
-
-    function subscribeRoutineMaster() {
-      renderDayRoutineTodos();
-      if (!db) return;
-      if (unsubscribeRoutines) unsubscribeRoutines();
-      unsubscribeRoutines = db.collection('routine_master').doc('list')
-        .onSnapshot(doc => {
-          if (doc.exists) {
-            localStorage.setItem('mingle_routine_rules', JSON.stringify(doc.data().rules || []));
-            renderDayRoutineTodos();
-          }
-        }, err => console.error(err));
-    }
-
-    function getRoutineRules() {
-      const defaultRules = [
-        { id: 1, text: "물 1.5L 마시기", type: "daily", sortOrder: 1 },
-        { id: 2, text: "참마 화장실 청소 🚽", type: "weekly", days: [4], sortOrder: 2 },
-        { id: 3, text: "월세 보내기 🏠", type: "monthly_last", sortOrder: 3 },
-        { id: 4, text: "칫솔 바꾸기", type: "quarterly", sortOrder: 4 },
-        { id: 5, text: "브리타 필터 바꾸기", type: "quarterly", sortOrder: 5 }
-      ];
-      return JSON.parse(localStorage.getItem('mingle_routine_rules') || JSON.stringify(defaultRules));
-    }
-
-    function saveRoutineRules(rules) {
-      localStorage.setItem('mingle_routine_rules', JSON.stringify(rules));
-      renderDayRoutineTodos();
-      if (db) db.collection('routine_master').doc('list').set({ rules }).catch(console.error);
-    }
-
-    function addRoutineTodo() {
-      const input = document.getElementById('newRoutineTodoInput');
-      const text = input.value.trim();
-      if (!text) return;
-
-      const type = document.getElementById('routineTypeSelect').value;
-      const rules = getRoutineRules();
-
-      const newRule = {
-        id: Date.now(),
-        text,
-        type,
-        days: type === 'weekly' ? [...selectedWeeklyDays] : null,
-        createdDate: currentDate,
-        sortOrder: Date.now()
-      };
-
-      rules.push(newRule);
-      input.value = '';
-      selectedWeeklyDays = [];
-      renderWeekDayChips();
-      saveRoutineRules(rules);
-    }
-
-    function moveRoutineOrder(id, delta) {
-      let rules = getRoutineRules();
-      const idx = rules.findIndex(r => r.id === id);
-      if (idx === -1) return;
-      const targetIdx = idx + delta;
-      if (targetIdx < 0 || targetIdx >= rules.length) return;
-      const temp = rules[idx];
-      rules[idx] = rules[targetIdx];
-      rules[targetIdx] = temp;
-      saveRoutineRules(rules);
-    }
-
-    function deleteRoutineRule(id) {
-      let rules = getRoutineRules();
-      rules = rules.filter(r => r.id !== id);
-      saveRoutineRules(rules);
-    }
-
-    function toggleDayRoutineCheck(ruleId) {
-      const dayData = getDayDataLocal(currentDate);
-      if (!dayData.routineChecks) dayData.routineChecks = {};
-      dayData.routineChecks[ruleId] = !dayData.routineChecks[ruleId];
-      saveDayDataLocal(currentDate, dayData);
-      renderDayRoutineTodos();
-      if (db) db.collection('diary_days').doc(currentDate).set(dayData).catch(console.error);
-    }
-
-    function renderDayRoutineTodos() {
-      const container = document.getElementById('routineTodoList');
-      if (!container) return;
-
-      const parts = currentDate.split('-');
-      const year = parseInt(parts[0], 10);
-      const monthIdx = parseInt(parts[1], 10) - 1;
-      const d = new Date(year, monthIdx, parseInt(parts[2], 10));
-      const dayOfWeek = d.getDay();
-      const dateNum = d.getDate();
-      const monthNum = d.getMonth() + 1;
-      const lastDayOfMonth = new Date(year, monthIdx + 1, 0).getDate();
-
-      const rules = getRoutineRules();
-      const dayData = getDayDataLocal(currentDate);
-      const checks = dayData.routineChecks || {};
-
-      const activeRules = rules.filter(r => {
-        if (r.type === 'daily') return true;
-        if (r.type === 'weekly') return r.days && r.days.includes(dayOfWeek);
-        if (r.type === 'monthly_first' || r.type === 'monthly') return dateNum === 1;
-        if (r.type === 'monthly_last') return dateNum === lastDayOfMonth;
-        if (r.type === 'quarterly') return dateNum === 1 && [1, 4, 7, 10].includes(monthNum);
-        return false;
-      });
-
-      // 3단계 정렬: 1순위(주기 짧은순) ➔ 2순위(가나다순)
-      const typeRank = { daily: 1, weekly: 2, monthly_first: 3, monthly: 3, monthly_last: 4, quarterly: 5 };
-      activeRules.sort((a, b) => {
-        const rankDiff = (typeRank[a.type] || 9) - (typeRank[b.type] || 9);
-        if (rankDiff !== 0) return rankDiff;
-        return a.text.localeCompare(b.text, 'ko');
-      });
-
-      document.getElementById('routineTodoCount').innerText = `${activeRules.length}건`;
-
-      if (activeRules.length === 0) {
-        container.innerHTML = `<p class="text-[11px] text-stone-300 py-2 text-center">오늘 등록된 정기 투두가 없어요 🌿</p>`;
-        return;
-      }
-
-      const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-
-      container.innerHTML = activeRules.map((r) => {
-        const isDone = !!checks[r.id];
-        // 이모지 싹 뺀 미니멀 파스텔 단어 뱃지
-        let badge = '';
-        if (r.type === 'daily') badge = '<span class="text-[9px] bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.2 rounded font-semibold shrink-0">매일</span>';
-        else if (r.type === 'weekly') badge = `<span class="text-[9px] bg-sky-50 text-sky-900 border border-sky-200 px-1.5 py-0.2 rounded font-semibold shrink-0">${dayNames[dayOfWeek]}요일</span>`;
-        else if (r.type === 'monthly_first' || r.type === 'monthly') badge = '<span class="text-[9px] bg-emerald-50 text-emerald-900 border border-emerald-200 px-1.5 py-0.2 rounded font-semibold shrink-0">첫날</span>';
-        else if (r.type === 'monthly_last') badge = '<span class="text-[9px] bg-rose-50 text-rose-900 border border-rose-200 px-1.5 py-0.2 rounded font-semibold shrink-0">말일</span>';
-        else if (r.type === 'quarterly') badge = '<span class="text-[9px] bg-purple-50 text-purple-900 border border-purple-200 px-1.5 py-0.2 rounded font-semibold shrink-0">분기</span>';
+  container.innerHTML = `
+    <div class="relative pl-6 space-y-2 border-l-2 border-dashed border-stone-200 ml-3 py-1">
+      ${mergedList.map(s => {
+        const startMin = s.startB * 10;
+        let endB_next = s.endB + 1;
+        let endH_num = parseInt(s.endH, 10);
+        if (endB_next >= 6) { endB_next = 0; endH_num++; }
+        const endH_str = endH_num < 10 ? `0${endH_num}` : `${endH_num}`;
+        const endMin = endB_next * 10;
+        const timeLabel = `${s.startH}:${startMin === 0 ? '00' : startMin} ~ ${endH_str}:${endMin === 0 ? '00' : endMin}`;
+        const markerStyle = TIMELINE_MARKER_STYLES[s.cat] || TIMELINE_MARKER_STYLES.custom;
 
         return `
-          <div class="flex items-center justify-between p-1.5 rounded-lg bg-stone-50 border border-stone-100 text-xs">
-            <label class="flex items-center gap-1.5 flex-1 cursor-pointer min-w-0 pr-1">
-              <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleDayRoutineCheck(${r.id})" class="rounded text-amber-500">
-              <span class="${isDone ? 'line-through text-stone-300' : 'text-stone-700 font-medium'} truncate">${r.text}</span>
-              ${badge}
-            </label>
-            <div class="flex items-center gap-1 shrink-0">
-              <button onclick="moveRoutineOrder(${r.id}, -1)" title="위로" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▲</button>
-              <button onclick="moveRoutineOrder(${r.id}, 1)" title="아래로" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▼</button>
-              <button onclick="deleteRoutineRule(${r.id})" title="삭제" class="text-stone-300 hover:text-stone-500 px-1 text-xs">✕</button>
+          <div class="relative group">
+            <div class="absolute -left-[31px] top-2 w-2.5 h-2.5 rounded-full bg-white border-2 border-amber-400"></div>
+            <div class="p-2.5 rounded-xl border border-stone-200/70 ${markerStyle} shadow-2xs flex items-center justify-between transition-all cursor-pointer hover:opacity-90">
+              <div onclick="editTimelineSession('${s.startH}', ${s.startB},${s.duration}, '${s.text.replace(/'/g, "\\'")}', '${s.cat}')" class="min-w-0 pr-2 flex-1" title="클릭하여 내용 수정">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-mono text-[10px] text-stone-500 font-semibold">${timeLabel}</span>
+                  <span class="text-[9px] bg-white/80 px-1.5 py-0.2 rounded-full font-bold text-stone-600 border border-stone-200/60">${s.duration}분</span>
+                </div>
+                <div class="font-bold text-xs mt-0.5 tracking-tight flex items-center gap-1">
+                  <span>${s.text}</span>${EDIT_SVG_ICON}
+                </div>
+              </div>
+              <button onclick="clearSessionBlocks('${s.startH}', ${s.startB},${s.duration})" title="이 덩어리 삭제" class="text-stone-300 hover:text-stone-600 text-xs px-1 shrink-0">✕</button>
             </div>
           </div>
         `;
-      }).join('');
-    }
+      }).join('')}
+    </div>
+  `;
+}
 
-    // 👗 노션 스타일 스마트 옷장 칩 바
-    const DEFAULT_OOTD_CLOSET = {
-      top: ['민트 브이넥 니트', '아이보리 셔츠', '화이트 반팔티'],
-      bottom: ['연청 데님', '블랙 슬랙스', '베이지 코튼팬츠'],
-      shoes: ['화이트 스니커즈', '반스 체커보드', '컨버스 로우'],
-      bag: ['미피 네트백', '블랙 백팩', '캔버스 에코백']
-    };
+function editTimelineSession(startH, startB, duration, currentText, cat) {
+  const newText = prompt("일정 내용을 수정해주세요:", currentText);
+  if (newText === null || !newText.trim()) return;
+  const blocksCount = Math.round(duration / 10);
+  let sH = parseInt(startH, 10), sB = startB;
 
-    function getOotdCloset() {
-      return JSON.parse(localStorage.getItem('mingle_ootd_closet') || JSON.stringify(DEFAULT_OOTD_CLOSET));
-    }
+  for (let i = 0; i < blocksCount; i++) {
+    let currH = sH + Math.floor((sB + i) / 6);
+    let currB = (sB + i) % 6;
+    if (currH > 24) break;
+    const hStr = currH < 10 ? `0${currH}` : `${currH}`;
+    setBlockData(hStr, currB, newText.trim(), cat);
+  }
+  saveDayData();
+  renderVerticalTimeline();
+}
 
-    function saveOotdCloset(closet) {
-      localStorage.setItem('mingle_ootd_closet', JSON.stringify(closet));
-      renderOotdChips();
-    }
+function clearSessionBlocks(startH, startB, duration) {
+  const blocksCount = Math.round(duration / 10);
+  let sH = parseInt(startH, 10), sB = startB;
 
-    function promptAddOotdChip(group) {
-      const item = prompt("새로운 의류/아이템을 등록해주세요:");
-      if (!item || !item.trim()) return;
-      const closet = getOotdCloset();
-      if (!closet[group]) closet[group] = [];
-      closet[group].push(item.trim());
-      saveOotdCloset(closet);
-    }
+  for (let i = 0; i < blocksCount; i++) {
+    let currH = sH + Math.floor((sB + i) / 6);
+    let currB = (sB + i) % 6;
+    if (currH > 24) break;
+    const hStr = currH < 10 ? `0${currH}` : `${currH}`;
+    setBlockData(hStr, currB, '', '');
+  }
+  saveDayData();
+  renderVerticalTimeline();
+}
 
-    function deleteOotdChip(group, idx) {
-      const closet = getOotdCloset();
-      if (!closet[group]) return;
-      closet[group].splice(idx, 1);
-      saveOotdCloset(closet);
-    }
+// ==========================================
+// 🌅 [7] 동적 루틴 관리 (Morning/Evening Routines)
+// ==========================================
+const DEFAULT_ROUTINES = {
+  categories: {
+    morning: ['🌤️ 기상·비움', '⚖️ 바디·건강', '🎒 외출·출근'],
+    evening: ['🧹 정리·바디', '🌿 반려·어항', '🧶 마무리']
+  },
+  morning: [
+    { id: 'm1', cat: '🌤️ 기상·비움', name: '화장실', autoTime: false, autoCat: 'routine', paused: false },
+    { id: 'm2', cat: '🌤️ 기상·비움', name: '미온수 한 잔', autoTime: false, autoCat: 'routine', paused: false },
+    { id: 'm3', cat: '⚖️ 바디·건강', name: '체중체크', autoTime: false, autoCat: 'routine', paused: false },
+    { id: 'm4', cat: '⚖️ 바디·건강', name: '비타민', autoTime: false, autoCat: 'routine', paused: false },
+    { id: 'm5', cat: '⚖️ 바디·건강', name: '아침식사', autoTime: true, autoCat: 'meal', paused: false },
+    { id: 'm6', cat: '🎒 외출·출근', name: '이부자리 정리', autoTime: false, autoCat: 'routine', paused: false },
+    { id: 'm7', cat: '🎒 외출·출근', name: '출근준비', autoTime: true, autoCat: 'routine', paused: false }
+  ],
+  evening: [
+    { id: 'e1', cat: '🧹 정리·바디', name: '정리', autoTime: true, autoCat: 'routine', paused: false },
+    { id: 'e2', cat: '🧹 정리·바디', name: '설거지', autoTime: true, autoCat: 'routine', paused: false },
+    { id: 'e3', cat: '🧹 정리·바디', name: '샤워', autoTime: true, autoCat: 'routine', paused: false },
+    { id: 'e4', cat: '🧹 정리·바디', name: '스킨케어', autoTime: true, autoCat: 'selfcare', paused: false },
+    { id: 'e5', cat: '🌿 반려·어항', name: '냥냥타임', autoTime: true, autoCat: 'routine', paused: false, isCatTime: true },
+    { id: 'e8', cat: '🧶 마무리', name: '독서', autoTime: true, autoCat: 'hobby', paused: false },
+    { id: 'e9', cat: '🧶 마무리', name: '뜨개', autoTime: true, autoCat: 'hobby', paused: false },
+    { id: 'e10', cat: '🧶 마무리', name: '일기', autoTime: true, autoCat: 'selfcare', paused: false }
+  ]
+};
 
-    function toggleSelectOotdChip(group, item) {
-      const dayData = getDayDataLocal(currentDate);
-      if (!dayData.ootdSelected) dayData.ootdSelected = { top: '', bottom: '', shoes: '', bag: '' };
-      
-      if (dayData.ootdSelected[group] === item) {
-        dayData.ootdSelected[group] = '';
-      } else {
-        dayData.ootdSelected[group] = item;
+function subscribeRoutineDefinitions() {
+  renderDynamicRoutines();
+  if (!db) return;
+  if (unsubscribeRoutineDef) unsubscribeRoutineDef();
+  unsubscribeRoutineDef = db.collection('routine_definitions').doc('master')
+    .onSnapshot(doc => {
+      if (doc.exists) {
+        localStorage.setItem('mingle_routine_defs', JSON.stringify(doc.data()));
+        renderDynamicRoutines();
       }
-      saveDayDataLocal(currentDate, dayData);
-      renderOotdChips();
-      saveDayData();
+    }, err => console.error(err));
+}
+
+function getRoutineDefs() {
+  const defs = JSON.parse(localStorage.getItem('mingle_routine_defs') || JSON.stringify(DEFAULT_ROUTINES));
+  if (!defs.categories) defs.categories = DEFAULT_ROUTINES.categories;
+  return defs;
+}
+
+function saveRoutineDefs(defs) {
+  localStorage.setItem('mingle_routine_defs', JSON.stringify(defs));
+  renderDynamicRoutines();
+  if (db) db.collection('routine_definitions').doc('master').set(defs).catch(console.error);
+}
+
+function toggleRoutineRest(type) {
+  const dayData = getDayDataLocal(currentDate);
+  if (!dayData.routineRest) dayData.routineRest = {};
+  dayData.routineRest[type] = !dayData.routineRest[type];
+  saveDayDataLocal(currentDate, dayData);
+  renderDynamicRoutines();
+  if (db) db.collection('diary_days').doc(currentDate).set(dayData).catch(console.error);
+  if(typeof renderRoutineProgressTracker === 'function') renderRoutineProgressTracker();
+  if(typeof renderCalendar === 'function') renderCalendar();
+}
+
+function autoFillTimetableNow(text, category = 'routine') {
+  const now = new Date();
+  let h = now.getHours();
+  if (h < 7) h = 7;
+  if (h > 24) h = 24;
+  const hStr = h < 10 ? `0${h}` : `${h}`;
+  const b = Math.floor(now.getMinutes() / 10);
+  setBlockData(hStr, b, text, category);
+  saveDayData();
+  if (timetableViewMode === 'timeline') renderVerticalTimeline();
+}
+
+function toggleDynamicRoutineCheck(type, itemId, autoTime, autoCat, itemName) {
+  const dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
+  if (!dayData.dynamicRoutineChecks) dayData.dynamicRoutineChecks = {};
+  const nextVal = !dayData.dynamicRoutineChecks[itemId];
+  dayData.dynamicRoutineChecks[itemId] = nextVal;
+
+  saveDayDataLocal(currentDate, dayData);
+  window.currentDayData = dayData;
+
+  if (nextVal && autoTime) {
+    autoFillTimetableNow(itemName, autoCat);
+  } else {
+    if (db) db.collection('diary_days').doc(currentDate).set(dayData, { merge: true }).catch(console.error);
+  }
+  renderDynamicRoutines();
+  if(typeof renderRoutineProgressTracker === 'function') renderRoutineProgressTracker();
+}
+
+function toggleCatCareTag(tag) {
+  const dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
+  if (!dayData.catCareTags) dayData.catCareTags = {};
+  dayData.catCareTags[tag] = !dayData.catCareTags[tag];
+  saveDayDataLocal(currentDate, dayData);
+  window.currentDayData = dayData;
+  renderDynamicRoutines();
+  if (db) db.collection('diary_days').doc(currentDate).set(dayData, { merge: true }).catch(console.error);
+}
+
+function completeAllMorningRoutines() {
+  const defs = getRoutineDefs();
+  const morningActive = defs.morning.filter(i => !i.paused);
+  const dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
+  if (!dayData.dynamicRoutineChecks) dayData.dynamicRoutineChecks = {};
+
+  morningActive.forEach(i => { dayData.dynamicRoutineChecks[i.id] = true; });
+  saveDayDataLocal(currentDate, dayData);
+  window.currentDayData = dayData;
+
+  autoFillTimetableNow('아침루틴', 'routine');
+  renderDynamicRoutines();
+  if(typeof renderRoutineProgressTracker === 'function') renderRoutineProgressTracker();
+  if(typeof renderCalendar === 'function') renderCalendar();
+}
+
+function toggleBookClubMode() {
+  const isClub = document.getElementById('bookClubToggle')?.checked;
+  const defs = getRoutineDefs();
+  let clubItem = defs.evening.find(i => i.id === 'club_special');
+  if (isClub) {
+    if (!clubItem) {
+      defs.evening.push({ id: 'club_special', cat: '🧶 마무리', name: '달보드레(독서모임)', autoTime: false, autoCat: 'bookclub', paused: false });
+    } else {
+      clubItem.paused = false;
+      clubItem.autoTime = false;
     }
+  } else if (clubItem) {
+    clubItem.paused = true;
+  }
+  saveRoutineDefs(defs);
+}
+
+function renderDynamicRoutines() {
+  const defs = getRoutineDefs();
+  const dayData = getDayDataLocal(currentDate);
+  const checks = dayData.dynamicRoutineChecks || {};
+  const catTags = dayData.catCareTags || {};
+  const rest = dayData.routineRest || {};
+
+  // 아침
+  const mWrapper = document.getElementById('morningRoutineContentWrapper');
+  const mRestBtn = document.getElementById('morningRestBtn');
+  if (mRestBtn) mRestBtn.className = rest.morning ? 'text-[10px] bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap' : 'text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap';
+
+  if (rest.morning) {
+    document.getElementById('morningProgressBadge').innerText = '휴식 🍃';
+    mWrapper.innerHTML = `<div class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-center text-emerald-900 text-xs font-semibold">☕ 오늘은 아침 루틴 없이 편안히 쉬어가는 날이에요!</div>`;
+  } else {
+    const activeMorning = defs.morning.filter(i => !i.paused);
+    const categories = defs.categories?.morning || [...new Set(activeMorning.map(i => i.cat))];
+    let pct = activeMorning.length > 0 ? Math.round((activeMorning.filter(i => checks[i.id]).length / activeMorning.length) * 100) : 0;
+    document.getElementById('morningProgressBadge').innerText = `${pct}%`;
+
+    mWrapper.innerHTML = `<div class="space-y-2 text-xs">` + categories.map(cat => {
+      const items = activeMorning.filter(i => i.cat === cat);
+      if (items.length === 0) return '';
+      return `
+        <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
+          <span class="text-[11px] font-bold text-stone-600">${cat}</span>
+          <div class="flex items-center gap-2 flex-wrap">
+            ${items.map(i => `
+              <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap">
+                <input type="checkbox" ${checks[i.id] ? 'checked' : ''} onchange="toggleDynamicRoutineCheck('morning', '${i.id}',${i.autoTime}, '${i.autoCat}', '${i.name}')" class="rounded text-amber-500">
+                <span class="text-[11px] ${checks[i.id] ? 'line-through text-stone-300' : 'text-stone-700'}">${i.name}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>`;
+    }).join('') + `</div>`;
+  }
+
+  // 저녁
+  const eWrapper = document.getElementById('eveningRoutineContentWrapper');
+  const eRestBtn = document.getElementById('eveningRestBtn');
+  if (eRestBtn) eRestBtn.className = rest.evening ? 'text-[10px] bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap' : 'text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200 font-bold px-2 py-0.5 rounded-lg whitespace-nowrap';
+
+  if (rest.evening) {
+    document.getElementById('eveningProgressBadge').innerText = '휴식 🍃';
+    eWrapper.innerHTML = `<div class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-center text-emerald-900 text-xs font-semibold">🛋️ 오늘은 저녁 루틴 없이 푹 쉬는 힐링 데이예요!</div>`;
+  } else {
+    const activeEvening = defs.evening.filter(i => !i.paused);
+    const categories = defs.categories?.evening || [...new Set(activeEvening.map(i => i.cat))];
+    let pct = activeEvening.length > 0 ? Math.round((activeEvening.filter(i => checks[i.id]).length / activeEvening.length) * 100) : 0;
+    document.getElementById('eveningProgressBadge').innerText = `${pct}%`;
+
+    eWrapper.innerHTML = `<div class="space-y-2 text-xs">` + categories.map(cat => {
+      const items = activeEvening.filter(i => i.cat === cat);
+      if (items.length === 0) return '';
+      return `
+        <div class="p-2 bg-stone-50 rounded-xl border border-stone-100 flex flex-wrap items-center justify-between gap-1">
+          <span class="text-[11px] font-bold text-stone-600">${cat}</span>
+          <div class="flex items-center gap-2 flex-wrap">
+            ${items.map(i => `
+              <div class="flex items-center gap-1">
+                <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap">
+                  <input type="checkbox" ${checks[i.id] ? 'checked' : ''} onchange="toggleDynamicRoutineCheck('evening', '${i.id}',${i.autoTime}, '${i.autoCat}', '${i.name}')" class="rounded text-indigo-500">
+                  <span class="text-[11px] ${checks[i.id] ? 'line-through text-stone-300' : 'text-stone-700'}">${i.name}</span>
+                </label>
+                ${i.isCatTime ? `
+                  <div class="inline-flex gap-0.5 ml-1 text-[9px]">
+                    <button onclick="toggleCatCareTag('brush')" class="px-1 py-0.2 rounded border ${catTags.brush ? 'bg-amber-200 border-amber-300 font-bold' : 'bg-white border-stone-200 text-stone-400'}">빗질</button>
+                    <button onclick="toggleCatCareTag('treat')" class="px-1 py-0.2 rounded border ${catTags.treat ? 'bg-amber-200 border-amber-300 font-bold' : 'bg-white border-stone-200 text-stone-400'}">간식</button>
+                    <button onclick="toggleCatCareTag('play')" class="px-1 py-0.2 rounded border ${catTags.play ? 'bg-amber-200 border-amber-300 font-bold' : 'bg-white border-stone-200 text-stone-400'}">사냥</button>
+                  </div>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+    }).join('') + `</div>`;
+  }
+}
+
+let routineModalTarget = 'morning';
+function openRoutineCustomModal(type) {
+  routineModalTarget = type;
+  document.getElementById('routineModalHeaderTitle').innerText = type === 'morning' ? '☀️ 아침 루틴 설정' : '🌙 저녁 루틴 설정';
+  document.getElementById('categoryManagerArea').classList.add('hidden');
+  updateRoutineCustomCatSelect();
+  renderRoutineModalItems();
+  document.getElementById('routineCustomModal').classList.remove('hidden');
+}
+
+function closeRoutineCustomModal() { document.getElementById('routineCustomModal').classList.add('hidden'); }
+
+function updateRoutineCustomCatSelect() {
+  const catSelect = document.getElementById('newRoutineCustomCat');
+  const cats = getRoutineDefs().categories?.[routineModalTarget] || [];
+  catSelect.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function toggleCategoryManagerSection() {
+  const isHidden = document.getElementById('categoryManagerArea').classList.toggle('hidden');
+  if (!isHidden) renderCategoryManagerList();
+}
+
+function renderCategoryManagerList() {
+  const container = document.getElementById('categoryManagerList');
+  const cats = getRoutineDefs().categories?.[routineModalTarget] || [];
+  container.innerHTML = cats.map((cat, idx) => `
+    <div class="flex items-center justify-between p-1 rounded bg-white border border-amber-200 text-xs">
+      <span onclick="editCategoryName(${idx})" class="font-bold text-amber-950 truncate cursor-pointer hover:underline flex items-center gap-1"><span>${cat}</span> ${EDIT_SVG_ICON}</span>
+      <div class="flex items-center gap-1 shrink-0">
+        <button onclick="moveCategoryOrder(${idx}, -1)" class="text-stone-400 hover:text-stone-700 text-[10px] px-0.5">▲</button>
+        <button onclick="moveCategoryOrder(${idx}, 1)" class="text-stone-400 hover:text-stone-700 text-[10px] px-0.5">▼</button>
+        <button onclick="deleteCategory(${idx})" class="text-stone-300 hover:text-rose-500 text-xs px-1">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function promptAddNewCategory() {
+  const name = prompt("새로운 카테고리(그룹) 이름을 입력해주세요:");
+  if (!name || !name.trim()) return;
+  const defs = getRoutineDefs();
+  if (!defs.categories[routineModalTarget]) defs.categories[routineModalTarget] = [];
+  defs.categories[routineModalTarget].push(name.trim());
+  saveRoutineDefs(defs);
+  updateRoutineCustomCatSelect();
+  renderCategoryManagerList();
+}
+
+function editCategoryName(idx) {
+  const defs = getRoutineDefs();
+  const oldName = defs.categories[routineModalTarget][idx];
+  const newName = prompt("카테고리 이름을 수정해주세요:", oldName);
+  if (!newName || !newName.trim()) return;
+  defs.categories[routineModalTarget][idx] = newName.trim();
+  defs[routineModalTarget].forEach(item => { if (item.cat === oldName) item.cat = newName.trim(); });
+  saveRoutineDefs(defs);
+  updateRoutineCustomCatSelect();
+  renderCategoryManagerList();
+  renderRoutineModalItems();
+}
+
+function moveCategoryOrder(idx, delta) {
+  const defs = getRoutineDefs();
+  const list = defs.categories[routineModalTarget];
+  const targetIdx = idx + delta;
+  if (targetIdx < 0 || targetIdx >= list.length) return;
+  [list[idx], list[targetIdx]] = [list[targetIdx], list[idx]];
+  saveRoutineDefs(defs);
+  renderCategoryManagerList();
+}
+
+function deleteCategory(idx) {
+  if (!confirm("이 카테고리를 삭제할까요?\n소속된 루틴은 기본 카테고리로 유지됩니다.")) return;
+  const defs = getRoutineDefs();
+  defs.categories[routineModalTarget].splice(idx, 1);
+  saveRoutineDefs(defs);
+  updateRoutineCustomCatSelect();
+  renderCategoryManagerList();
+}
+
+function renderRoutineModalItems() {
+  const container = document.getElementById('routineModalItemList');
+  const defs = getRoutineDefs();
+  const list = defs[routineModalTarget] || [];
+  container.innerHTML = list.map(item => `
+    <div class="p-2 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-between gap-1.5">
+      <div class="flex-1 min-w-0 flex items-center gap-1">
+        <span class="text-[9px] bg-stone-200 text-stone-600 px-1 py-0.2 rounded font-bold shrink-0">${item.cat}</span>
+        <span onclick="editRoutineItemName('${item.id}')" class="text-xs font-semibold ${item.paused ? 'line-through text-stone-400' : 'text-stone-800'} cursor-pointer hover:text-amber-800 truncate flex items-center gap-1">
+          <span>${item.name}</span> ${EDIT_SVG_ICON}
+        </span>
+      </div>
+      <div class="flex items-center gap-1 shrink-0">
+        <button onclick="moveRoutineItemOrder('${item.id}', -1)" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▲</button>
+        <button onclick="moveRoutineItemOrder('${item.id}', 1)" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▼</button>
+        <button onclick="togglePauseRoutineItem('${item.id}')" class="p-1 rounded bg-white border border-stone-200 hover:bg-stone-100">
+          <svg class="w-2.5 h-2.5 ${item.paused ? 'text-stone-300' : 'text-stone-600'} fill-current" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+        </button>
+        <button onclick="deleteRoutineItem('${item.id}')" class="text-stone-300 hover:text-rose-500 text-xs px-1">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function moveRoutineItemOrder(id, delta) {
+  const defs = getRoutineDefs();
+  const list = defs[routineModalTarget];
+  const idx = list.findIndex(i => i.id === id);
+  if (idx === -1) return;
+  const targetIdx = idx + delta;
+  if (targetIdx < 0 || targetIdx >= list.length) return;
+  [list[idx], list[targetIdx]] = [list[targetIdx], list[idx]];
+  saveRoutineDefs(defs);
+  renderRoutineModalItems();
+}
+
+function addNewCustomRoutineItem() {
+  const input = document.getElementById('newRoutineCustomName');
+  const name = input.value.trim();
+  if (!name) return;
+  const cat = document.getElementById('newRoutineCustomCat').value;
+  const defs = getRoutineDefs();
+  defs[routineModalTarget].push({ id: 'c_' + Date.now(), cat, name, autoTime: true, autoCat: 'routine', paused: false });
+  input.value = '';
+  saveRoutineDefs(defs);
+  renderRoutineModalItems();
+}
+
+function editRoutineItemName(id) {
+  const defs = getRoutineDefs();
+  const target = defs[routineModalTarget].find(i => i.id === id);
+  if (!target) return;
+  const newName = prompt("루틴 이름을 수정해주세요:", target.name);
+  if (!newName || !newName.trim()) return;
+  target.name = newName.trim();
+  saveRoutineDefs(defs);
+  renderRoutineModalItems();
+}
+
+function togglePauseRoutineItem(id) {
+  const defs = getRoutineDefs();
+  const target = defs[routineModalTarget].find(i => i.id === id);
+  if (target) { target.paused = !target.paused; saveRoutineDefs(defs); renderRoutineModalItems(); }
+}
+
+function deleteRoutineItem(id) {
+  if (!confirm("이 루틴을 완전히 삭제할까요?")) return;
+  const defs = getRoutineDefs();
+  defs[routineModalTarget] = defs[routineModalTarget].filter(i => i.id !== id);
+  saveRoutineDefs(defs);
+  renderRoutineModalItems();
+}
 
 // ==========================================
-// 👗 감성 스마트 OOTD & 옷장 모달 두뇌 (초안전 데이터 호환 방어막 탑재)
+// 💊 [8] 건강관리 & 영양제 (Health, Meals, Supplements)
 // ==========================================
+function onMealAcvChange() {
+  const acv2 = document.getElementById('mealAcv_2')?.checked || false;
+  const acv3 = document.getElementById('mealAcv_3')?.checked || false;
+  const count = (acv2 ? 1 : 0) + (acv3 ? 1 : 0);
 
-// 옛날 이름 호출 호환 브릿지 (로딩 멈춤 영구 방지)
-window.renderOotdChips = function() { try { renderOotd(); } catch(e){ console.error(e); } };
-window.loadOotd = function() { try { renderOotd(); } catch(e){ console.error(e); } };
+  const dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
+  dayData.acvCount = count;
+  if (!dayData.health) dayData.health = {};
+  if (!dayData.health.meals) dayData.health.meals = [{}, {}, {}];
+  if (dayData.health.meals[1]) dayData.health.meals[1].acv = acv2;
+  if (dayData.health.meals[2]) dayData.health.meals[2].acv = acv3;
 
-// 자연어 컬러 사전 (이름만 쳐도 색상이 착!)
+  saveDayDataLocal(currentDate, dayData);
+  window.currentDayData = dayData;
+  renderDrinkTracker(dayData);
+  saveDayData();
+}
+
+function renderDrinkTracker(data) {
+  data = data || {};
+  const waterEl = document.getElementById('drinkWaterDrops');
+  const acvEl = document.getElementById('drinkAcvDrops');
+  const coffeeEl = document.getElementById('drinkCoffeeDrops');
+  if (!waterEl) return;
+
+  waterEl.innerHTML = [1, 2, 3, 4, 5, 6].map(i => `<span onclick="toggleDrinkItem('waterCount', ${i})" class="transition-transform hover:scale-125 ${i <= (data.waterCount || 0) ? 'opacity-100' : 'opacity-25 grayscale'}">💧</span>`).join('');
+  if (acvEl) acvEl.innerHTML = [1, 2].map(i => `<span onclick="toggleDrinkItem('acvCount', ${i})" class="transition-transform hover:scale-125 ${i <= (data.acvCount || 0) ? 'opacity-100' : 'opacity-25 grayscale'}">🍏</span>`).join('');
+  if (coffeeEl) coffeeEl.innerHTML = `<span onclick="toggleDrinkItem('coffeeCount', 1)" class="transition-transform hover:scale-125 ${(data.coffeeCount || 0) >= 1 ? 'opacity-100' : 'opacity-25 grayscale'}">☕</span>`;
+}
+
+function toggleDrinkItem(key, idx) {
+  const dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
+  let curr = dayData[key] || 0;
+  let next = curr === idx ? idx - 1 : idx;
+  dayData[key] = next;
+
+  if (key === 'acvCount') {
+    if (document.getElementById('mealAcv_2')) document.getElementById('mealAcv_2').checked = next >= 1;
+    if (document.getElementById('mealAcv_3')) document.getElementById('mealAcv_3').checked = next >= 2;
+    if (!dayData.health) dayData.health = {};
+    if (!dayData.health.meals) dayData.health.meals = [{}, {}, {}];
+    if (dayData.health.meals[1]) dayData.health.meals[1].acv = next >= 1;
+    if (dayData.health.meals[2]) dayData.health.meals[2].acv = next >= 2;
+  }
+  saveDayDataLocal(currentDate, dayData);
+  window.currentDayData = dayData;
+  renderDrinkTracker(dayData);
+  saveDayData();
+}
+
+// 💊 영양제 스마트 렌더링
+function renderSupplementsList(mealIndex) {
+  const container = document.getElementById(`supplementsList_${mealIndex}`);
+  if (!container) return;
+
+  const dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
+  const health = dayData.health || {};
+  if (!health.supplements) health.supplements = { 1: [], 2: [], 3: [] };
+  const items = health.supplements[mealIndex] || [];
+
+  let html = items.map(sup => `
+    <div class="flex items-center justify-between bg-white border border-stone-100 px-2 py-1 rounded-lg">
+      <label class="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer">
+        <input type="checkbox" ${sup.checked ? 'checked' : ''} onchange="toggleSupplement(${mealIndex}, '${sup.id}')" class="rounded text-amber-500 w-3 h-3 focus:ring-0">
+        <span class="text-[10px] ${sup.checked ? 'text-stone-300 line-through' : 'text-stone-600 font-bold'} truncate">${sup.name}</span>
+      </label>
+      <button type="button" onclick="deleteSupplement(${mealIndex}, '${sup.id}')" class="text-stone-300 hover:text-rose-400 px-1 text-[10px] leading-none" title="삭제">✕</button>
+    </div>
+  `).join('');
+
+  html += `
+    <button type="button" onclick="addSupplement(${mealIndex})" class="w-full text-center text-[10px] text-stone-400 bg-stone-50/50 hover:bg-stone-100 border border-dashed border-stone-200 rounded-lg py-1 font-medium transition-colors">
+      + 영양제 추가
+    </button>
+  `;
+  container.innerHTML = html;
+}
+
+function addSupplement(mealIndex) {
+  const name = prompt("추가할 영양제/건강식품 이름을 입력하세요:\n(예: 유산균, 오메가3, 비타민C)");
+  if (!name || !name.trim()) return;
+
+  const dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
+  if (!dayData.health) dayData.health = {};
+  if (!dayData.health.supplements) dayData.health.supplements = { 1: [], 2: [], 3: [] };
+  
+  dayData.health.supplements[mealIndex].push({
+    id: 'sup_' + Date.now(),
+    name: name.trim(),
+    checked: false
+  });
+
+  saveDayDataLocal(currentDate, dayData);
+  window.currentDayData = dayData;
+  if (db) db.collection('diary_days').doc(currentDate).set(dayData, { merge: true }).catch(console.error);
+  renderSupplementsList(mealIndex);
+}
+
+function toggleSupplement(mealIndex, supId) {
+  const dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
+  const items = dayData.health.supplements[mealIndex] || [];
+  const target = items.find(i => i.id === supId);
+  if (target) {
+    target.checked = !target.checked;
+    saveDayDataLocal(currentDate, dayData);
+    window.currentDayData = dayData;
+    if (db) db.collection('diary_days').doc(currentDate).set(dayData, { merge: true }).catch(console.error);
+    renderSupplementsList(mealIndex);
+  }
+}
+
+function deleteSupplement(mealIndex, supId) {
+  if (!confirm("이 영양제를 목록에서 지울까요?")) return;
+  const dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
+  dayData.health.supplements[mealIndex] = dayData.health.supplements[mealIndex].filter(i => i.id !== supId);
+  
+  saveDayDataLocal(currentDate, dayData);
+  window.currentDayData = dayData;
+  if (db) db.collection('diary_days').doc(currentDate).set(dayData, { merge: true }).catch(console.error);
+  renderSupplementsList(mealIndex);
+}
+
+// ==========================================
+// 👗 [9] OOTD 및 스마트 옷장 (Smart Closet)
+// ==========================================
 const OOTD_COLOR_DICT = {
   '베이지': '#E8DCB8', '크림': '#FDFBF7', '아이보리': '#FFFFF0',
   '화이트': '#FFFFFF', '블랙': '#2B2B2B', '차콜': '#4A4A4A',
@@ -1651,45 +1186,24 @@ function detectClothColor(name) {
 }
 
 function getClosetData() {
-  const defaultCloset = {
-    outer: [],
-    top: [],
-    bottom: [],
-    shoes: [],
-    bag: []
-  };
+  const defaultCloset = { outer: [], top: [], bottom: [], shoes: [], bag: [] };
   try {
     const saved = localStorage.getItem('mingle_closet_v2');
     if (!saved) return defaultCloset;
     const parsed = JSON.parse(saved);
-    if (!parsed.outer) parsed.outer = [];
-    if (!parsed.top) parsed.top = [];
-    if (!parsed.bottom) parsed.bottom = [];
-    if (!parsed.shoes) parsed.shoes = [];
-    if (!parsed.bag) parsed.bag = [];
+    ['outer', 'top', 'bottom', 'shoes', 'bag'].forEach(cat => { if (!parsed[cat]) parsed[cat] = []; });
     return parsed;
-  } catch(e) {
-    return defaultCloset;
-  }
+  } catch(e) { return defaultCloset; }
 }
 
 function saveClosetData(data) {
-  try {
-    localStorage.setItem('mingle_closet_v2', JSON.stringify(data));
-  } catch(e) {}
-  // ☁️ 옷장 전체 목록 Firestore 클라우드 즉시 동기화
-  if (typeof db !== 'undefined' && db) {
-    db.collection('closet_data').doc('master').set({
-      closet: data
-    }, { merge: true }).catch(console.error);
-  }
+  try { localStorage.setItem('mingle_closet_v2', JSON.stringify(data)); } catch(e) {}
+  if (db) db.collection('closet_data').doc('master').set({ closet: data }, { merge: true }).catch(console.error);
 }
 
-// ☁️ 옷장 목록 실시간 양방향 클라우드 구독기
 let unsubscribeCloset = null;
 function subscribeClosetData() {
   if (typeof renderOotd === 'function') renderOotd();
-
   if (!db) return;
   if (unsubscribeCloset) unsubscribeCloset();
   unsubscribeCloset = db.collection('closet_data').doc('master')
@@ -1710,32 +1224,7 @@ let activeCategory = 'outer';
 function renderOotd() {
   try {
     const closet = getClosetData();
-    let dayData = {};
-    const curD = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
-
-    // 1순위: getDayDataLocal (파이어베이스 실시간 수신 데이터 저장소)
-    if (typeof getDayDataLocal === 'function') {
-      try { dayData = getDayDataLocal(curD) || {}; } catch(e) {}
-    }
-    // 2순위: window.currentDayData
-    if ((!dayData.ootdSelected && !dayData.ootd) && window.currentDayData) {
-      if (window.currentDayData.ootdSelected) dayData.ootdSelected = window.currentDayData.ootdSelected;
-      if (window.currentDayData.ootd) dayData.ootd = window.currentDayData.ootd;
-    }
-    // 3순위: mingle_day_ 로컬 키
-    if (!dayData.ootdSelected && !dayData.ootd) {
-      try {
-        const stored = localStorage.getItem('mingle_day_' + curD);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed) {
-            dayData.ootdSelected = parsed.ootdSelected || {};
-            dayData.ootd = parsed.ootd || {};
-          }
-        }
-      } catch(e) {}
-    }
-
+    const dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : (getDayDataLocal(currentDate) || {});
     const dayOotd = dayData.ootd || {};
     const ootdSel = dayData.ootdSelected || {};
 
@@ -1745,22 +1234,7 @@ function renderOotd() {
       container.innerHTML = '';
 
       let rawVal = ootdSel[cat] !== undefined ? ootdSel[cat] : dayOotd[cat];
-      let selectedIds = [];
-
-      if (Array.isArray(rawVal)) {
-        selectedIds = rawVal.map(String);
-      } else if (typeof rawVal === 'string' && rawVal.trim() !== '') {
-        const found = (closet[cat] || []).find(c => c.name === rawVal || String(c.id) === rawVal);
-        if (found) {
-          selectedIds = [String(found.id)];
-        } else {
-          const autoId = 'legacy_' + Date.now();
-          if (!closet[cat]) closet[cat] = [];
-          closet[cat].push({ id: autoId, name: rawVal, color: detectClothColor(rawVal) });
-          saveClosetData(closet);
-          selectedIds = [autoId];
-        }
-      }
+      let selectedIds = Array.isArray(rawVal) ? rawVal.map(String) : (typeof rawVal === 'string' && rawVal.trim() !== '' ? [rawVal] : []);
 
       if (selectedIds.length === 0) {
         container.innerHTML = '<span class="text-[10px] text-stone-300 italic">미선택</span>';
@@ -1775,152 +1249,53 @@ function renderOotd() {
         const displayName = item ? item.name : (savedName || String(id));
         const displayColor = item ? (item.color || detectClothColor(displayName)) : (savedColor || detectClothColor(displayName));
 
-        const chip = document.createElement('span');
-        chip.className = 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-stone-700 border border-stone-200';
-        chip.innerHTML = `
-          <span class="w-2 h-2 rounded-full border border-stone-300 shrink-0" style="background-color: ${displayColor};"></span>
-          <span>${displayName}</span>
-          <button onclick="toggleSelectCloth('${cat}', '${id}'); event.stopPropagation();" class="text-stone-400 hover:text-red-500 ml-0.5 text-xs font-bold leading-none">×</button>
-        `;
-        container.appendChild(chip);
+        container.innerHTML += `
+          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-stone-700 border border-stone-200 shadow-2xs">
+            <span class="w-2 h-2 rounded-full border border-stone-300 shrink-0" style="background-color: ${displayColor};"></span>
+            <span>${displayName}</span>
+            <button onclick="toggleSelectCloth('${cat}', '${id}'); event.stopPropagation();" class="text-stone-400 hover:text-red-500 ml-0.5 text-xs font-bold leading-none">×</button>
+          </span>`;
       });
     });
 
-    // 대표 컬러 반영
-    const badge = document.getElementById('ootdColorBadge');
-    const input = document.getElementById('ootdColorInput');
     const currentColor = dayOotd.color || '#ecdcc9';
-    if (badge) badge.style.backgroundColor = currentColor;
-    if (input) input.value = currentColor;
-
-    // 메모 반영
-    const memoEl = document.getElementById('ootdMemoInput');
-    if (memoEl) memoEl.value = dayOotd.memo || dayData.dailyOotdMemo || '';
-
-    // 오늘의 노래 반영 및 초기화 (다른 날짜 유령 노래 방지)
-    const bgm = dayData.bgm || {};
-    const coverEl = document.getElementById('bgmCoverImg');
-    const infoEl = document.getElementById('bgmInfoText');
-    const inputEl = document.getElementById('bgmSearchInput');
-    const defaultCover = 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&auto=format&fit=crop&q=60';
-
-    if (bgm.song || bgm.info) {
-      if (coverEl) {
-        coverEl.src = bgm.cover || defaultCover;
-        coverEl.style.display = 'block';
-      }
-      if (infoEl) infoEl.innerText = bgm.info || bgm.song || 'BGM을 검색해보세요';
-      if (inputEl) inputEl.value = bgm.song || '';
-    } else {
-          
-      // 해당 날짜에 저장된 노래가 없으면 기본 감성 커버와 플레이스홀더로 복원!
-      if (coverEl) {
-        coverEl.src = defaultCover;
-        coverEl.style.display = 'block';
-      }
-      if (infoEl) infoEl.innerText = 'BGM을 검색해보세요';
-      if (inputEl) inputEl.value = '';
-    }
-
-      // 지출 위젯 렌더링 호출
-    if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
-
-  } catch (err) {
-    console.warn("OOTD 렌더링 안전 패스:", err);
-  }
+    if (document.getElementById('ootdColorBadge')) document.getElementById('ootdColorBadge').style.backgroundColor = currentColor;
+    if (document.getElementById('ootdColorInput')) document.getElementById('ootdColorInput').value = currentColor;
+    if (document.getElementById('ootdMemoInput')) document.getElementById('ootdMemoInput').value = dayOotd.memo || dayData.dailyOotdMemo || '';
+  } catch (err) { console.warn("OOTD 렌더링 에러 패스:", err); }
 }
 
 function onOotdColorChange(color) {
-  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
-  let dayData = (typeof getDayDataLocal === 'function' ? getDayDataLocal(curDate) : window.currentDayData) || {};
+  let dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
   if (!dayData.ootd) dayData.ootd = {};
   dayData.ootd.color = color;
-
-  const badge = document.getElementById('ootdColorBadge');
-  if (badge) badge.style.backgroundColor = color;
-  const input = document.getElementById('ootdColorInput');
-  if (input) input.value = color;
-
-  if (window.currentDayData) {
-    if (!window.currentDayData.ootd) window.currentDayData.ootd = {};
-    window.currentDayData.ootd.color = color;
-  }
-
-  // 1. 로컬 저장
-  try {
-    const k = 'mingle_day_' + curDate;
-    localStorage.setItem(k, JSON.stringify(dayData));
-    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(curDate, dayData);
-  } catch(e) {}
-
-  // 2. ☁️ 파이어베이스 즉시 클라우드 동기화
-  if (typeof db !== 'undefined' && db) {
-    db.collection('diary_days').doc(curDate).set({
-      ootd: { color: color }
-    }, { merge: true }).catch(err => console.error(err));
-  }
-
-  if (typeof saveDayData === 'function') saveDayData();
+  saveDayDataLocal(currentDate, dayData);
+  window.currentDayData = dayData;
+  if (document.getElementById('ootdColorBadge')) document.getElementById('ootdColorBadge').style.backgroundColor = color;
+  if (db) db.collection('diary_days').doc(currentDate).set({ ootd: { color } }, { merge: true }).catch(console.error);
   if (typeof renderCalendar === 'function') renderCalendar();
 }
 
 function saveOotdMemo(memo) {
-  let dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : (window.currentDayData || {});
+  let dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
   if (!dayData.ootd) dayData.ootd = {};
   dayData.ootd.memo = memo;
-  if (typeof saveDayData === 'function') saveDayData();
+  saveDayData();
 }
 
 function openOotdClosetModal(category) {
   activeCategory = category || 'outer';
-  const catNames = {
-    outer: '🧥 외투',
-    top: '👕 상의',
-    bottom: '👖 하의',
-    shoes: '👟 신발',
-    bag: '👜 가방'
-  };
-  const titleEl = document.getElementById('ootdModalTitle');
-  if (titleEl) {
-    titleEl.innerText = `${catNames[activeCategory] || '🧥 외투'} 옷장 선택 & 관리`;
-  }
-
+  const catNames = { outer: '🧥 외투', top: '👕 상의', bottom: '👖 하의', shoes: '👟 신발', bag: '👜 가방' };
+  if (document.getElementById('ootdModalTitle')) document.getElementById('ootdModalTitle').innerHTML = `<span>${catNames[activeCategory].split(' ')[0]}</span> ${catNames[activeCategory].split(' ')[1]} 옷장 선택 & 관리`;
   renderClosetModalList();
-  const modal = document.getElementById('ootdClosetModal');
-  if (modal) modal.classList.remove('hidden');
-}
-
-// OOTD 파이어베이스 즉시 동기화 함수
-function syncOotdToFirestore() {
-  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
-  const selectedData = (typeof currentOotdSelected !== 'undefined') ? currentOotdSelected : {};
-  
-  // 1. 로컬 저장소 동기화
-  try {
-    const key = 'mingle_day_' + curDate;
-    let d = JSON.parse(localStorage.getItem(key) || '{}');
-    d.ootdSelected = selectedData;
-    localStorage.setItem(key, JSON.stringify(d));
-    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(curDate, d);
-  } catch(e) {}
-
-  // 2. 파이어베이스 클라우드 동기화 (기존 데이터 보존)
-  if (typeof db !== 'undefined' && db) {
-    db.collection('diary_days').doc(curDate).set({
-      ootdSelected: selectedData
-    }, { merge: true }).catch(err => console.error(err));
-  }
+  document.getElementById('ootdClosetModal').classList.remove('hidden');
 }
 
 function closeOotdClosetModal() {
-  const modal = document.getElementById('ootdClosetModal');
-  if (modal) modal.classList.add('hidden');
-  syncOotdToFirestore();
-  if (typeof renderOotd === 'function') renderOotd();
-  if (typeof renderOotdSelectedList === 'function') renderOotdSelectedList();
+  document.getElementById('ootdClosetModal').classList.add('hidden');
+  renderOotd();
 }
 
-// OOTD 옷별 착용 누적 횟수 계산 함수
 function getClothWearCount(category, clothId) {
   let count = 0;
   try {
@@ -1928,12 +1303,9 @@ function getClothWearCount(category, clothId) {
       const key = localStorage.key(i);
       if (key && key.startsWith('mingle_day_')) {
         const d = JSON.parse(localStorage.getItem(key) || '{}');
-        const target = (d && d.ootdSelected && d.ootdSelected[category]) || (d && d.ootd && d.ootd[category]);
-        if (Array.isArray(target) && target.map(String).includes(String(clothId))) {
-          count++;
-        } else if (target && String(target) === String(clothId)) {
-          count++;
-        }
+        const target = (d.ootdSelected && d.ootdSelected[category]) || (d.ootd && d.ootd[category]);
+        if (Array.isArray(target) && target.map(String).includes(String(clothId))) count++;
+        else if (target && String(target) === String(clothId)) count++;
       }
     }
   } catch(e) {}
@@ -1943,84 +1315,49 @@ function getClothWearCount(category, clothId) {
 function renderClosetModalList() {
   const container = document.getElementById('ootdClosetList');
   if (!container) return;
-  container.innerHTML = '';
-
   const closet = getClosetData();
   let list = (closet[activeCategory] || []).slice();
   
-  // 로컬 스토리지에서 최신 당일 데이터를 가장 먼저 직접 조회!
-  let dayData = {};
-  try {
-    const key = 'mingle_day_' + currentDate;
-    dayData = JSON.parse(localStorage.getItem(key) || '{}');
-  } catch(e) {
-    dayData = (typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : window.currentDayData) || {};
-  }
-  
+  const dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
   const selObj = dayData.ootdSelected || dayData.ootd || {};
   let selectedIds = selObj[activeCategory] || [];
   if (!Array.isArray(selectedIds)) selectedIds = selectedIds ? [String(selectedIds)] : [];
 
   if (list.length === 0) {
-    container.innerHTML = '<span class="text-[11px] text-stone-400 p-2">등록된 옷이 없어요. 위에서 추가해 보세요!</span>';
+    container.innerHTML = '<span class="text-[11px] text-stone-400 p-2 text-center w-full">등록된 옷이 없어요. 위에서 추가해 보세요! 🧥</span>';
     return;
   }
 
-  // 착용 횟수 미리 계산 후 자주 입은 순 정렬
-  list.forEach(item => {
-    item._count = getClothWearCount(activeCategory, item.id);
-  });
+  list.forEach(item => { item._count = getClothWearCount(activeCategory, item.id); });
   list.sort((a, b) => b._count - a._count);
 
-  list.forEach(item => {
-    const isSelected = selectedIds.map(String).includes(String(item.id));
-    const btn = document.createElement('div');
-    btn.className = isSelected 
-      ? 'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border cursor-pointer select-none transition-all bg-amber-100 border-amber-300 font-bold text-amber-900 shadow-xs ring-1 ring-amber-400' 
-      : 'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border cursor-pointer select-none transition-all bg-white border-stone-200 text-stone-600 hover:bg-stone-50';
+  container.innerHTML = list.map(item => {
+    const isSelected = selectedIds.includes(String(item.id));
+    const btnClass = isSelected 
+      ? 'bg-amber-100 border-amber-300 font-bold text-amber-900 shadow-xs ring-1 ring-amber-400' 
+      : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50';
 
-    btn.innerHTML = '' +
-      '<span class="w-2.5 h-2.5 rounded-full border border-stone-300 shrink-0 pointer-events-none" style="background-color: ' + (item.color || '#A8A29E') + ';"></span>' +
-      '<span class="cloth-title flex-1 pointer-events-none">' + item.name + '</span>' +
-      '<span class="text-[10px] text-stone-400 font-normal shrink-0 pointer-events-none">(' + item._count + '회)</span>' +
-      '<button type="button" onclick="event.stopPropagation(); editClothName(\'' + item.id + '\', \'' + item.name.replace(/'/g, "\\'") + '\')" title="이름 수정" class="text-stone-300 hover:text-stone-500 p-1 transition-colors flex items-center">' +
-        '<svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-          '<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>' +
-        '</svg>' +
-      '</button>' +
-      '<button type="button" onclick="event.stopPropagation(); deleteClothFromCloset(\'' + item.id + '\')" title="삭제" class="text-stone-300 hover:text-red-400 px-1 text-sm font-bold transition-colors">×</button>';
-
-    btn.onclick = () => {
-      toggleSelectCloth(activeCategory, item.id);
-    };
-
-    container.appendChild(btn);
-  });
+    return `
+      <div onclick="toggleSelectCloth('${activeCategory}', '${item.id}')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border cursor-pointer select-none transition-all ${btnClass}">
+        <span class="w-2.5 h-2.5 rounded-full border border-stone-300 shrink-0 pointer-events-none" style="background-color: ${item.color || '#A8A29E'};"></span>
+        <span class="cloth-title flex-1 pointer-events-none">${item.name}</span>
+        <span class="text-[10px] text-stone-400 font-normal shrink-0 pointer-events-none">(${item._count}회)</span>
+        <button type="button" onclick="event.stopPropagation(); editClothName('${item.id}', '${item.name.replace(/'/g, "\\'")}')" title="이름 수정" class="text-stone-300 hover:text-stone-500 p-1 flex items-center">${EDIT_SVG_ICON}</button>
+        <button type="button" onclick="event.stopPropagation(); deleteClothFromCloset('${item.id}')" title="삭제" class="text-stone-300 hover:text-red-400 px-1 text-sm font-bold">×</button>
+      </div>`;
+  }).join('');
 }
 
 function toggleSelectCloth(category, id) {
   const strId = String(id);
-  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
-  const key = 'mingle_day_' + curDate;
-  let dayData = {};
-  try {
-    dayData = JSON.parse(localStorage.getItem(key)) || {};
-  } catch(e) {
-    dayData = {};
-  }
+  const dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
 
   if (!dayData.ootdSelected) dayData.ootdSelected = {};
   if (!dayData.ootd) dayData.ootd = {};
   if (!dayData.ootdNames) dayData.ootdNames = {};
   if (!dayData.ootdColors) dayData.ootdColors = {};
 
-  let arr = [];
-  const sourceArr = dayData.ootdSelected[category] || dayData.ootd[category];
-  if (Array.isArray(sourceArr)) {
-    arr = sourceArr.map(String);
-  } else if (sourceArr) {
-    arr = [String(sourceArr)];
-  }
+  let arr = Array.isArray(dayData.ootdSelected[category] || dayData.ootd[category]) ? [...(dayData.ootdSelected[category] || dayData.ootd[category])].map(String) : [];
 
   const closet = getClosetData();
   const cloth = (closet[category] || []).find(c => String(c.id) === strId || c.name === strId);
@@ -2038,70 +1375,43 @@ function toggleSelectCloth(category, id) {
     dayData.ootdNames[category][strId] = clothName;
     dayData.ootdColors[category][strId] = clothColor;
 
-    if (category === 'top' || category === 'outer') {
-      if (clothColor && (!dayData.ootd.color || dayData.ootd.color === '#ecdcc9')) {
-        dayData.ootd.color = clothColor;
-      }
+    if ((category === 'top' || category === 'outer') && clothColor && (!dayData.ootd.color || dayData.ootd.color === '#ecdcc9')) {
+      dayData.ootd.color = clothColor;
+      if (document.getElementById('ootdColorBadge')) document.getElementById('ootdColorBadge').style.backgroundColor = clothColor;
     }
   }
 
   dayData.ootdSelected[category] = arr;
   dayData.ootd[category] = arr;
 
-  try {
-    localStorage.setItem(key, JSON.stringify(dayData));
-    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(curDate, dayData);
-  } catch(e) {}
+  saveDayDataLocal(currentDate, dayData);
+  window.currentDayData = dayData;
 
-  if (window.currentDayData) {
-    window.currentDayData.ootdSelected = dayData.ootdSelected;
-    window.currentDayData.ootd = dayData.ootd;
-    window.currentDayData.ootdNames = dayData.ootdNames;
-    window.currentDayData.ootdColors = dayData.ootdColors;
-    if (dayData.ootd && dayData.ootd.color) window.currentDayData.ootd.color = dayData.ootd.color;
-  }
-
-  // ☁️ 파이어베이스 즉시 동기화 (이름과 색상까지 함께 전송)
-  if (typeof db !== 'undefined' && db) {
-    db.collection('diary_days').doc(curDate).set({
-      ootdSelected: dayData.ootdSelected,
-      ootd: dayData.ootd,
-      ootdNames: dayData.ootdNames,
-      ootdColors: dayData.ootdColors
-    }, { merge: true }).catch(err => console.error(err));
+  if (db) {
+    db.collection('diary_days').doc(currentDate).set({
+      ootdSelected: dayData.ootdSelected, ootd: dayData.ootd, ootdNames: dayData.ootdNames, ootdColors: dayData.ootdColors
+    }, { merge: true }).catch(console.error);
   }
 
   renderClosetModalList();
-  if (typeof renderOotd === 'function') {
-    try { renderOotd(); } catch(e) {}
-  }
-  if (typeof renderTodayOotd === 'function') {
-    try { renderTodayOotd(); } catch(e) {}
-  }
-  if (typeof renderCalendar === 'function') {
-    try { renderCalendar(); } catch(e) {}
-  }
+  renderOotd();
+  if (typeof renderCalendar === 'function') renderCalendar();
 }
 
 function addNewClothToCloset() {
   const input = document.getElementById('ootdNewClothInput');
-  if (!input) return;
-  const name = input.value.trim();
+  const name = input?.value.trim();
   if (!name) return;
 
-  const color = typeof detectClothColor === 'function' ? detectClothColor(name) : '#A8A29E';
+  const color = detectClothColor(name);
   const closet = getClosetData();
-  
-  if (!closet[activeCategory]) {
-    closet[activeCategory] = [];
-  }
+  if (!closet[activeCategory]) closet[activeCategory] = [];
 
   const newId = String(Date.now());
-  closet[activeCategory].push({ id: newId, name: name, color: color });
+  closet[activeCategory].push({ id: newId, name, color });
   saveClosetData(closet);
 
   input.value = '';
-  renderClosetModalList();
   toggleSelectCloth(activeCategory, newId);
 }
 
@@ -2126,2054 +1436,432 @@ function deleteClothFromCloset(id) {
   closet[activeCategory] = (closet[activeCategory] || []).filter(c => String(c.id) !== String(id));
   saveClosetData(closet);
 
-  let dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : (window.currentDayData || {});
-  if (dayData && dayData.ootd && Array.isArray(dayData.ootd[activeCategory])) {
+  let dayData = (window.currentDayData && window.currentDayData.date === currentDate) ? window.currentDayData : getDayDataLocal(currentDate);
+  if (dayData.ootd && Array.isArray(dayData.ootd[activeCategory])) {
     dayData.ootd[activeCategory] = dayData.ootd[activeCategory].filter(x => String(x) !== String(id));
-    if (typeof saveDayData === 'function') saveDayData();
+    saveDayDataLocal(currentDate, dayData);
+    if (db) db.collection('diary_days').doc(currentDate).set({ ootd: dayData.ootd }, { merge: true }).catch(console.error);
   }
-
   renderClosetModalList();
   renderOotd();
 }
 
-    function searchMusicTrack() {
-      const q = document.getElementById('bgmSearchInput').value.trim();
-      if (!q) return;
-      document.getElementById('bgmInfoText').innerText = "음악 검색 중... 🎵";
-
-      fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&limit=1`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.results && data.results.length > 0) {
-            const track = data.results[0];
-            const coverUrl = track.artworkUrl100.replace('100x100bb', '300x300bb');
-            const info = `${track.trackName} - ${track.artistName}`;
-            
-            document.getElementById('bgmCoverImg').src = coverUrl;
-            document.getElementById('bgmInfoText').innerText = info;
-            document.getElementById('bgmSearchInput').value = track.trackName;
-            saveDayData();
-          } else {
-            document.getElementById('bgmInfoText').innerText = "검색 결과가 없어요 😢";
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          document.getElementById('bgmInfoText').innerText = "음악 정보를 불러오지 못했어요";
-        });
-    }
-
-    // 데일리 데이터 동기화 (순수 파이어베이스 직통)
-    function subscribeDayData(dateStr) {
-      if (unsubscribeDay) unsubscribeDay();
-
-      // 날짜 변경 즉시 이전 날짜 잔상 메모리 초기화
-      window.currentDayData = { date: dateStr, expenses: [], ootdSelected: {}, ootd: {} };
-      applyDayDataToUI(window.currentDayData);
-
-      if (!db) return;
-      unsubscribeDay = db.collection('diary_days').doc(dateStr)
-        .onSnapshot((doc) => {
-          if (doc.exists) {
-            const data = doc.data() || {};
-            data.date = dateStr;
-            window.currentDayData = data;
-            saveDayDataLocal(dateStr, data);
-            applyDayDataToUI(data);
-          } else {
-            // 해당 날짜에 기록이 없으면 깨끗하게 빈 화면으로 리셋!
-            const emptyData = { date: dateStr, expenses: [], ootdSelected: {}, ootd: {} };
-            window.currentDayData = emptyData;
-            applyDayDataToUI(emptyData);
-          }
-
-          // 위젯 및 달력 동기화
-          if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
-          if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
-          if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
-          if (typeof renderOotdSelectedList === 'function') renderOotdSelectedList();
-        }, err => console.error(err));
-    }
-
-    function getDayDataLocal(dateStr) {
-      const all = JSON.parse(localStorage.getItem('mingle_diary_days') || '{}');
-      return all[dateStr] || {};
-    }
-
-    function saveDayDataLocal(dateStr, data) {
-      const all = JSON.parse(localStorage.getItem('mingle_diary_days') || '{}');
-      all[dateStr] = data;
-      localStorage.setItem('mingle_diary_days', JSON.stringify(all));
-    }
-
-    function saveDayData() {
-      const timetableData = {};
-      for (let h = 7; h <= 24; h++) {
-        const hourStr = h < 10 ? `0${h}` : `${h}`;
-        for (let b = 0; b < 6; b++) {
-          const cell = document.getElementById(`cell_${hourStr}_${b}`);
-          if (cell && cell.innerText) {
-            timetableData[`${hourStr}_${b}`] = {
-              text: cell.innerText,
-              category: cell.dataset.category || 'custom'
-            };
-          }
-        }
-      }
-
-      const existing = getDayDataLocal(currentDate) || {};
-
-      const data = {
-        ...existing,
-        weather: document.getElementById('todayWeatherSelect')?.value || '',
-        mood: document.getElementById('todayMoodSelect')?.value || '',
-        ootd: {
-          ...(existing.ootd || {}),
-          text: document.getElementById('ootdTextInput')?.value || (existing.ootd?.text || ''),
-          color: (existing.ootd && existing.ootd.color) ? existing.ootd.color : (document.getElementById('ootdColorInput')?.value || '#ecdcc9')
-        },
-        ootdSelected: (typeof currentOotdSelected !== 'undefined') ? currentOotdSelected : (existing.ootdSelected || {}),
-        expenses: existing.expenses || [],
-        bgm: {
-          song: document.getElementById('bgmSearchInput')?.value || '',
-          info: document.getElementById('bgmInfoText')?.innerText || '',
-          cover: document.getElementById('bgmCoverImg')?.src || ''
-        },
-        health: {
-          sleepBed: document.getElementById('sleepBedTime').value,
-          sleepWake: document.getElementById('sleepWakeTime').value,
-          weight: document.getElementById('todayWeight').value,
-          snacks: {
-            amTime: document.getElementById('snackTime_am')?.value || '',
-            amMenu: document.getElementById('snackMenu_am')?.value || '',
-            pmTime: document.getElementById('snackTime_pm')?.value || '',
-            pmMenu: document.getElementById('snackMenu_pm')?.value || '',
-            nightTime: document.getElementById('snackTime_night')?.value || '',
-            nightMenu: document.getElementById('snackMenu_night')?.value || ''
-          },
-          meals: [1, 2, 3].map(i => ({
-            time: document.getElementById(`mealTime_${i}`).value,
-            sugarPost: document.getElementById(`sugarPost_${i}`).value,
-            menu: document.getElementById(`mealMenu_${i}`).value,
-            vege: document.getElementById(`mealVege_${i}`)?.checked || false,
-            acv: document.getElementById(`mealAcv_${i}`)?.checked || false,
-            walk: document.getElementById(`mealWalk_${i}`)?.checked || false,
-            cond: document.getElementById(`mealCond_${i}`).value,
-            sugarFast: i === 1 ? document.getElementById('sugarFast').value : null
-          }))
-        },
-        knit: {
-          project: document.getElementById('knitCurrentProject').value,
-          rows: document.getElementById('knitRowCount').innerText,
-          tip: document.getElementById('knitSectionTip')?.value || ''
-        },
-        book: {
-          title: document.getElementById('bookCurrentTitle').value,
-          pages: document.getElementById('bookTodayPages').value
-        },
-        memo: document.getElementById('dailyMemo').value,
-        timetable: timetableData,
-        waterCount: existing.waterCount || 0,
-        acvCount: existing.acvCount || 0,
-        coffeeCount: existing.coffeeCount || 0
-      };
-
-      saveDayDataLocal(currentDate, data);
-      if (db) db.collection('diary_days').doc(currentDate).set(data).catch(console.error);
-
-      renderMoodTracker();
-      renderCalendar();
-      renderRoutineProgressTracker();
-      renderHealthTracker();
-    }
-
-    function applyDayDataToUI(data) {
-      data = data || {};
-      window.currentDayData = data; // 이전 날짜 찌꺼기 강제 덮어쓰기 영구 박멸!
-      initTimetableGrid();
-
-      const weatherEl = document.getElementById('todayWeatherSelect');
-      if (weatherEl) weatherEl.value = data.weather || '';
-
-      const moodEl = document.getElementById('todayMoodSelect');
-      if (moodEl) moodEl.value = data.mood || '';
-
-    if (data.ootd) {
-      const oldOotdInput = document.getElementById('ootdTextInput');
-      if (oldOotdInput) oldOotdInput.value = data.ootd.text || '';
-      
-      const oColorInput = document.getElementById('ootdColorInput');
-      if (oColorInput) oColorInput.value = data.ootd.color || '#ecdcc9';
-      
-      const oColorBadge = document.getElementById('ootdColorBadge');
-      if (oColorBadge) oColorBadge.style.backgroundColor = data.ootd.color || '#ecdcc9';
-
-      const oMemoInput = document.getElementById('ootdMemoInput');
-      if (oMemoInput) oMemoInput.value = data.ootd.memo || '';
-    }
-      // 👗 OOTD 선택 옷 데이터 복원 및 렌더링
-  if (data.ootdSelected) {
-    if (typeof currentOotdSelected !== 'undefined') {
-      currentOotdSelected = data.ootdSelected;
-    }
-    if (typeof renderOotdSelectedList === 'function') {
-      renderOotdSelectedList();
-    }
-  }
-  // 🎨 대표 컬러 즉시 동기화 반영
-  const remoteOotdColor = (data && data.ootd && data.ootd.color) ? data.ootd.color : ((data && data.ootdColor) ? data.ootdColor : null);
-  if (remoteOotdColor) {
-    if (!window.currentDayData) window.currentDayData = {};
-    if (!window.currentDayData.ootd) window.currentDayData.ootd = {};
-    window.currentDayData.ootd.color = remoteOotdColor;
-    const badge = document.getElementById('ootdColorBadge');
-    const input = document.getElementById('ootdColorInput');
-    if (badge) badge.style.backgroundColor = remoteOotdColor;
-    if (input) input.value = remoteOotdColor;
-  }
-  if (typeof renderOotd === 'function') renderOotd();
-
-  // 💸 클라우드 지출 데이터 즉시 반영 및 렌더링
-  if (data && Array.isArray(data.expenses)) {
-    if (!window.currentDayData) window.currentDayData = {};
-    window.currentDayData.expenses = data.expenses;
-    const curD = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
-    try {
-      const k = 'mingle_day_' + curD;
-      let d = JSON.parse(localStorage.getItem(k) || '{}');
-      d.expenses = data.expenses;
-      localStorage.setItem(k, JSON.stringify(d));
-    } catch(e) {}
-  }
-  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
-  if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
-  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
-
-      if (data.bgm) {
-        document.getElementById('bgmSearchInput').value = data.bgm.song || '';
-        document.getElementById('bgmInfoText').innerText = data.bgm.info || 'BGM을 검색해보세요';
-        if (data.bgm.cover) document.getElementById('bgmCoverImg').src = data.bgm.cover;
-      }
-
-      if (data.health) {
-        document.getElementById('sleepBedTime').value = data.health.sleepBed || '';
-        document.getElementById('sleepWakeTime').value = data.health.sleepWake || '';
-        document.getElementById('todayWeight').value = data.health.weight || '';
-
-        if (data.health.snacks) {
-          if (document.getElementById('snackTime_am')) document.getElementById('snackTime_am').value = data.health.snacks.amTime || '';
-          if (document.getElementById('snackMenu_am')) document.getElementById('snackMenu_am').value = data.health.snacks.amMenu || '';
-          if (document.getElementById('snackTime_pm')) document.getElementById('snackTime_pm').value = data.health.snacks.pmTime || '';
-          if (document.getElementById('snackMenu_pm')) document.getElementById('snackMenu_pm').value = data.health.snacks.pmMenu || '';
-          if (document.getElementById('snackTime_night')) document.getElementById('snackTime_night').value = data.health.snacks.nightTime || '';
-          if (document.getElementById('snackMenu_night')) document.getElementById('snackMenu_night').value = data.health.snacks.nightMenu || '';
-        }
-
-        if (data.health.meals) {
-          data.health.meals.forEach((m, idx) => {
-            const i = idx + 1;
-            document.getElementById(`mealTime_${i}`).value = m.time || '';
-            document.getElementById(`sugarPost_${i}`).value = m.sugarPost || '';
-            document.getElementById(`mealMenu_${i}`).value = m.menu || '';
-            if (document.getElementById(`mealVege_${i}`)) document.getElementById(`mealVege_${i}`).checked = !!m.vege;
-            if (document.getElementById(`mealAcv_${i}`)) document.getElementById(`mealAcv_${i}`).checked = !!m.acv;
-            if (document.getElementById(`mealWalk_${i}`)) document.getElementById(`mealWalk_${i}`).checked = !!m.walk;
-            document.getElementById(`mealCond_${i}`).value = m.cond || '';
-            if (i === 1) document.getElementById('sugarFast').value = m.sugarFast || '';
-          });
-        }
-      }
-
-      renderDrinkTracker(data);
-
-      if (data.knit) {
-        document.getElementById('knitCurrentProject').value = data.knit.project || '';
-        document.getElementById('knitRowCount').innerText = data.knit.rows || '0';
-        if (document.getElementById('knitSectionTip')) document.getElementById('knitSectionTip').value = data.knit.tip || '';
-      }
-      if (data.book) {
-        document.getElementById('bookCurrentTitle').value = data.book.title || '';
-        document.getElementById('bookTodayPages').value = data.book.pages || '';
-      }
-      document.getElementById('dailyMemo').value = data.memo || '';
-
-      if (data.timetable) {
-        Object.keys(data.timetable).forEach(k => {
-          const [h, b] = k.split('_');
-          const item = data.timetable[k];
-          if (typeof item === 'object') {
-            setBlockData(h, parseInt(b), item.text, item.category);
-          } else {
-            setBlockData(h, parseInt(b), item, 'custom');
-          }
-        });
-      }
-
-      renderDynamicRoutines();
-      updateTodaySpecialBanner();
-
-      if (timetableViewMode === 'timeline') renderVerticalTimeline();
-    }
-
-    // 캘린더 약속 / 일정 & 클릭 수정
-    function initCalEventCategoryButtons() {
-      const container = document.getElementById('calEventCategoryContainer');
-      if (!container) return;
-      container.innerHTML = EVENT_CATEGORIES.map(c => `
-        <button type="button" onclick="selectCalEventCategory('${c.key}')" id="cec_btn_${c.key}" class="py-1 px-1.5 rounded-lg border text-[11px] font-bold text-center truncate ${c.key === selectedCalEventCategory ? c.bg : 'border-stone-200 bg-stone-50 text-stone-600'}">
-          ${c.icon} ${c.label}
-        </button>
-      `).join('');
-    }
-
-    function selectCalEventCategory(key) {
-      selectedCalEventCategory = key;
-      EVENT_CATEGORIES.forEach(c => {
-        const btn = document.getElementById(`cec_btn_${c.key}`);
-        if (btn) {
-          if (c.key === key) btn.className = `py-1 px-1.5 rounded-lg border text-[11px] font-bold text-center truncate ${c.bg}`;
-          else btn.className = 'py-1 px-1.5 rounded-lg border text-[11px] font-bold text-center truncate border-stone-200 bg-stone-50 text-stone-600';
-        }
-      });
-    }
-
-    function toggleCalEventRepeat(checked) {
-      const box = document.getElementById('calEventRepeatDaysBox');
-      if (checked) {
-        box.classList.remove('hidden');
-        renderCalRepeatDays();
-      } else {
-        box.classList.add('hidden');
-      }
-    }
-
-    function toggleCalRepeatDay(dayNum) {
-      const idx = calEventRepeatDays.indexOf(dayNum);
-      if (idx > -1) {
-        calEventRepeatDays.splice(idx, 1);
-      } else {
-        calEventRepeatDays.push(dayNum);
-      }
-      renderCalRepeatDays();
-    }
-
-    function renderCalRepeatDays() {
-      [0, 1, 2, 3, 4, 5, 6].forEach(d => {
-        const btn = document.getElementById(`crd_${d}`);
-        if (btn) {
-          if (calEventRepeatDays.includes(d)) {
-            btn.className = 'px-2 py-0.5 rounded border border-amber-300 bg-amber-100 text-amber-900 font-bold';
-          } else {
-            btn.className = 'px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600';
-          }
-        }
-      });
-    }
-
-    function changeCalMonth(delta) {
-      calMonth += delta;
-      if (calMonth < 0) { calMonth = 11; calYear--; }
-      if (calMonth > 11) { calMonth = 0; calYear++; }
-      renderCalendar();
-      renderUpcomingEvents();
-      renderTicketList();
-      renderAnniversaries();
-    }
-
-    function subscribeCalendarEvents() {
-      renderCalendar();
-      renderUpcomingEvents();
-      if (!db) return;
-      if (unsubscribeCalEvents) unsubscribeCalEvents();
-      unsubscribeCalEvents = db.collection('calendar_events').doc('all')
-        .onSnapshot(doc => {
-          if (doc.exists) {
-            localStorage.setItem('mingle_cal_events', JSON.stringify(doc.data().events || []));
-            renderCalendar();
-            renderUpcomingEvents();
-            updateTodaySpecialBanner();
-          }
-        }, err => console.error(err));
-    }
-
-    function getCalendarEvents() {
-      return JSON.parse(localStorage.getItem('mingle_cal_events') || '[]');
-    }
-
-    function saveCalendarEvents(events) {
-      localStorage.setItem('mingle_cal_events', JSON.stringify(events));
-      renderCalendar();
-      renderUpcomingEvents();
-      updateTodaySpecialBanner();
-      if (db) db.collection('calendar_events').doc('all').set({ events }).catch(console.error);
-    }
-
-    function setEventFilter(mode) {
-      eventFilterMode = mode;
-      ['7', '30', 'all'].forEach(m => {
-        const btn = document.getElementById(`eventFilter_${m}`);
-        if (btn) {
-          if (m === mode) btn.className = 'px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold';
-          else btn.className = 'px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold';
-        }
-      });
-      renderUpcomingEvents();
-    }
-
-    function openCalendarEventModal(eventId = null) {
-      editingEventId = eventId;
-      const sTimeInp = document.getElementById('calEventStartTime');
-      const eTimeInp = document.getElementById('calEventEndTime');
-
-      if (eventId) {
-        const ev = getCalendarEvents().find(e => e.id === eventId);
-        if (ev) {
-          document.getElementById('calEventModalTitle').innerHTML = '<span>📌</span> 일정 / 약속 수정';
-          document.getElementById('calEventTitle').value = ev.title;
-          document.getElementById('calEventStart').value = ev.start;
-          document.getElementById('calEventEnd').value = ev.end;
-          if (sTimeInp) sTimeInp.value = ev.startTime || '';
-          if (eTimeInp) eTimeInp.value = ev.endTime || '';
-          document.getElementById('calEventRepeatToggle').checked = !!ev.isRepeat;
-          calEventRepeatDays = ev.repeatDays ? [...ev.repeatDays] : [];
-          toggleCalEventRepeat(!!ev.isRepeat);
-          selectCalEventCategory(ev.category || 'family');
-        }
-      } else {
-        document.getElementById('calEventModalTitle').innerHTML = '<span>📌</span> 일정 / 약속 등록';
-        document.getElementById('calEventTitle').value = '';
-        document.getElementById('calEventStart').value = currentDate;
-        document.getElementById('calEventEnd').value = currentDate;
-        if (sTimeInp) sTimeInp.value = '';
-        if (eTimeInp) eTimeInp.value = '';
-        document.getElementById('calEventRepeatToggle').checked = false;
-        calEventRepeatDays = [];
-        document.getElementById('calEventRepeatDaysBox').classList.add('hidden');
-        selectCalEventCategory('family');
-      }
-      document.getElementById('calendarEventModal').classList.remove('hidden');
-    }
-
-    function closeCalendarEventModal() {
-      document.getElementById('calendarEventModal').classList.add('hidden');
-      editingEventId = null;
-    }
-
-    function saveCalendarEvent() {
-      const title = document.getElementById('calEventTitle').value.trim();
-      const start = document.getElementById('calEventStart').value;
-      const end = document.getElementById('calEventEnd').value || start;
-      const startTime = document.getElementById('calEventStartTime')?.value.trim() || '';
-      const endTime = document.getElementById('calEventEndTime')?.value.trim() || '';
-      if (!title || !start) return;
-
-      const isRepeat = document.getElementById('calEventRepeatToggle').checked;
-      let events = getCalendarEvents();
-
-      if (editingEventId) {
-        const idx = events.findIndex(e => e.id === editingEventId);
-        if (idx > -1) {
-          events[idx].title = title;
-          events[idx].start = start;
-          events[idx].end = end;
-          events[idx].startTime = startTime;
-          events[idx].endTime = endTime;
-          events[idx].category = selectedCalEventCategory;
-          events[idx].isRepeat = isRepeat;
-          events[idx].repeatDays = isRepeat ? [...calEventRepeatDays] : null;
-        }
-      } else {
-        events.push({
-          id: Date.now(),
-          title,
-          start,
-          end,
-          startTime,
-          endTime,
-          category: selectedCalEventCategory,
-          isRepeat,
-          repeatDays: isRepeat ? [...calEventRepeatDays] : null,
-          skippedDates: []
-        });
-      }
-
-      saveCalendarEvents(events);
-      closeCalendarEventModal();
-    }
-
-    function deleteCalendarEvent(id) {
-      let events = getCalendarEvents();
-      events = events.filter(e => e.id !== id);
-      saveCalendarEvents(events);
-    }
-
-    // 🎫 예매 확인 (단골 지명 퀵 칩 & 즐겨찾기)
-    const DEFAULT_FAV_PLACES = ['부산', '진주', '사천', '서울'];
-
-    function getFavPlaces() {
-      return JSON.parse(localStorage.getItem('mingle_fav_places') || JSON.stringify(DEFAULT_FAV_PLACES));
-    }
-
-function saveFavPlaces(places) {
-  localStorage.setItem('mingle_fav_places', JSON.stringify(places));
-  renderFavPlaceChips();
-
-  // ☁️ 자주 가는 장소 Firestore 클라우드 즉시 동기화
-  if (typeof db !== 'undefined' && db) {
-    db.collection('tickets_data').doc('fav_places').set({
-      places: places
-    }, { merge: true }).catch(console.error);
-  }
-}
-
-    function promptAddPlaceChip() {
-      const place = prompt("자주 가는 도시/지명을 입력해주세요:\n(예: 대전, 대구, 순천)");
-      if (!place || !place.trim()) return;
-      const places = getFavPlaces();
-      places.push(place.trim());
-      saveFavPlaces(places);
-    }
-
-    function deletePlaceChip(idx) {
-      const places = getFavPlaces();
-      places.splice(idx, 1);
-      saveFavPlaces(places);
-    }
-
-    function fillPlaceIntoInput(place) {
-      const targetInput = document.getElementById(activePlaceInputId) || document.getElementById('ticketDepartPlace');
-      if (targetInput) {
-        targetInput.value = place;
-        targetInput.focus();
-      }
-    }
-
-    function renderFavPlaceChips() {
-      const container = document.getElementById('favPlacesChipContainer');
-      if (!container) return;
-      const places = getFavPlaces();
-
-      container.innerHTML = places.map((p, idx) => `
-        <div class="inline-flex items-center rounded-lg border border-sky-200 bg-white text-[11px] font-semibold text-sky-900 shadow-2xs">
-          <span onclick="fillPlaceIntoInput('${p}')" class="px-2 py-0.5 cursor-pointer hover:bg-sky-50">${p}</span>
-          <button onclick="deletePlaceChip(${idx})" class="pr-1 text-[9px] text-stone-300 hover:text-rose-500">✕</button>
-        </div>
-      `).join('');
-    }
-
-    let unsubscribeCompletedTickets = null;
-    let unsubscribeFavPlaces = null;
-    function subscribeTicketData() {
-      renderTicketList();
-      if (!db) return;
-      if (unsubscribeTickets) unsubscribeTickets();
-      unsubscribeTickets = db.collection('tickets_data').doc('all')
-        .onSnapshot(doc => {
-          if (doc.exists) {
-            localStorage.setItem('mingle_tickets', JSON.stringify(doc.data().tickets || []));
-            renderTicketList();
-            renderCalendar();
-            updateTodaySpecialBanner();
-          }
-        }, err => console.error(err));
-
-      // ☁️ 탑승완료 상태 실시간 동기화
-      if (unsubscribeCompletedTickets) unsubscribeCompletedTickets();
-      unsubscribeCompletedTickets = db.collection('tickets_data').doc('completed')
-        .onSnapshot(doc => {
-          if (doc.exists) {
-            const ids = (doc.data() && doc.data().completedIds) || [];
-            localStorage.setItem('mingle_completed_tickets', JSON.stringify(ids));
-            updateTodaySpecialBanner();
-          }
-        }, err => console.error(err));
-
-      // ☁️ 자주 가는 장소 실시간 동기화
-      if (unsubscribeFavPlaces) unsubscribeFavPlaces();
-      unsubscribeFavPlaces = db.collection('tickets_data').doc('fav_places')
-        .onSnapshot(doc => {
-          if (doc.exists) {
-            const places = (doc.data() && doc.data().places) || [];
-            if (Array.isArray(places) && places.length > 0) {
-              localStorage.setItem('mingle_fav_places', JSON.stringify(places));
-              if (typeof renderFavPlaceChips === 'function') renderFavPlaceChips();
-            }
-          }
-        }, err => console.error(err));
-    }
-
-    function getTicketsLocal() {
-      return JSON.parse(localStorage.getItem('mingle_tickets') || '[]');
-    }
-
-    function saveTicketsLocal(tickets) {
-      localStorage.setItem('mingle_tickets', JSON.stringify(tickets));
-      renderTicketList();
-      renderCalendar();
-      updateTodaySpecialBanner();
-      if (db) db.collection('tickets_data').doc('all').set({ tickets }).catch(console.error);
-    }
-
-    function setTicketFilter(mode) {
-      ticketFilterMode = mode;
-      ['7', '30', 'all'].forEach(m => {
-        const btn = document.getElementById(`ticketFilter_${m}`);
-        if (btn) {
-          if (m === mode) btn.className = 'px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold';
-          else btn.className = 'px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold';
-        }
-      });
-      renderTicketList();
-    }
-
-    function openTicketModal(ticketId = null) {
-      editingTicketId = ticketId;
-      renderFavPlaceChips();
-      if (ticketId) {
-        const t = getTicketsLocal().find(item => item.id === ticketId);
-        if (t) {
-          document.getElementById('ticketModalTitle').innerHTML = '<span>🎫</span> 승차권 / 예매 수정';
-          selectTicketType(t.type);
-          document.getElementById('ticketDepartPlace').value = t.depart;
-          document.getElementById('ticketArrivePlace').value = t.arrive;
-          document.getElementById('ticketDate').value = t.date;
-          document.getElementById('ticketTime').value = t.time;
-          document.getElementById('ticketSeatMemo').value = t.seatMemo || '';
-        }
-      } else {
-        document.getElementById('ticketModalTitle').innerHTML = '<span>🎫</span> 승차권 / 예매 등록';
-        selectTicketType('bus');
-        document.getElementById('ticketDepartPlace').value = '';
-        document.getElementById('ticketArrivePlace').value = '';
-        document.getElementById('ticketDate').value = currentDate;
-        document.getElementById('ticketTime').value = '14:00';
-        document.getElementById('ticketSeatMemo').value = '';
-      }
-      document.getElementById('ticketModal').classList.remove('hidden');
-    }
-
-    function closeTicketModal() {
-      document.getElementById('ticketModal').classList.add('hidden');
-      editingTicketId = null;
-    }
-
-    function selectTicketType(type) {
-      selectedTicketType = type;
-      ['bus', 'train', 'flight'].forEach(t => {
-        const btn = document.getElementById(`tt_btn_${t}`);
-        if (btn) {
-          if (t === type) btn.className = 'py-1 rounded-lg border border-sky-300 bg-sky-100 text-sky-900 font-bold text-center';
-          else btn.className = 'py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-600 text-center';
-        }
-      });
-    }
-
-    function saveTicketData() {
-      const depart = document.getElementById('ticketDepartPlace').value.trim();
-      const arrive = document.getElementById('ticketArrivePlace').value.trim();
-      const date = document.getElementById('ticketDate').value;
-      const time = document.getElementById('ticketTime').value;
-      const seatMemo = document.getElementById('ticketSeatMemo').value.trim();
-      if (!depart || !arrive || !date) return;
-
-      let tickets = getTicketsLocal();
-      if (editingTicketId) {
-        const idx = tickets.findIndex(t => t.id === editingTicketId);
-        if (idx > -1) {
-          tickets[idx].type = selectedTicketType;
-          tickets[idx].depart = depart;
-          tickets[idx].arrive = arrive;
-          tickets[idx].date = date;
-          tickets[idx].time = time;
-          tickets[idx].seatMemo = seatMemo;
-        }
-      } else {
-        tickets.push({
-          id: Date.now(),
-          type: selectedTicketType,
-          depart,
-          arrive,
-          date,
-          time,
-          seatMemo
-        });
-      }
-
-      saveTicketsLocal(tickets);
-      closeTicketModal();
-    }
-
-    function deleteTicketData(id) {
-      let tickets = getTicketsLocal();
-      tickets = tickets.filter(t => t.id !== id);
-      saveTicketsLocal(tickets);
-    }
-
-function renderTicketList() {
-  const container = document.getElementById('ticketReservationList');
-  if (!container) return;
-  const tickets = getTicketsLocal();
-  const todayObj = new Date(REAL_TODAY_STR);
-
-  // 날짜+시간 순 정렬 (전체보기일 때 과거 내역도 정렬되어 나옴)
-  tickets.sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
-
-  const filtered = tickets.filter(t => {
-    const tDate = new Date(t.date);
-    const diff = Math.ceil((tDate - todayObj) / (1000 * 60 * 60 * 24));
-
-    if (ticketFilterMode === '7') {
-      return t.date >= REAL_TODAY_STR && diff <= 7;
-    }
-    if (ticketFilterMode === '30') {
-      return t.date >= REAL_TODAY_STR && diff <= 30;
-    }
-    return true; // 전체보기('all')는 과거 티켓까지 전부 노출!
-  });
-
-      if (filtered.length === 0) {
-        container.innerHTML = `<p class="text-[11px] text-stone-300 py-3 text-center">해당 기간에 예매된 승차권이 없어요 🌿</p>`;
-        return;
-      }
-
-      const iconMap = { bus: '🚌 버스', train: '🚅 기차', flight: '✈️ 비행기' };
-
-  container.innerHTML = filtered.map(t => {
-    const tDate = new Date(t.date);
-    const diff = Math.ceil((tDate - todayObj) / (1000 * 60 * 60 * 24));
-    const isPast = diff < 0;
-
-    // 디데이 뱃지: 오늘이면 '오늘 출발', 미래면 'D-day', 과거는 뱃지 없이 깔끔하게!
-    let badgeHtml = '';
-    if (diff === 0) {
-      badgeHtml = '<span class="font-bold px-2 py-0.5 rounded-full text-[10px] bg-rose-500 text-white animate-pulse">오늘 출발</span>';
-    } else if (diff > 0) {
-      const badgeColor = diff <= 7 ? 'text-rose-600 bg-rose-50' : 'text-sky-600 bg-sky-50';
-      badgeHtml = `<span class="font-bold px-2 py-0.5 rounded-full text-[10px] ${badgeColor}">D-${diff}</span>`;
-    } else {
-      // 지난 티켓은 D--1 대신 깔끔하고 단정한 연회색 텍스트로!
-      badgeHtml = '<span class="text-[10px] text-stone-400 font-medium">지난 일정</span>';
-    }
-
-    // 카드 스타일: 지난 일정은 살짝 은은하게 톤다운
-    const cardBg = isPast 
-      ? 'border-stone-200 bg-stone-50/70 text-stone-400 opacity-60' 
-      : 'border-sky-200 bg-sky-50/60 text-stone-700';
-
-    return `
-      <div class="p-2.5 rounded-xl border ${cardBg} flex items-center justify-between text-xs transition-all">
-        <div onclick="openTicketModal(${t.id})" class="min-w-0 pr-2 flex-1 cursor-pointer hover:opacity-80">
-          <div class="font-bold flex items-center gap-1.5 flex-wrap">
-            <span>${iconMap[t.type] || '🎫'} ${t.depart || ''} → ${t.arrive || ''}</span>
-            ${t.time ? `<span class="text-[10px] px-1.5 py-0.2 rounded-md bg-white/80 border border-stone-200 font-normal">${t.time}</span>` : ''}
-          </div>
-          <div class="text-[11px] text-stone-400 mt-0.5">
-            ${t.date}${t.seatMemo ? ` · ${t.seatMemo}` : ''}
-          </div>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
-          ${badgeHtml}
-          <button onclick="deleteTicketData(${t.id})" class="text-stone-300 hover:text-stone-500 text-xs">✕</button>
-        </div>
-      </div>
-    `;
-  }).join('');
- }
-
-    function renderUpcomingEvents() {
-      const container = document.getElementById('upcomingEventsList');
-      if (!container) return;
-      const events = getCalendarEvents();
-      const now = new Date(REAL_TODAY_STR);
-
-  // 날짜순 오름차순 정렬 (과거부터 미래 순으로 깔끔하게 정렬)
-  events.sort((a, b) => (a.start || '').localeCompare(b.start || ''));
-
-  // 7일 이내 다가올 일정이 있으면 기본 필터를 '7'로 스마트 전환
-  if (typeof eventFilterMode !== 'undefined') {
-    const hasUrgent = events.some(e => {
-      if (e.isRepeat) return false;
-      const startD = new Date(e.start);
-      const diff = Math.ceil((startD - now) / (1000 * 60 * 60 * 24));
-      return (e.end || e.start) >= REAL_TODAY_STR && diff <= 7;
-    });
-
-    if (hasUrgent && eventFilterMode === '30') {
-      eventFilterMode = '7';
-      ['7', '30', 'all'].forEach(m => {
-        const btn = document.getElementById(`eventFilter_${m}`);
-        if (btn) {
-          if (m === '7') btn.className = 'px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold';
-          else btn.className = 'px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold';
-        }
-      });
-    }
-  }
-
-  const filtered = events.filter(e => {
-    if (e.isRepeat) return true;
-    const startD = new Date(e.start);
-    const diff = Math.ceil((startD - now) / (1000 * 60 * 60 * 24));
-
-    if (eventFilterMode === '7') {
-      return (e.end || e.start) >= REAL_TODAY_STR && diff <= 7;
-    }
-    if (eventFilterMode === '30') {
-      return (e.end || e.start) >= REAL_TODAY_STR && diff <= 30;
-    }
-    return true; // 전체보기('all')는 과거에 끝난 일정도 다이어리처럼 전부 노출!
-  });
-
-      if (filtered.length === 0) {
-        container.innerHTML = `<p class="text-[11px] text-stone-300 py-3 text-center">해당 기간에 예정된 약속이나 일정이 없어요 🌿</p>`;
-        return;
-      }
-
-      const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-
-      container.innerHTML = filtered.map(e => {
-        const catMeta = EVENT_CATEGORIES.find(c => c.key === e.category) || EVENT_CATEGORIES[6];
-        const startD = new Date(e.start);
-        const diff = Math.ceil((startD - now) / (1000 * 60 * 60 * 24));
-        
-        // 디데이 뱃지: 오늘이면 다른 탭들처럼 '오늘'로 통일!
-        let ddayText = '';
-        let badgeStyle = catMeta.bg;
-
-        if (e.isRepeat) {
-          ddayText = '반복일정';
-        } else if (diff === 0) {
-          ddayText = '오늘';
-          badgeStyle = 'bg-rose-500 text-white animate-pulse shadow-xs';
-        } else if (diff < 0) {
-          ddayText = '진행중';
-        } else {
-          ddayText = `D-${diff}`;
-        }
-
-        // 반복 요일 텍스트 조합 (예: 매주 월요일 또는 매주 화, 목)
-        let repeatDaysText = '매주 반복 일정';
-        if (e.isRepeat && Array.isArray(e.repeatDays) && e.repeatDays.length > 0) {
-          const sortedDays = [...e.repeatDays].sort((a, b) => a - b).map(d => dayNames[d]);
-          repeatDaysText = `매주 (${sortedDays.join(', ')})`;
-        }
-
-        const timeStr = e.startTime ? ` (${e.startTime}${e.endTime ? '~' + e.endTime : ''})` : '';
-
-        return `
-          <div class="p-2 rounded-xl border flex items-center justify-between text-xs bg-stone-50 border-stone-100 text-stone-800">
-            <div onclick="openCalendarEventModal(${e.id})" class="min-w-0 pr-2 flex-1 cursor-pointer hover:opacity-80" title="클릭하여 일정 수정">
-              <span class="font-bold flex items-center gap-1">
-                <span>${catMeta.icon} ${e.title}</span>
-                ${EDIT_SVG_ICON}
-              </span>
-              <span class="text-[10px] text-stone-400 block">${e.isRepeat ? repeatDaysText : `${e.start} ~${e.end}`}${timeStr}</span>
-            </div>
-            <div class="flex items-center gap-1.5 shrink-0">
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeStyle}">${ddayText}</span>
-              <button onclick="deleteCalendarEvent(${e.id})" class="text-stone-300 hover:text-stone-500 text-xs px-1">✕</button>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    // ==========================================
-// 💌 오늘 배너: 기념일 / 일정 / 예매 3단 분리 & 탑승 완료 토글
 // ==========================================
+// 🎵 [10] BGM 음악 검색 (Music BGM)
+// ==========================================
+function searchMusicTrack() {
+  const q = document.getElementById('bgmSearchInput').value.trim();
+  if (!q) return;
+  document.getElementById('bgmInfoText').innerText = "음악 검색 중... 🎵";
 
-function updateTodaySpecialBanner() {
-  const banner = document.getElementById('todaySpecialEventBanner');
-  const textEl = document.getElementById('todaySpecialEventText');
-  if (!banner || !textEl) return;
-
-  const events = typeof getCalendarEvents === 'function' ? getCalendarEvents() : [];
-  const d = new Date(currentDate);
-  const dayOfWeek = d.getDay();
-
-  // 1. 일반 일정
-  const hitEvents = events.filter(e => {
-    if (e.skippedDates && e.skippedDates.includes(currentDate)) return false;
-    if (e.isRepeat) return e.repeatDays && e.repeatDays.includes(dayOfWeek);
-    return currentDate >= e.start && currentDate <= e.end;
-  });
-
-  // 2. 예매 내역
-  const tickets = (typeof getTicketsLocal === 'function' ? getTicketsLocal() : []).filter(t => t.date === currentDate);
-  const ticketIconMap = { bus: '🚌 버스', train: '🚆 기차', flight: '✈️ 비행기' };
-
-  // 3. 기념일 & 공휴일
-  const anniversaries = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
-  const parts = currentDate.split('-');
-  const m = parseInt(parts[1], 10);
-  const dayNum = parseInt(parts[2], 10);
-  const mStr = m < 10 ? `0${m}` : `${m}`;
-  const dStr = dayNum < 10 ? `0${dayNum}` : `${dayNum}`;
-
-  const hitAnniv = anniversaries.filter(a => {
-    if (!a.date) return false;
-    const cleanDate = a.date.replace(/\./g, '-');
-    const aParts = cleanDate.split('-');
-    const aMonth = parseInt(aParts[aParts.length - 2], 10);
-    const aDay = parseInt(aParts[aParts.length - 1], 10);
-    return aMonth === m && aDay === dayNum;
-  });
-
-  let holidayName = '';
-  if (typeof KR_HOLIDAYS !== 'undefined' && KR_HOLIDAYS[`${mStr}-${dStr}`]) {
-    holidayName = KR_HOLIDAYS[`${mStr}-${dStr}`];
-  } else if (typeof KR_HOLIDAYS !== 'undefined' && KR_HOLIDAYS[currentDate]) {
-    holidayName = KR_HOLIDAYS[currentDate];
-  }
-
-  // 로컬 완료 상태 불러오기
-    const completedTickets = JSON.parse(localStorage.getItem('mingle_completed_tickets') || '[]').map(String);
-
-  // 각 항목별 HTML 블록 생성
-  const blocks = [];
-
-  // A-1. 국가 공휴일 카드 (은은한 로즈 톤)
-  if (holidayName) {
-    blocks.push(`
-      <div class="flex items-center gap-1.5 bg-rose-50/80 border border-rose-200/80 px-2.5 py-1 rounded-xl text-[11px] text-rose-800 font-bold shadow-2xs">
-        <span>🇰🇷</span>
-        <span>${holidayName}</span>
-      </div>
-    `);
-  }
-
-  // A-2. 개인 기념일/생일 카드 (공백·이모지 간격 완벽 통일!)
-  hitAnniv.forEach(a => {
-    const catIcon = a.category === '기념일' ? '💖' : (a.category === '이벤트' ? '🎉' : '🎂');
-    blocks.push(`
-      <div class="flex items-center gap-1.5 bg-pink-50/80 border border-pink-200 px-2.5 py-1 rounded-xl text-[11px] text-pink-900 font-bold shadow-2xs">
-        <span>${catIcon}</span>
-        <span class="truncate">${a.name}</span>
-      </div>
-    `);
-  });
-
-  // B. 일반 일정 (선택한 카테고리 구분 이모지 반영!)
-  hitEvents.forEach(e => {
-    const catMeta = (typeof EVENT_CATEGORIES !== 'undefined' ? EVENT_CATEGORIES.find(c => c.key === e.category) : null) || { icon: '🗓️', bg: 'bg-stone-50 text-stone-700 border-stone-200' };
-    const timeStr = e.startTime ? ` · ${e.startTime}${e.endTime ? '~' + e.endTime : ''}` : '';
-
-    blocks.push(`
-      <div class="flex items-center gap-1.5 bg-stone-50 border border-stone-200 px-2.5 py-1 rounded-xl text-[11px] text-stone-700 font-bold shadow-2xs">
-        <span>${catMeta.icon}</span>
-        <span class="truncate">${e.title}${timeStr}</span>
-      </div>
-    `);
-  });
-
-  // C. 교통/예매 내역 (스카이 블루 톤 & 볼드체·간격 gap-1.5 완벽 일치!)
-  const pureIcons = { bus: '🚌', train: '🚆', flight: '✈️' };
-  const completedStrList = completedTickets.map(x => String(x));
-
-  tickets.forEach(t => {
-    const isDone = completedStrList.includes(String(t.id));
-    const memoText = t.seatMemo && t.seatMemo.trim() ? ` (${t.seatMemo.trim()})` : '';
-    const icon = pureIcons[t.type] || '🎫';
-    const timeStr = t.time ? `${t.time} ` : '';
-    const label = `${timeStr}${t.depart || ''} → ${t.arrive || ''}${memoText}`;
-
-    const cardStyle = isDone
-      ? 'bg-stone-100/80 border-stone-200 text-stone-400 opacity-60'
-      : 'bg-sky-50/70 border-sky-200 text-stone-700';
-
-    const textStyle = isDone 
-      ? 'style="text-decoration: line-through; color: #a8a29e;"' 
-      : 'class="font-bold text-stone-700 truncate"';
-
-    const btnStyle = isDone
-      ? 'bg-stone-200 text-stone-500 border border-stone-300'
-      : 'bg-sky-500 text-white shadow-xs';
-
-    blocks.push(`
-      <div class="flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${cardStyle}">
-        <div class="flex items-center gap-1.5 min-w-0 flex-1">
-          <span class="shrink-0">${icon}</span>
-          <span ${textStyle}>${label}</span>
-        </div>
-        <button onclick="toggleTicketComplete('${t.id}'); event.stopPropagation();" class="shrink-0 text-[10px] px-2 py-0.5 rounded-full transition-colors cursor-pointer font-bold ${btnStyle}">
-          ${isDone ? '완료됨 ↩' : '탑승완료 ✓'}
-        </button>
-      </div>
-    `);
-  });
-
-  // 표시할 게 하나도 없으면 숨김
-  if (blocks.length === 0) {
-    banner.classList.add('hidden');
-    return;
-  }
-
-  // 배너 표시 및 예쁜 카드 리스트로 렌더링
-  banner.classList.remove('hidden');
-  banner.className = 'w-full space-y-1.5 mb-2';
-  textEl.className = 'flex flex-col gap-1.5 w-full';
-  textEl.innerHTML = blocks.join('');
-}
-
-// 🎫 예매 탑승 완료 토글 도우미 함수 (Firestore 실시간 양방향 클라우드 저장 탑재)
-function toggleTicketComplete(id) {
-  const targetId = String(id);
-  let completed = [];
-  try {
-    const raw = JSON.parse(localStorage.getItem('mingle_completed_tickets') || '[]');
-    completed = raw.map(x => String(x));
-  } catch(e) {
-    completed = [];
-  }
-
-  if (completed.includes(targetId)) {
-    completed = completed.filter(x => x !== targetId);
-  } else {
-    completed.push(targetId);
-  }
-
-  localStorage.setItem('mingle_completed_tickets', JSON.stringify(completed));
-  
-  // ☁️ 파이어베이스 즉시 클라우드 동기화
-  if (typeof db !== 'undefined' && db) {
-    db.collection('tickets_data').doc('completed').set({
-      completedIds: completed
-    }, { merge: true }).catch(console.error);
-  }
-
-  if (typeof updateTodaySpecialBanner === 'function') {
-    updateTodaySpecialBanner();
-  }
-}
-
-    // 캘린더 타일: 고정 높이 3단 정방형 스탬프 렌더러
-    function renderCalendar() {
-      document.getElementById('calendarMonthTitle').innerText = `${calYear}년 ${calMonth + 1}월`;
-      const grid = document.getElementById('calendarGrid');
-      grid.innerHTML = '';
-
-      const firstDay = new Date(calYear, calMonth, 1).getDay();
-      const lastDate = new Date(calYear, calMonth + 1, 0).getDate();
-      const allDays = JSON.parse(localStorage.getItem('mingle_diary_days') || '{}');
-      const anniversaries = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
-      const events = getCalendarEvents();
-      const tickets = getTicketsLocal();
-
-      for (let i = 0; i < firstDay; i++) {
-        grid.innerHTML += `<div class="h-16 bg-stone-50/40 rounded-xl"></div>`;
+  fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&limit=1`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.results && data.results.length > 0) {
+        const track = data.results[0];
+        const coverUrl = track.artworkUrl100.replace('100x100bb', '300x300bb');
+        const info = `${track.trackName} - ${track.artistName}`;
+        
+        document.getElementById('bgmCoverImg').src = coverUrl;
+        document.getElementById('bgmInfoText').innerText = info;
+        document.getElementById('bgmSearchInput').value = track.trackName;
+        saveDayData();
+      } else {
+        document.getElementById('bgmInfoText').innerText = "검색 결과가 없어요 😢";
       }
-
-      for (let d = 1; d <= lastDate; d++) {
-        const mStr = (calMonth + 1) < 10 ? `0${calMonth + 1}` : `${calMonth + 1}`;
-        const dStr = d < 10 ? `0${d}` : `${d}`;
-        const dateKey = `${calYear}-${mStr}-${dStr}`;
-        const record = allDays[dateKey];
-
-        const dayOfWeek = new Date(calYear, calMonth, d).getDay();
-        const holidayName = KR_HOLIDAYS[`${mStr}-${dStr}`] || KR_HOLIDAYS[dateKey];
-        const isRedDay = dayOfWeek === 0 || !!holidayName;
-
-        const hitAnni = anniversaries.find(a => {
-          const parts = a.date.split('-');
-          return parseInt(parts[parts.length - 2], 10) === (calMonth + 1) && parseInt(parts[parts.length - 1], 10) === d;
-        });
-
-        const dayEvents = events.filter(e => {
-          if (e.skippedDates && e.skippedDates.includes(dateKey)) return false;
-          if (e.isRepeat) return e.repeatDays && e.repeatDays.includes(dayOfWeek);
-          return dateKey >= e.start && dateKey <= e.end;
-        });
-
-        const dayTickets = tickets.filter(t => t.date === dateKey);
-
-        const moodIcon = record?.mood && MOOD_META[record.mood] ? MOOD_META[record.mood].icon : '';
-
-        let eventStampIcons = '';
-        if (holidayName) eventStampIcons += '<span class="text-[8px] bg-rose-100 text-rose-700 px-1 py-0.2 rounded font-bold">휴일</span>';
-        if (hitAnni) eventStampIcons += '🎂';
-        dayTickets.forEach(t => {
-          const tIcon = t.type === 'bus' ? '🚌' : t.type === 'train' ? '🚅' : '✈️';
-          eventStampIcons += `<span title="${t.depart}➔${t.arrive}">${tIcon}</span>`;
-        });
-        dayEvents.slice(0, 2).forEach(ev => {
-          const catMeta = EVENT_CATEGORIES.find(c => c.key === ev.category) || EVENT_CATEGORIES[6];
-          eventStampIcons += `<span title="${ev.title}">${catMeta.icon}</span>`;
-        });
-
-        let activityIcons = '';
-        if (record?.weather) {
-          if (record.weather.includes('☀️')) activityIcons += '☀';
-          else if (record.weather.includes('⛅')) activityIcons += '⛅';
-          else if (record.weather.includes('🌧️')) activityIcons += '🌧️';
-          else if (record.weather.includes('❄️')) activityIcons += '❄️';
-          else if (record.weather.includes('더워')) activityIcons += '🥵';
-          else if (record.weather.includes('추워')) activityIcons += '🥶';
-          else activityIcons += '🍃';
-        }
-        if (record?.knit?.rows > 0) activityIcons += '🧶';
-        if (record?.book?.title) activityIcons += '📖';
-        const ootdDot = record?.ootd?.color ? `<span class="w-1.5 h-1.5 rounded-full inline-block border border-stone-200" style="background-color: ${record.ootd.color};"></span>` : '';
-
-        grid.innerHTML += `
-          <div onclick="selectDateFromCal('${dateKey}')" class="h-16 p-1 bg-stone-50 hover:bg-amber-50/80 border border-stone-100 rounded-xl cursor-pointer flex flex-col justify-between transition-colors overflow-hidden">
-            <div class="flex items-center justify-between leading-none">
-              <span class="text-[10px] font-bold ${isRedDay ? 'text-rose-500' : 'text-stone-700'}">${d}</span>
-              <span class="text-[10px]">${moodIcon}</span>
-            </div>
-            <div class="flex items-center justify-center gap-0.5 text-xs truncate py-0.5">
-              ${eventStampIcons || '<span class="text-[9px] text-stone-200">·</span>'}
-            </div>
-            <div class="flex items-center justify-between text-[8px] leading-none pt-0.5 border-t border-stone-100/60">
-              <span class="truncate tracking-tighter">${activityIcons}</span>
-              ${ootdDot}
-            </div>
-          </div>
-        `;
-      }
-    }
-
-    function selectDateFromCal(dateStr) {
-      currentDate = dateStr;
-      document.getElementById('currentDateInput').value = currentDate;
-      updateDateLabel();
-      subscribeDayData(currentDate);
-      subscribeTodayTasks(currentDate);
-      renderDayHabitList();
-      renderDayRoutineTodos();
-      calculateDDays();
-      updateTodaySpecialBanner();
-      switchTab('day');
-    }
-
-    // 기념일
-    function setAnniversaryFilter(mode) {
-      anniversaryFilterMode = mode;
-      ['7', '30', 'all'].forEach(m => {
-        const btn = document.getElementById(`anniFilter_${m}`);
-        if (btn) {
-          if (m === mode) btn.className = 'px-2 py-0.5 rounded-full bg-stone-800 text-white font-semibold';
-          else btn.className = 'px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold';
-        }
-      });
-      renderAnniversaries();
-    }
-
-// --- 기념일 모달 및 관리 로직 ---
-let editingAnnivId = null;
-
-// 📅 숫자 8자리 입력 시 YYYY-MM-DD 하이픈 자동 포맷 스마트 함수
-function formatSmartDateInput(el) {
-  if (!el) return;
-  let val = el.value.replace(/[^0-9]/g, '');
-  if (val.length <= 4) {
-    el.value = val;
-  } else if (val.length <= 6) {
-    el.value = val.slice(0, 4) + '-' + val.slice(4);
-  } else {
-    el.value = val.slice(0, 4) + '-' + val.slice(4, 6) + '-' + val.slice(6, 8);
-  }
-}
-
-function openAnnivModal(id = null) {
-  editingAnnivId = id;
-  const modal = document.getElementById('annivModal');
-  const title = document.getElementById('annivModalTitle');
-  const nameInput = document.getElementById('annivInputName');
-  const dateInput = document.getElementById('annivInputDate');
-  
-  if (!modal) return;
-
-  if (id) {
-    if (title) title.innerHTML = '🎂 <span>기념일 수정</span>';
-    const items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
-    const target = items.find(item => String(item.id) === String(id));
-    if (target) {
-      nameInput.value = target.name || '';
-      dateInput.value = target.date || '';
-      const radios = document.getElementsByName('annivCategory');
-      radios.forEach(r => { r.checked = (r.value === (target.category || '생일')); });
-    }
-  } else {
-    if (title) title.innerHTML = '🎂 <span>기념일 & 이벤트 등록</span>';
-    nameInput.value = '';
-    dateInput.value = '';
-    const radios = document.getElementsByName('annivCategory');
-    if (radios.length > 0) radios[0].checked = true;
-  }
-  if (dateInput) {
-    dateInput.oninput = () => formatSmartDateInput(dateInput);
-  }
-  modal.classList.remove('hidden');
-}
-
-// 기존 프롬프트 함수 호환용 (혹시 남아있어도 에러 안 나게 방어!)
-function addAnniversaryPrompt() {
-  openAnnivModal();
-}
-
-function closeAnnivModal() {
-  const modal = document.getElementById('annivModal');
-  if (modal) modal.classList.add('hidden');
-  editingAnnivId = null;
-}
-
-function saveAnniversaryFromModal() {
-  const nameInput = document.getElementById('annivInputName');
-  const dateInput = document.getElementById('annivInputDate');
-  const name = nameInput ? nameInput.value.trim() : '';
-  let date = dateInput ? dateInput.value.trim() : '';
-
-  if (!name) return alert('기념일 이름을 입력해 주세요.');
-  if (!date) return alert('날짜를 선택해 주세요.');
-
-  // 혹시 점(.)이 섞여 있어도 무조건 표준 하이픈(-)으로 정돈
-  date = date.replace(/\./g, '-');
-  
-  if (!name) return alert('기념일 이름을 입력해 주세요.');
-  if (!date) return alert('날짜를 선택해 주세요.');
-
-  let category = '생일';
-  const radios = document.getElementsByName('annivCategory');
-  radios.forEach(r => { if (r.checked) category = r.value; });
-
-  let items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
-
-  if (editingAnnivId) {
-    items = items.map(item => {
-      if (String(item.id) === String(editingAnnivId)) {
-        return { ...item, name, date, category };
-      }
-      return item;
+    })
+    .catch(err => {
+      console.error(err);
+      document.getElementById('bgmInfoText').innerText = "음악 정보를 불러오지 못했어요";
     });
-  } else {
-    items.push({
-      id: Date.now(),
-      name,
-      date,
-      category
-    });
-  }
-
-  localStorage.setItem('mingle_anniversaries', JSON.stringify(items));
-  closeAnnivModal();
-  renderAnniversaries();
-  if (typeof renderCalendar === 'function') renderCalendar();
-  if (typeof updateTodaySpecialBanner === 'function') updateTodaySpecialBanner();
-
-  // ☁️ 파이어베이스 즉시 동기화
-  if (typeof db !== 'undefined' && db) {
-    db.collection('anniversaries_data').doc('master').set({
-      anniversaries: items
-    }, { merge: true }).catch(console.error);
-  }
 }
-
-function deleteAnniversary(id) {
-  if (!confirm('이 기념일을 삭제할까요?')) return;
-  let items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
-  items = items.filter(a => String(a.id) !== String(id));
-  localStorage.setItem('mingle_anniversaries', JSON.stringify(items));
-  renderAnniversaries();
-  if (typeof renderCalendar === 'function') renderCalendar();
-  if (typeof updateTodaySpecialBanner === 'function') updateTodaySpecialBanner();
-
-  // ☁️ 파이어베이스 즉시 동기화
-  if (typeof db !== 'undefined' && db) {
-    db.collection('anniversaries_data').doc('master').set({
-      anniversaries: items
-    }, { merge: true }).catch(console.error);
-  }
-}
-
-// ☁️ 기념일 실시간 양방향 구독기
-let unsubscribeAnniversaries = null;
-function subscribeAnniversaries() {
-  if (typeof renderAnniversaries === 'function') renderAnniversaries();
-  if (typeof renderCalendar === 'function') renderCalendar();
+// ==========================================
+// 💾 [11] 데일리 데이터 동기화 (Day Data Sync)
+// ==========================================
+function subscribeDayData(dateStr) {
+  if (unsubscribeDay) unsubscribeDay();
+  window.currentDayData = { date: dateStr, expenses: [], ootdSelected: {}, ootd: {} };
+  applyDayDataToUI(window.currentDayData);
 
   if (!db) return;
-  if (unsubscribeAnniversaries) unsubscribeAnniversaries();
-  unsubscribeAnniversaries = db.collection('anniversaries_data').doc('master')
+  unsubscribeDay = db.collection('diary_days').doc(dateStr)
+    .onSnapshot((doc) => {
+      if (doc.exists) {
+        const data = doc.data() || {};
+        data.date = dateStr;
+        window.currentDayData = data;
+        saveDayDataLocal(dateStr, data);
+        applyDayDataToUI(data);
+      } else {
+        const emptyData = { date: dateStr, expenses: [], ootdSelected: {}, ootd: {} };
+        window.currentDayData = emptyData;
+        applyDayDataToUI(emptyData);
+      }
+      if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+      if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+      if (typeof renderOotdSelectedList === 'function') renderOotdSelectedList();
+    }, err => console.error(err));
+}
+
+function getDayDataLocal(dateStr) {
+  return JSON.parse(localStorage.getItem('mingle_diary_days') || '{}')[dateStr] || {};
+}
+
+function saveDayDataLocal(dateStr, data) {
+  const all = JSON.parse(localStorage.getItem('mingle_diary_days') || '{}');
+  all[dateStr] = data;
+  localStorage.setItem('mingle_diary_days', JSON.stringify(all));
+}
+
+function saveDayData() {
+  const timetableData = {};
+  for (let h = 7; h <= 24; h++) {
+    const hourStr = h < 10 ? `0${h}` : `${h}`;
+    for (let b = 0; b < 6; b++) {
+      const cell = document.getElementById(`cell_${hourStr}_${b}`);
+      if (cell && cell.innerText) {
+        timetableData[`${hourStr}_${b}`] = { text: cell.innerText, category: cell.dataset.category || 'custom' };
+      }
+    }
+  }
+
+  const existing = getDayDataLocal(currentDate) || {};
+  const data = {
+    ...existing,
+    weather: document.getElementById('todayWeatherSelect')?.value || '',
+    mood: document.getElementById('todayMoodSelect')?.value || '',
+    ootd: {
+      ...(existing.ootd || {}),
+      color: existing.ootd?.color || document.getElementById('ootdColorInput')?.value || '#ecdcc9',
+      memo: document.getElementById('ootdMemoInput')?.value || existing.ootd?.memo || ''
+    },
+    expenses: existing.expenses || [],
+    bgm: {
+      song: document.getElementById('bgmSearchInput')?.value || '',
+      info: document.getElementById('bgmInfoText')?.innerText || '',
+      cover: document.getElementById('bgmCoverImg')?.src || ''
+    },
+    health: {
+      sleepBed: document.getElementById('sleepBedTime')?.value || '',
+      sleepWake: document.getElementById('sleepWakeTime')?.value || '',
+      weight: document.getElementById('todayWeight')?.value || '',
+      supplements: existing.health?.supplements || { 1: [], 2: [], 3: [] },
+      meals: [1, 2, 3].map(i => ({
+        time: document.getElementById(`mealTime_${i}`)?.value || '',
+        sugarPost: document.getElementById(`sugarPost_${i}`)?.value || '',
+        menu: document.getElementById(`mealMenu_${i}`)?.value || '',
+        vege: document.getElementById(`mealVege_${i}`)?.checked || false,
+        acv: document.getElementById(`mealAcv_${i}`)?.checked || false,
+        walk: document.getElementById(`mealWalk_${i}`)?.checked || false,
+        cond: document.getElementById(`mealCond_${i}`)?.value || '',
+        sugarFast: i === 1 ? (document.getElementById('sugarFast')?.value || '') : null
+      }))
+    },
+    knit: {
+      project: document.getElementById('knitCurrentProject')?.value || '',
+      rows: document.getElementById('knitRowCount')?.innerText || '0',
+      tip: document.getElementById('knitSectionTip')?.value || ''
+    },
+    book: {
+      title: document.getElementById('bookCurrentTitle')?.value || '',
+      pages: document.getElementById('bookTodayPages')?.value || ''
+    },
+    memo: document.getElementById('dailyMemo')?.value || '',
+    timetable: timetableData
+  };
+
+  saveDayDataLocal(currentDate, data);
+  if (db) db.collection('diary_days').doc(currentDate).set(data, { merge: true }).catch(console.error);
+
+  if (typeof renderMoodTracker === 'function') renderMoodTracker();
+  if (typeof renderCalendar === 'function') renderCalendar();
+  if (typeof renderRoutineProgressTracker === 'function') renderRoutineProgressTracker();
+  if (typeof renderHealthTracker === 'function') renderHealthTracker();
+}
+
+function applyDayDataToUI(data) {
+  data = data || {};
+  window.currentDayData = data; 
+  initTimetableGrid();
+
+  if (document.getElementById('todayWeatherSelect')) document.getElementById('todayWeatherSelect').value = data.weather || '';
+  if (document.getElementById('todayMoodSelect')) document.getElementById('todayMoodSelect').value = data.mood || '';
+
+  if (data.ootd) {
+    if (document.getElementById('ootdColorBadge')) document.getElementById('ootdColorBadge').style.backgroundColor = data.ootd.color || '#ecdcc9';
+    if (document.getElementById('ootdColorInput')) document.getElementById('ootdColorInput').value = data.ootd.color || '#ecdcc9';
+    if (document.getElementById('ootdMemoInput')) document.getElementById('ootdMemoInput').value = data.ootd.memo || '';
+  }
+  if (typeof renderOotd === 'function') renderOotd();
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+
+  if (data.bgm) {
+    if(document.getElementById('bgmSearchInput')) document.getElementById('bgmSearchInput').value = data.bgm.song || '';
+    if(document.getElementById('bgmInfoText')) document.getElementById('bgmInfoText').innerText = data.bgm.info || 'BGM을 검색해보세요';
+    if (data.bgm.cover && document.getElementById('bgmCoverImg')) document.getElementById('bgmCoverImg').src = data.bgm.cover;
+  }
+
+  if (data.health) {
+    if(document.getElementById('sleepBedTime')) document.getElementById('sleepBedTime').value = data.health.sleepBed || '';
+    if(document.getElementById('sleepWakeTime')) document.getElementById('sleepWakeTime').value = data.health.sleepWake || '';
+    if(document.getElementById('todayWeight')) document.getElementById('todayWeight').value = data.health.weight || '';
+
+    if (data.health.meals) {
+      data.health.meals.forEach((m, idx) => {
+        const i = idx + 1;
+        if(document.getElementById(`mealTime_${i}`)) document.getElementById(`mealTime_${i}`).value = m.time || '';
+        if(document.getElementById(`sugarPost_${i}`)) document.getElementById(`sugarPost_${i}`).value = m.sugarPost || '';
+        if(document.getElementById(`mealMenu_${i}`)) document.getElementById(`mealMenu_${i}`).value = m.menu || '';
+        if (document.getElementById(`mealVege_${i}`)) document.getElementById(`mealVege_${i}`).checked = !!m.vege;
+        if (document.getElementById(`mealAcv_${i}`)) document.getElementById(`mealAcv_${i}`).checked = !!m.acv;
+        if (document.getElementById(`mealWalk_${i}`)) document.getElementById(`mealWalk_${i}`).checked = !!m.walk;
+        if(document.getElementById(`mealCond_${i}`)) document.getElementById(`mealCond_${i}`).value = m.cond || '';
+        if (i === 1 && document.getElementById('sugarFast')) document.getElementById('sugarFast').value = m.sugarFast || '';
+        if (typeof renderSupplementsList === 'function') renderSupplementsList(i);
+      });
+    }
+  }
+  if (typeof renderDrinkTracker === 'function') renderDrinkTracker(data);
+
+  if (data.knit) {
+    if(document.getElementById('knitCurrentProject')) document.getElementById('knitCurrentProject').value = data.knit.project || '';
+    if(document.getElementById('knitRowCount')) document.getElementById('knitRowCount').innerText = data.knit.rows || '0';
+    if (document.getElementById('knitSectionTip')) document.getElementById('knitSectionTip').value = data.knit.tip || '';
+  }
+  if (data.book) {
+    if(document.getElementById('bookCurrentTitle')) document.getElementById('bookCurrentTitle').value = data.book.title || '';
+    if(document.getElementById('bookTodayPages')) document.getElementById('bookTodayPages').value = data.book.pages || '';
+  }
+  if(document.getElementById('dailyMemo')) document.getElementById('dailyMemo').value = data.memo || '';
+
+  if (data.timetable) {
+    Object.keys(data.timetable).forEach(k => {
+      const [h, b] = k.split('_');
+      const item = data.timetable[k];
+      if (typeof item === 'object') setBlockData(h, parseInt(b), item.text, item.category);
+      else setBlockData(h, parseInt(b), item, 'custom');
+    });
+  }
+
+  if (typeof renderDynamicRoutines === 'function') renderDynamicRoutines();
+  if (typeof updateTodaySpecialBanner === 'function') updateTodaySpecialBanner();
+  if (timetableViewMode === 'timeline' && typeof renderVerticalTimeline === 'function') renderVerticalTimeline();
+}
+
+// ==========================================
+// 📝 [12] 데일리 TO-DO (Routine Todo & Master List)
+// ==========================================
+let selectedWeeklyDays = [];
+function onRoutineTypeChange(val) {
+  const selector = document.getElementById('weeklyDaysSelector');
+  if (val === 'weekly') {
+    selector.classList.remove('hidden');
+    selectedWeeklyDays = [];
+    renderWeekDayChips();
+  } else {
+    selector.classList.add('hidden');
+  }
+}
+
+function toggleWeekDayChip(dayNum) {
+  const idx = selectedWeeklyDays.indexOf(dayNum);
+  if (idx > -1) selectedWeeklyDays.splice(idx, 1);
+  else selectedWeeklyDays.push(dayNum);
+  renderWeekDayChips();
+}
+
+function renderWeekDayChips() {
+  [0, 1, 2, 3, 4, 5, 6].forEach(d => {
+    const chip = document.getElementById(`wd_chip_${d}`);
+    if (chip) {
+      chip.className = selectedWeeklyDays.includes(d) 
+        ? 'px-2 py-1 rounded-lg border border-amber-300 bg-amber-100 text-amber-900 font-bold' 
+        : 'px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium';
+    }
+  });
+}
+
+function subscribeRoutineMaster() {
+  renderDayRoutineTodos();
+  if (!db) return;
+  if (unsubscribeRoutines) unsubscribeRoutines();
+  unsubscribeRoutines = db.collection('routine_master').doc('list')
     .onSnapshot(doc => {
       if (doc.exists) {
-        const d = doc.data() || {};
-        if (Array.isArray(d.anniversaries)) {
-          localStorage.setItem('mingle_anniversaries', JSON.stringify(d.anniversaries));
-          if (typeof renderAnniversaries === 'function') renderAnniversaries();
-          if (typeof renderCalendar === 'function') renderCalendar();
-          if (typeof updateTodaySpecialBanner === 'function') updateTodaySpecialBanner();
-        }
+        localStorage.setItem('mingle_routine_rules', JSON.stringify(doc.data().rules || []));
+        renderDayRoutineTodos();
       }
     }, err => console.error(err));
 }
 
-function renderAnniversaries() {
-  const list = document.getElementById('anniversaryList');
-  if (!list) return;
-  const items = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
-  const now = new Date();
-  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+function getRoutineRules() {
+  return JSON.parse(localStorage.getItem('mingle_routine_rules') || '[]');
+}
 
-  const processed = items.map(item => {
-    const orig = new Date(item.date);
-    const origYear = orig.getFullYear();
-    let next = new Date(now.getFullYear(), orig.getMonth(), orig.getDate());
-    
-    // 올해 기념일이 이미 지났는지 체크
-    const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    if (next < todayZero) {
-      next.setFullYear(now.getFullYear() + 1);
-    }
-    const diff = Math.ceil((next - todayZero) / (1000 * 60 * 60 * 24));
-    
-    // n주년 / n번째 계산
-    const currentAnnivYear = next.getFullYear();
-    const yearsCount = currentAnnivYear - origYear;
-    let countBadge = '';
-    if (!isNaN(yearsCount) && yearsCount > 0) {
-      countBadge = item.category === '생일' ? `${yearsCount + 1}번째` : `${yearsCount}주년`;
-    }
+function saveRoutineRules(rules) {
+  localStorage.setItem('mingle_routine_rules', JSON.stringify(rules));
+  renderDayRoutineTodos();
+  if (typeof renderRoutineTodoManageList === 'function') renderRoutineTodoManageList();
+  if (db) db.collection('routine_master').doc('list').set({ rules }).catch(console.error);
+}
 
-    // YY-MM-DD (요일) 포맷팅
-    const yy = String(next.getFullYear()).slice(-2);
-    const mm = String(next.getMonth() + 1).padStart(2, '0');
-    const dd = String(next.getDate()).padStart(2, '0');
-    const dayOfWeek = dayNames[next.getDay()];
-    const dateFormatted = `${yy}-${mm}-${dd} (${dayOfWeek})`;
+function addRoutineTodo() {
+  const input = document.getElementById('newRoutineTodoInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const type = document.getElementById('routineTypeSelect').value;
+  const rules = getRoutineRules();
 
-    const catIcon = item.category === '기념일' ? '💖' : (item.category === '이벤트' ? '🎉' : '🎂');
-
-    return { 
-      ...item, 
-      diff, 
-      dateFormatted,
-      countBadge,
-      catIcon
-    };
+  rules.push({
+    id: Date.now(),
+    text,
+    type,
+    days: type === 'weekly' ? [...selectedWeeklyDays] : null,
+    createdDate: currentDate,
+    sortOrder: Date.now()
   });
 
-  processed.sort((a, b) => a.diff - b.diff);
+  input.value = '';
+  selectedWeeklyDays = [];
+  renderWeekDayChips();
+  saveRoutineRules(rules);
+}
 
-  const filtered = processed.filter(item => {
-    if (typeof anniversaryFilterMode === 'undefined') return true;
-    if (anniversaryFilterMode === '7') return item.diff <= 7;
-    if (anniversaryFilterMode === '30') return item.diff <= 30;
-    return true; // 전체보기
+function toggleDayRoutineCheck(ruleId) {
+  const dayData = getDayDataLocal(currentDate);
+  if (!dayData.routineChecks) dayData.routineChecks = {};
+  dayData.routineChecks[ruleId] = !dayData.routineChecks[ruleId];
+  saveDayDataLocal(currentDate, dayData);
+  renderDayRoutineTodos();
+  if (db) db.collection('diary_days').doc(currentDate).set({ routineChecks: dayData.routineChecks }, { merge: true }).catch(console.error);
+}
+
+function renderDayRoutineTodos() {
+  const container = document.getElementById('routineTodoList');
+  if (!container) return;
+
+  const parts = currentDate.split('-');
+  const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  const dayOfWeek = d.getDay();
+  const dateNum = d.getDate();
+  const monthNum = d.getMonth() + 1;
+  const lastDayOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+
+  const rules = getRoutineRules();
+  const dayData = getDayDataLocal(currentDate);
+  const checks = dayData.routineChecks || {};
+
+  const activeRules = rules.filter(r => {
+    if (r.type === 'daily') return true;
+    if (r.type === 'weekly') return r.days && r.days.includes(dayOfWeek);
+    if (r.type === 'monthly_first' || r.type === 'monthly') return dateNum === 1;
+    if (r.type === 'monthly_last') return dateNum === lastDayOfMonth;
+    if (r.type === 'quarterly') return dateNum === 1 && [1, 4, 7, 10].includes(monthNum);
+    return false;
   });
 
-  if (filtered.length === 0) {
-    list.innerHTML = '<p class="text-[11px] text-stone-300 py-3 text-center">해당 기간에 예정된 기념일이 없어요 🌿</p>';
+  const typeRank = { daily: 1, weekly: 2, monthly_first: 3, monthly: 3, monthly_last: 4, quarterly: 5 };
+  activeRules.sort((a, b) => {
+    if ((typeRank[a.type] || 9) !== (typeRank[b.type] || 9)) return (typeRank[a.type] || 9) - (typeRank[b.type] || 9);
+    return a.text.localeCompare(b.text, 'ko');
+  });
+
+  const countEl = document.getElementById('routineTodoCount');
+  if (countEl) countEl.innerText = `${activeRules.length}건`;
+
+  if (activeRules.length === 0) {
+    container.innerHTML = `<p class="text-[11px] text-stone-300 py-2 text-center">오늘 등록된 정기 투두가 없어요 🌿</p>`;
     return;
   }
 
-  list.innerHTML = filtered.map(item => {
-    const badgeText = item.diff === 0 ? '오늘' : `D-${item.diff}`;
-    const badgeStyle = item.diff === 0 
-      ? 'bg-rose-500 text-white animate-pulse' 
-      : (item.diff <= 7 ? 'text-rose-600 bg-rose-50' : 'text-amber-600 bg-amber-50');
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  container.innerHTML = activeRules.map((r) => {
+    const isDone = !!checks[r.id];
+    let badge = '';
+    if (r.type === 'daily') badge = '<span class="text-[9px] bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.2 rounded font-semibold shrink-0">매일</span>';
+    else if (r.type === 'weekly') badge = `<span class="text-[9px] bg-sky-50 text-sky-900 border border-sky-200 px-1.5 py-0.2 rounded font-semibold shrink-0">${dayNames[dayOfWeek]}요일</span>`;
+    else if (r.type === 'monthly_first' || r.type === 'monthly') badge = '<span class="text-[9px] bg-emerald-50 text-emerald-900 border border-emerald-200 px-1.5 py-0.2 rounded font-semibold shrink-0">첫날</span>';
+    else if (r.type === 'monthly_last') badge = '<span class="text-[9px] bg-rose-50 text-rose-900 border border-rose-200 px-1.5 py-0.2 rounded font-semibold shrink-0">말일</span>';
+    else if (r.type === 'quarterly') badge = '<span class="text-[9px] bg-purple-50 text-purple-900 border border-purple-200 px-1.5 py-0.2 rounded font-semibold shrink-0">분기</span>';
 
     return `
-      <div class="p-2 rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-between text-xs">
-        <div onclick="openAnnivModal('${item.id}')" class="cursor-pointer hover:text-amber-800 flex-1 flex items-center gap-1.5 flex-wrap">
-          <span class="font-bold text-stone-800">${item.catIcon} ${item.name}</span>
-          ${item.countBadge ? `<span class="px-1.5 py-0.2 text-[10px] rounded-md bg-stone-200/70 text-stone-600 font-medium">${item.countBadge}</span>` : ''}
-          <span class="text-[11px] text-stone-400 font-normal">${item.dateFormatted}</span>
+      <div class="flex items-center justify-between p-1.5 rounded-lg bg-stone-50 border border-stone-100 text-xs">
+        <label class="flex items-center gap-1.5 flex-1 cursor-pointer min-w-0 pr-1">
+          <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleDayRoutineCheck(${r.id})" class="rounded text-amber-500 w-3.5 h-3.5">
+          <span class="${isDone ? 'line-through text-stone-300' : 'text-stone-700 font-medium'} truncate">${r.text}</span>
+          ${badge}
+        </label>
+      </div>`;
+  }).join('');
+}
+
+// ⚙️ 데일리 투두 [전체 관리] 모달 로직
+function openRoutineTodoManageModal() {
+  document.getElementById('routineTodoManageModal').classList.remove('hidden');
+  renderRoutineTodoManageList();
+}
+
+function closeRoutineTodoManageModal() {
+  document.getElementById('routineTodoManageModal').classList.add('hidden');
+}
+
+function renderRoutineTodoManageList() {
+  const container = document.getElementById('routineTodoManageList');
+  if (!container) return;
+  const rules = getRoutineRules();
+
+  if (rules.length === 0) {
+    container.innerHTML = '<p class="text-center text-stone-400 py-4">등록된 반복 투두가 없습니다.</p>';
+    return;
+  }
+
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  container.innerHTML = rules.map((r, idx) => {
+    let typeTxt = r.type;
+    if (r.type === 'daily') typeTxt = '매일';
+    else if (r.type === 'weekly' && r.days) typeTxt = r.days.map(d => dayNames[d]).join(',') + '요일';
+    else if (r.type === 'monthly_first') typeTxt = '매월 1일';
+    else if (r.type === 'monthly_last') typeTxt = '매월 말일';
+    else if (r.type === 'quarterly') typeTxt = '매 분기 1일';
+
+    return `
+      <div class="p-2 border border-stone-200 rounded-xl flex items-center justify-between bg-stone-50">
+        <div class="flex-1 min-w-0 pr-2">
+          <p class="font-bold text-stone-800 text-sm truncate">${r.text}</p>
+          <p class="text-[10px] text-stone-500">${typeTxt}</p>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <span class="font-bold px-2 py-0.5 rounded-full text-[10px] ${badgeStyle}">${badgeText}</span>
-          <button onclick="deleteAnniversary('${item.id}')" class="text-stone-300 hover:text-stone-500 text-xs">✕</button>
+        <div class="flex items-center gap-1 shrink-0">
+          <button onclick="moveRoutineOrder(${r.id}, -1)" class="text-stone-400 hover:text-stone-700 text-xs px-1 border rounded bg-white">▲</button>
+          <button onclick="moveRoutineOrder(${r.id}, 1)" class="text-stone-400 hover:text-stone-700 text-xs px-1 border rounded bg-white">▼</button>
+          <button onclick="deleteRoutineRule(${r.id})" class="text-rose-400 hover:text-rose-600 text-xs px-1 ml-1 font-bold">✕</button>
         </div>
       </div>
     `;
   }).join('');
 }
 
-    // 도서 & 뜨개 아카이브
-    function subscribeArchives() {
-      renderBookShelf();
-      renderKnittingShowroom();
-
-      if (!db) return;
-      if (unsubscribeBooks) unsubscribeBooks();
-      unsubscribeBooks = db.collection('bookshelf').onSnapshot((snapshot) => {
-        const books = [];
-        snapshot.forEach(doc => books.push({ id: doc.id, ...doc.data() }));
-        localStorage.setItem('mingle_bookshelf', JSON.stringify(books));
-        renderBookShelf();
-      }, err => console.error(err));
-
-      if (unsubscribeKnits) unsubscribeKnits();
-      unsubscribeKnits = db.collection('knitting_showroom').onSnapshot((snapshot) => {
-        const knits = [];
-        snapshot.forEach(doc => knits.push({ id: doc.id, ...doc.data() }));
-        localStorage.setItem('mingle_knitting_showroom', JSON.stringify(knits));
-        renderKnittingShowroom();
-      }, err => console.error(err));
-    }
-
-    function filterBooks(cat) {
-      renderBookShelf(cat);
-    }
-
-    function renderBookShelf(filter = 'all') {
-      const list = document.getElementById('bookshelfList');
-      if (!list) return;
-      const books = JSON.parse(localStorage.getItem('mingle_bookshelf') || '[]');
-      const filtered = filter === 'all' ? books : books.filter(b => b.category === filter);
-      if (filtered.length === 0) {
-        list.innerHTML = `<p class="text-xs text-stone-300 py-6 text-center">등록된 도서 기록이 없어요 📖</p>`;
-        return;
-      }
-      list.innerHTML = filtered.map((b) => `
-        <div class="p-3 rounded-xl bg-stone-50 border border-stone-100 text-xs space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-stone-800 text-xs">📖 ${b.title}</span>
-            <span class="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold">${b.category || '기타'}</span>
-          </div>
-          <div class="text-[11px] text-stone-500">${b.author || '저자 미상'} | <b>${b.startDate || ''} ~ ${b.endDate || '읽는 중'}</b></div>
-          <div class="text-[10px] text-amber-500 font-medium mt-1">${getRatingStars(b.rating)} <span class="text-stone-400 font-mono text-[9px]">(${parseFloat(b.rating || 5).toFixed(1)})</span></div>
-          ${b.review ? `<p class="text-[11px] text-stone-600 bg-white p-2 rounded-lg border border-stone-100">${b.review}</p>` : ''}
-        </div>
-      `).join('');
-    }
-
-    function openBookModal() {
-      const modal = document.getElementById('bookDetailModal');
-      if (!modal) return;
-
-      document.getElementById('bookEditId').value = '';
-      document.getElementById('bookModalTitle').innerHTML = '<span>📚</span> 도서 신규 등록';
-      document.getElementById('bookSearchSection')?.classList.remove('hidden');
-      document.getElementById('bookModalDeleteBtn')?.classList.add('hidden');
-      document.getElementById('bookHistorySection')?.classList.add('hidden');
-
-      document.getElementById('bookInputTitle').value = '';
-      document.getElementById('bookInputAuthor').value = '';
-      document.getElementById('bookInputTotalPage').value = '';
-      document.getElementById('bookCoverUrl').value = '';
-
-      const coverImg = document.getElementById('bookPreviewCover');
-      const icon = document.getElementById('bookPreviewIcon');
-      const text = document.getElementById('bookPreviewText');
-      if (coverImg) {
-        coverImg.src = '';
-        coverImg.classList.add('hidden');
-      }
-      if (icon) icon.classList.remove('hidden');
-      if (text) text.classList.remove('hidden');
-
-      if (document.getElementById('bookInputStatus')) document.getElementById('bookInputStatus').value = 'reading';
-      if (document.getElementById('bookInputStartDate')) document.getElementById('bookInputStartDate').value = (typeof currentDate !== 'undefined' ? currentDate : '');
-      if (document.getElementById('bookInputEndDate')) document.getElementById('bookInputEndDate').value = '';
-      if (document.getElementById('bookInputReview')) document.getElementById('bookInputReview').value = '';
-      if (document.getElementById('bookInputRating')) document.getElementById('bookInputRating').value = '5';
-
-      modal.classList.remove('hidden');
-    }
-
-    function renderKnittingShowroom() {
-      const list = document.getElementById('knittingShowroomList');
-      if (!list) return;
-      const items = JSON.parse(localStorage.getItem('mingle_knitting_showroom') || '[]');
-      if (items.length === 0) {
-        list.innerHTML = `<p class="text-xs text-rose-300 py-6 text-center">등록된 뜨개 작품이 없어요 🧶</p>`;
-        return;
-      }
-      list.innerHTML = items.map((item) => `
-        <div class="p-3 rounded-xl bg-rose-50/40 border border-rose-100 text-xs space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-stone-800 text-xs">🧶 ${item.title}</span>
-            <span class="text-[10px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-bold">${item.status || '진행중'}</span>
-          </div>
-          <div class="text-[11px] text-stone-600">실: <b>${item.yarn || '-'}</b> | 바늘: <b>${item.needle || '-'}</b></div>
-          <div class="text-[10px] text-stone-400">기간: ${item.startDate || ''} ~ ${item.endDate || '진행중'}</div>
-          ${item.memo ? `<p class="text-[11px] text-stone-700 bg-white p-2 rounded-lg border border-rose-50">${item.memo}</p>` : ''}
-        </div>
-      `).join('');
-    }
-
-    function openKnitModal() {
-      const title = prompt("작품 이름 (예: 미피 네트백):");
-      if (!title) return;
-      const yarn = prompt("사용한 실 (예: 오메가 베리, 모헤어):");
-      const needle = prompt("사용한 바늘 (예: 모사용 6호):");
-      const startDate = prompt("시작일 (YYYY-MM-DD):", currentDate);
-      const endDate = prompt("완성일 (진행 중이면 엔터):", "");
-      const status = endDate ? "완성(FO) 🥳" : "뜨는 중 ⏳";
-      const memo = prompt("도안 링크나 작업 팁 메모:");
-
-      const newKnit = { title, yarn, needle, startDate, endDate, status, memo, createdAt: Date.now() };
-      const items = JSON.parse(localStorage.getItem('mingle_knitting_showroom') || '[]');
-      items.unshift(newKnit);
-      localStorage.setItem('mingle_knitting_showroom', JSON.stringify(items));
-      renderKnittingShowroom();
-      if (db) db.collection('knitting_showroom').add(newKnit).catch(console.error);
-    }
-
-    // 건강 관리 달력 & 추이 트래커
-    function changeHealthMonth(delta) {
-      healthMonth += delta;
-      if (healthMonth < 0) { healthMonth = 11; healthYear--; }
-      if (healthMonth > 11) { healthMonth = 0; healthYear++; }
-      renderHealthTracker();
-    }
-
-    function renderHealthTracker() {
-      document.getElementById('healthMonthTitle').innerText = `${healthYear}년 ${healthMonth + 1}월`;
-      const grid = document.getElementById('healthCalendarGrid');
-      if (!grid) return;
-      grid.innerHTML = '';
-
-      const firstDay = new Date(healthYear, healthMonth, 1).getDay();
-      const lastDate = new Date(healthYear, healthMonth + 1, 0).getDate();
-      const allDays = JSON.parse(localStorage.getItem('mingle_diary_days') || '{}');
-
-      let weightSum = 0, weightCount = 0;
-      let fastSum = 0, fastCount = 0;
-      let postSum = 0, postCount = 0;
-
-      for (let i = 0; i < firstDay; i++) {
-        grid.innerHTML += `<div class="p-1 rounded-xl bg-stone-50/40 min-h-[46px]"></div>`;
-      }
-
-      for (let d = 1; d <= lastDate; d++) {
-        const mStr = (healthMonth + 1) < 10 ? `0${healthMonth + 1}` : `${healthMonth + 1}`;
-        const dStr = d < 10 ? `0${d}` : `${d}`;
-        const dateKey = `${healthYear}-${mStr}-${dStr}`;
-        const record = allDays[dateKey];
-
-        let weight = record?.health?.weight;
-        let sugarFast = record?.health?.meals?.[0]?.sugarFast;
-        let postMeals = (record?.health?.meals || []).map(m => parseFloat(m.sugarPost)).filter(n => !isNaN(n));
-        let avgPost = postMeals.length > 0 ? Math.round(postMeals.reduce((a, b) => a + b, 0) / postMeals.length) : null;
-
-        if (weight) {
-          weightSum += parseFloat(weight);
-          weightCount++;
-        }
-        if (sugarFast) {
-          fastSum += parseFloat(sugarFast);
-          fastCount++;
-        }
-        if (avgPost) {
-          postSum += avgPost;
-          postCount++;
-        }
-
-        const hasHealthData = weight || sugarFast || avgPost;
-
-        grid.innerHTML += `
-          <div onclick="selectDateFromCal('${dateKey}')" class="p-1 rounded-xl border ${hasHealthData ? 'bg-amber-50/70 border-amber-200' : 'bg-stone-50 border-stone-200 text-stone-300'} flex flex-col justify-between min-h-[46px] cursor-pointer hover:scale-105 transition-transform text-left">
-            <span class="text-[9px] font-bold text-stone-500">${d}일</span>
-            <div class="text-[8px] font-mono leading-tight">
-              ${weight ? `<div class="text-stone-700 font-bold">${weight}k</div>` : ''}
-              ${sugarFast ? `<div class="text-rose-600 font-semibold">공${sugarFast}</div>` : ''}
-              ${avgPost ? `<div class="text-amber-700">식${avgPost}</div>` : ''}
-            </div>
-          </div>
-        `;
-      }
-
-      document.getElementById('healthAvgWeight').innerText = weightCount > 0 ? `${(weightSum / weightCount).toFixed(1)} kg` : '- kg';
-      document.getElementById('healthAvgSugarFast').innerText = fastCount > 0 ? `${Math.round(fastSum / fastCount)}` : '-';
-      document.getElementById('healthAvgSugarPost').innerText = postCount > 0 ? `${Math.round(postSum / postCount)}` : '-';
-    }
-
-    // 루틴 진행도 트래커 (줄맞춤 + ⭐ 하루 평균 + 아침☀/저녁🌙)
-    function changeRoutineMonth(delta) {
-      routineMonth += delta;
-      if (routineMonth < 0) { routineMonth = 11; routineYear--; }
-      if (routineMonth > 11) { routineMonth = 0; routineYear++; }
-      renderRoutineProgressTracker();
-    }
-
-    function renderRoutineProgressTracker() {
-      const titleEl = document.getElementById('routineMonthTitle');
-      if (titleEl) titleEl.innerText = `${routineYear}년 ${routineMonth + 1}월`;
-      const grid = document.getElementById('routineProgressGrid');
-      if (!grid) return;
-      grid.innerHTML = '';
-
-      const lastDate = new Date(routineYear, routineMonth + 1, 0).getDate();
-      const allDays = JSON.parse(localStorage.getItem('mingle_diary_days') || '{}');
-      const defs = getRoutineDefs();
-      const mActive = defs.morning.filter(i => !i.paused);
-      const eActive = defs.evening.filter(i => !i.paused);
-
-      let totalPctSum = 0;
-      let recordedDaysCount = 0;
-
-      for (let d = 1; d <= lastDate; d++) {
-        const mStr = (routineMonth + 1) < 10 ? `0${routineMonth + 1}` : `${routineMonth + 1}`;
-        const dStr = d < 10 ? `0${d}` : `${d}`;
-        const dateKey = `${routineYear}-${mStr}-${dStr}`;
-        const record = allDays[dateKey];
-        const rest = record?.routineRest || {};
-
-        let mPct = 0;
-        let ePct = 0;
-        let hasActiveDuty = false;
-
-        if (record?.dynamicRoutineChecks) {
-          if (!rest.morning && mActive.length > 0) {
-            const mDone = mActive.filter(i => record.dynamicRoutineChecks[i.id]).length;
-            mPct = Math.round((mDone / mActive.length) * 100);
-            hasActiveDuty = true;
-          }
-          if (!rest.evening && eActive.length > 0) {
-            const eDone = eActive.filter(i => record.dynamicRoutineChecks[i.id]).length;
-            ePct = Math.round((eDone / eActive.length) * 100);
-            hasActiveDuty = true;
-          }
-          
-          if (hasActiveDuty) {
-            const dayAvg = Math.round((mPct + ePct) / 2);
-            totalPctSum += dayAvg;
-            recordedDaysCount++;
-          }
-        }
-
-        const isFullRest = rest.morning && rest.evening;
-        const avg = hasActiveDuty ? Math.round((mPct + ePct) / 2) : 0;
-        const tileColor = isFullRest 
-          ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
-          : (avg >= 80 ? 'bg-amber-100 border-amber-300 text-amber-900' : (avg > 0 ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-stone-50 border-stone-200 text-stone-400'));
-
-        grid.innerHTML += `
-          <div onclick="selectDateFromCal('${dateKey}')" class="p-1 rounded-xl border ${tileColor} flex flex-col justify-between min-h-[46px] cursor-pointer hover:scale-105 transition-transform text-left">
-            <div class="flex items-center justify-between leading-none">
-              <span class="text-[9px] font-bold opacity-70">${d}일</span>
-              ${isFullRest ? '<span class="text-[8px] font-bold text-emerald-700">휴식</span>' : (avg > 0 ? `<span class="text-[9px] font-bold font-mono text-amber-900">⭐${avg}%</span>` : '')}
-            </div>
-            <div class="text-[8px] font-mono leading-tight space-y-0.2 pt-0.5 border-t border-stone-200/40">
-              ${isFullRest ? '<div class="text-[8px] text-stone-400 text-center py-1">쉼 🍃</div>' : (hasActiveDuty ? `
-                <div class="flex justify-between items-center text-amber-950 font-medium"><span>☀</span><span>${mPct}%</span></div>
-                <div class="flex justify-between items-center text-indigo-950 font-medium"><span>🌙</span><span>${ePct}%</span></div>
-              ` : '<div class="text-stone-300 text-center py-1">·</div>')}
-            </div>
-          </div>
-        `;
-      }
-
-      const overallAvg = recordedDaysCount > 0 ? Math.round(totalPctSum / recordedDaysCount) : 0;
-      document.getElementById('routineMonthlyAvg').innerText = `평균 ${overallAvg}%`;
-    }
-
-    // 무드 트래커
-    function changeMoodMonth(delta) {
-      moodMonth += delta;
-      if (moodMonth < 0) { moodMonth = 11; moodYear--; }
-      if (moodMonth > 11) { moodMonth = 0; moodYear++; }
-      renderMoodTracker();
-    }
-
-    function renderMoodTracker() {
-      const titleEl = document.getElementById('moodMonthTitle');
-      if (titleEl) titleEl.innerText = `${moodYear}년 ${moodMonth + 1}월`;
-      const grid = document.getElementById('moodGrid');
-      if (!grid) return;
-      grid.innerHTML = '';
-
-      const firstDay = new Date(moodYear, moodMonth, 1).getDay();
-      const lastDate = new Date(moodYear, moodMonth + 1, 0).getDate();
-      const allDays = JSON.parse(localStorage.getItem('mingle_diary_days') || '{}');
-
-      for (let i = 0; i < firstDay; i++) {
-        grid.innerHTML += `<div class="p-1 rounded-xl bg-stone-50/40 min-h-[46px]"></div>`;
-      }
-
-      for (let d = 1; d <= lastDate; d++) {
-        const mStr = (moodMonth + 1) < 10 ? `0${moodMonth + 1}` : `${moodMonth + 1}`;
-        const dStr = d < 10 ? `0${d}` : `${d}`;
-        const dateKey = `${moodYear}-${mStr}-${dStr}`;
-        const record = allDays[dateKey];
-        const moodKey = record?.mood;
-        const meta = moodKey && MOOD_META[moodKey] ? MOOD_META[moodKey] : null;
-
-        if (meta) {
-          grid.innerHTML += `
-            <div onclick="selectDateFromCal('${dateKey}')" class="p-1.5 rounded-xl border ${meta.bg} flex flex-col items-center justify-between min-h-[46px] cursor-pointer shadow-2xs hover:scale-105 transition-transform">
-              <span class="text-[9px] font-bold opacity-70">${d}일</span>
-              <span class="text-sm leading-none">${meta.icon}</span>
-            </div>
-          `;
-        } else {
-          grid.innerHTML += `
-            <div onclick="selectDateFromCal('${dateKey}')" class="p-1.5 rounded-xl border border-stone-200 bg-stone-50/70 text-stone-400 flex flex-col items-center justify-between min-h-[46px] cursor-pointer hover:bg-stone-100">
-              <span class="text-[9px]">${d}일</span>
-              <span class="text-[10px] text-stone-300">·</span>
-            </div>
-          `;
-        }
-      }
-    }
-
-    // 해빗 트래커
-    function subscribeHabitData() {
-      renderHabits();
-      renderDayHabitList();
-
-      if (!db) return;
-      if (unsubscribeHabits) unsubscribeHabits();
-      unsubscribeHabits = db.collection('habits_data').doc('master')
-        .onSnapshot((doc) => {
-          if (doc.exists) {
-            const data = doc.data();
-            localStorage.setItem('mingle_habits', JSON.stringify(data.habits || []));
-            localStorage.setItem('mingle_habit_logs', JSON.stringify(data.logs || {}));
-            renderHabits();
-            renderDayHabitList();
-          }
-        }, err => console.error(err));
-    }
-
-    function getHabitsLocal() {
-      const defaultHabits = [
-        { id: 1, name: "물 1.5L 마시기 💧", paused: false },
-        { id: 2, name: "유산균·영양제 💊", paused: false },
-        { id: 3, name: "식후 10분 가볍게 걷기 🚶‍♀️", paused: false }
-      ];
-      return JSON.parse(localStorage.getItem('mingle_habits') || JSON.stringify(defaultHabits));
-    }
-
-    function getHabitLogsLocal() {
-      return JSON.parse(localStorage.getItem('mingle_habit_logs') || '{}');
-    }
-
-    function saveHabitsState(habits, logs) {
-      localStorage.setItem('mingle_habits', JSON.stringify(habits));
-      localStorage.setItem('mingle_habit_logs', JSON.stringify(logs));
-      renderHabits();
-      renderDayHabitList();
-      if (db) db.collection('habits_data').doc('master').set({ habits, logs }).catch(console.error);
-    }
-
-    function setHabitViewMode(mode) {
-      habitViewMode = mode;
-      if (mode === 'week') {
-        document.getElementById('habitWeekSection').classList.remove('hidden');
-        document.getElementById('habitMonthSection').classList.add('hidden');
-        document.getElementById('habitViewBtnWeek').className = 'px-2 py-0.5 rounded-lg font-bold bg-white text-stone-800 shadow-xs';
-        document.getElementById('habitViewBtnMonth').className = 'px-2 py-0.5 rounded-lg font-medium text-stone-500';
-      } else {
-        document.getElementById('habitWeekSection').classList.add('hidden');
-        document.getElementById('habitMonthSection').classList.remove('hidden');
-        document.getElementById('habitViewBtnMonth').className = 'px-2 py-0.5 rounded-lg font-bold bg-white text-stone-800 shadow-xs';
-        document.getElementById('habitViewBtnWeek').className = 'px-2 py-0.5 rounded-lg font-medium text-stone-500';
-        populateHabitMonthSelect();
-        renderHabitMonthGrid();
-      }
-    }
-
-    function getWeekDates(baseDateStr) {
-      const parts = baseDateStr.split('-');
-      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-      const day = d.getDay();
-      const diffToMonday = day === 0 ? -6 : 1 - day;
-      const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diffToMonday);
-
-      const week = [];
-      for (let i = 0; i < 7; i++) {
-        const target = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
-        const mStr = (target.getMonth() + 1) < 10 ? `0${target.getMonth() + 1}` : `${target.getMonth() + 1}`;
-        const dStr = target.getDate() < 10 ? `0${target.getDate()}` : `${target.getDate()}`;
-        week.push(`${target.getFullYear()}-${mStr}-${dStr}`);
-      }
-      return week;
-    }
-
-    function toggleHabitCheck(habitId, dateStr) {
-      const logs = getHabitLogsLocal();
-      const habits = getHabitsLocal();
-      if (!logs[dateStr]) logs[dateStr] = {};
-      logs[dateStr][habitId] = !logs[dateStr][habitId];
-      saveHabitsState(habits, logs);
-    }
-
-    function renderDayHabitList() {
-      const container = document.getElementById('dayHabitCheckList');
-      if (!container) return;
-      const habits = getHabitsLocal().filter(h => !h.paused);
-      const logs = getHabitLogsLocal()[currentDate] || {};
-
-      if (habits.length === 0) {
-        container.innerHTML = `<p class="text-[11px] text-stone-300 py-1">진행 중인 습관이 없어요 🌿</p>`;
-        return;
-      }
-
-      container.innerHTML = habits.map(h => {
-        const isDone = !!logs[h.id];
-        return `
-          <label class="flex items-center justify-between p-2 rounded-xl border ${isDone ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900' : 'bg-stone-50 border-stone-200 text-stone-700'} cursor-pointer transition-colors">
-            <span class="text-xs font-semibold">${h.name}</span>
-            <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleHabitCheck(${h.id}, '${currentDate}')" class="rounded text-emerald-600 focus:ring-0">
-          </label>
-        `;
-      }).join('');
-    }
-
-    function renderHabits() {
-      const container = document.getElementById('habitTable');
-      if (!container) return;
-      const allHabits = getHabitsLocal();
-      const activeHabits = allHabits.filter(h => !h.paused);
-      const pausedHabits = allHabits.filter(h => h.paused);
-      const logs = getHabitLogsLocal();
-      const weekDates = getWeekDates(currentDate);
-
-      if (activeHabits.length === 0) {
-        container.innerHTML = `<p class="text-xs text-stone-300 py-4 text-center">진행 중인 습관이 없어요 🌿</p>`;
-      } else {
-        container.innerHTML = activeHabits.map(h => `
-          <div class="flex items-center justify-between p-2 rounded-xl bg-stone-50 border border-stone-100 text-xs">
-            <div class="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
-              <span onclick="editHabitName(${h.id})" class="font-medium text-stone-700 truncate text-[11px] cursor-pointer hover:text-amber-700 flex items-center gap-1" title="클릭하여 이름 수정">
-                <span>${h.name}</span>
-                ${EDIT_SVG_ICON}
-              </span>
-              <button onclick="pauseHabit(${h.id})" title="보관" class="text-stone-300 hover:text-stone-600 px-0.5 inline-flex items-center">
-                <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
-              </button>
-              <button onclick="deleteHabit(${h.id})" title="삭제" class="text-stone-300 hover:text-rose-500 text-[10px] px-0.5">✕</button>
-            </div>
-            <div class="flex gap-1 shrink-0">
-              ${weekDates.map(dStr => {
-                const done = logs[dStr] && logs[dStr][h.id];
-                return `
-                  <button onclick="toggleHabitCheck(${h.id}, '${dStr}')" class="w-5 h-5 rounded-md border text-[10px] flex items-center justify-center font-bold transition-colors ${done ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-white border-stone-200 text-stone-300 hover:border-emerald-300'}">
-                    ${done ? '✓' : ''}
-                  </button>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        `).join('');
-      }
-
-      document.getElementById('pausedHabitsCount').innerText = `${pausedHabits.length}`;
-      const pausedContainer = document.getElementById('pausedHabitsList');
-      if (pausedContainer) {
-        pausedContainer.innerHTML = pausedHabits.map(h => `
-          <div class="flex items-center justify-between p-1.5 rounded-lg bg-stone-100/70 border border-stone-200 text-xs">
-            <span class="text-stone-500 line-through text-[11px]">${h.name}</span>
-            <div class="flex items-center gap-2">
-              <button onclick="resumeHabit(${h.id})" class="text-[10px] bg-white border border-stone-200 px-2 py-0.5 rounded text-stone-600 hover:bg-stone-50 font-bold">▶ 재개</button>
-              <button onclick="deleteHabit(${h.id})" class="text-stone-300 hover:text-rose-500 text-xs px-1">✕</button>
-            </div>
-          </div>
-        `).join('');
-      }
-
-      if (habitViewMode === 'month') {
-        populateHabitMonthSelect();
-        renderHabitMonthGrid();
-      }
-    }
-
-    function addHabitPrompt() {
-      const name = prompt("새로운 습관 이름 (예: 식후 10분 걷기 🚶‍♀️):");
-      if (!name) return;
-      const habits = getHabitsLocal();
-      const logs = getHabitLogsLocal();
-      habits.push({ id: Date.now(), name, paused: false });
-      saveHabitsState(habits, logs);
-    }
-
-    function editHabitName(id) {
-      const habits = getHabitsLocal();
-      const target = habits.find(h => h.id === id);
-      if (!target) return;
-      const newName = prompt("수정할 습관 이름을 입력해주세요:", target.name);
-      if (!newName || !newName.trim()) return;
-      target.name = newName.trim();
-      saveHabitsState(habits, getHabitLogsLocal());
-    }
-
-    function pauseHabit(id) {
-      const habits = getHabitsLocal();
-      const logs = getHabitLogsLocal();
-      const target = habits.find(h => h.id === id);
-      if (target) {
-        target.paused = true;
-        saveHabitsState(habits, logs);
-      }
-    }
-
-    function resumeHabit(id) {
-      const habits = getHabitsLocal();
-      const logs = getHabitLogsLocal();
-      const target = habits.find(h => h.id === id);
-      if (target) {
-        target.paused = false;
-        saveHabitsState(habits, logs);
-      }
-    }
-
-    function deleteHabit(id) {
-      if (!confirm("정말 이 습관을 완전히 삭제할까요?")) return;
-      let habits = getHabitsLocal();
-      const logs = getHabitLogsLocal();
-      habits = habits.filter(h => h.id !== id);
-      saveHabitsState(habits, logs);
-    }
-
-    function togglePausedHabits() {
-      const list = document.getElementById('pausedHabitsList');
-      const icon = document.getElementById('pausedHabitsToggleIcon');
-      const isHidden = list.classList.toggle('hidden');
-      icon.innerText = isHidden ? '▶' : '▼';
-    }
-
-    function populateHabitMonthSelect() {
-      const select = document.getElementById('habitSelectForMonth');
-      if (!select) return;
-      const habits = getHabitsLocal().filter(h => !h.paused);
-      const currentVal = select.value;
-      select.innerHTML = habits.map(h => `<option value="${h.id}">${h.name}</option>`).join('');
-      if (currentVal && habits.some(h => `${h.id}` === currentVal)) {
-        select.value = currentVal;
-      }
-    }
-
-    function changeHabitMonth(delta) {
-      habitMonth += delta;
-      if (habitMonth < 0) { habitMonth = 11; habitYear--; }
-      if (habitMonth > 11) { habitMonth = 0; habitYear++; }
-      renderHabitMonthGrid();
-    }
-
-    function renderHabitMonthGrid() {
-      const titleEl = document.getElementById('habitMonthTitle');
-      if (titleEl) titleEl.innerText = `${habitYear}년 ${habitMonth + 1}월`;
-      const grid = document.getElementById('habitMonthGrid');
-      const select = document.getElementById('habitSelectForMonth');
-      if (!grid || !select) return;
-
-      const habitId = parseInt(select.value, 10);
-      if (!habitId) {
-        grid.innerHTML = `<p class="col-span-7 text-xs text-stone-300 py-6 text-center">선택할 습관이 없어요 🌿</p>`;
-        return;
-      }
-
-      grid.innerHTML = '';
-      const firstDay = new Date(habitYear, habitMonth, 1).getDay();
-      const lastDate = new Date(habitYear, habitMonth + 1, 0).getDate();
-      const logs = getHabitLogsLocal();
-
-      for (let i = 0; i < firstDay; i++) {
-        grid.innerHTML += `<div class="p-1 rounded-lg bg-stone-50/40 min-h-[38px]"></div>`;
-      }
-
-      for (let d = 1; d <= lastDate; d++) {
-        const mStr = (habitMonth + 1) < 10 ? `0${habitMonth + 1}` : `${habitMonth + 1}`;
-        const dStr = d < 10 ? `0${d}` : `${d}`;
-        const dateKey = `${habitYear}-${mStr}-${dStr}`;
-        const isDone = logs[dateKey] && logs[dateKey][habitId];
-
-        grid.innerHTML += `
-          <div onclick="toggleHabitCheck(${habitId}, '${dateKey}')" class="p-1 rounded-xl border min-h-[38px] cursor-pointer flex flex-col items-center justify-between transition-colors ${isDone ? 'bg-emerald-100 border-emerald-300 text-emerald-900 font-bold' : 'bg-stone-50 border-stone-200 text-stone-400 hover:bg-stone-100'}">
-            <span class="text-[9px] leading-tight">${d}</span>
-            <span class="text-xs leading-none">${isDone ? '🌿' : '·'}</span>
-          </div>
-        `;
-      }
-    }
-
-    // D-Day 계산
-    function calculateDDays() {
-      const parts = currentDate.split('-');
-      const todayZero = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-
-      const summerBase = new Date(2024, 2, 30);
-      const diffSummer = Math.round((todayZero - summerBase) / (1000 * 60 * 60 * 24));
-      
-      const moonBase = new Date(2025, 6, 19);
-      const diffMoon = Math.round((todayZero - moonBase) / (1000 * 60 * 60 * 24));
-
-      const elS = document.getElementById('ddaySummer');
-      const elM = document.getElementById('ddayMoon');
-      if (elS) elS.innerText = `D+${diffSummer}`;
-      if (elM) elM.innerText = `D+${diffMoon}`;
-    }
-
-    // 밴드 일기 1초 복사
-    function copyToBandDiary() {
-      const parts = currentDate.split('-');
-      const today = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-      const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
-      const dateText = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${days[today.getDay()]}`;
-
-      const data = getDayDataLocal(currentDate);
-      const weatherText = data.weather ? `${data.weather}` : '';
-
-      const summerStart = new Date(2024, 2, 30);
-      const moonStart = new Date(2025, 6, 19);
-      const diffSummer = Math.round((today - summerStart) / (1000 * 60 * 60 * 24));
-      const diffMoon = Math.round((today - moonStart) / (1000 * 60 * 60 * 24));
-
-      const bandText = 
-`#오늘의일기 
-
-${dateText}
-날씨 : ${weatherText}
-
-우리 여름이 안 아픈 지 ${diffSummer}일 째 되는 날 ♡
-우리 달이 천사된 지 ${diffMoon}일 째 되는 날 ♡`;
-
-      navigator.clipboard.writeText(bandText).then(() => {
-        alert("선택한 날씨까지 포함해서 밴드 일기가 복사되었어요! 📋🤍");
-      }).catch(err => {
-        alert("복사 중 오류가 발생했습니다.");
-        console.error(err);
-      });
-    }
-
-    function downloadAsImage() {
-      const area = document.getElementById('captureArea');
-      html2canvas(area, { scale: 2 }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `mingle_log_${currentDate}.png`;
-        link.href = canvas.toDataURL();
-        link.click();
-      });
-    }
-// ==========================================
-// 🗄️ 서랍장(가계부/독서/뜨개) 및 신규 탭 로직 덮어쓰기
-// ==========================================
-
-// 1. 하단 탭 이동 덮어쓰기
-function switchTab(tab, subAction) {
-  ['day', 'calendar', 'tracker', 'drawer'].forEach(t => {
-    const view = document.getElementById(`view-${t}`);
-    const nav = document.getElementById(`nav-${t}`);
-    if (view) view.classList.add('hidden');
-    if (nav) nav.className = 'text-stone-400 hover:text-stone-600 py-1 flex flex-col items-center gap-0.5';
-  });
-  const targetView = document.getElementById(`view-${tab}`);
-  const targetNav = document.getElementById(`nav-${tab}`);
-  if (targetView) targetView.classList.remove('hidden');
-  if (targetNav) targetNav.className = 'text-stone-800 py-1 flex flex-col items-center gap-0.5 font-bold';
-
-  if (tab === 'tracker') {
-    if (typeof renderHabits === 'function') renderHabits();
-    if (typeof renderMoodTracker === 'function') renderMoodTracker();
-    if (typeof renderRoutineProgressTracker === 'function') renderRoutineProgressTracker();
-    if (typeof renderHealthTracker === 'function') renderHealthTracker();
-  } else if (tab === 'calendar') {
-    if (typeof renderCalendar === 'function') renderCalendar();
-    if (typeof renderUpcomingEvents === 'function') renderUpcomingEvents();
-    if (typeof renderTicketList === 'function') renderTicketList();
-    if (typeof renderAnniversaries === 'function') renderAnniversaries();
-  } else if (tab === 'drawer') {
-    if (subAction === 'knit') setDrawerSubTab('knit');
-    else if (subAction === 'book') setDrawerSubTab('book');
-    else setDrawerSubTab('budget');
-  }
+function moveRoutineOrder(id, delta) {
+  let rules = getRoutineRules();
+  const idx = rules.findIndex(r => r.id === id);
+  if (idx === -1) return;
+  const targetIdx = idx + delta;
+  if (targetIdx < 0 || targetIdx >= rules.length) return;
+  [rules[idx], rules[targetIdx]] = [rules[targetIdx], rules[idx]];
+  saveRoutineRules(rules);
 }
 
-// 2. 서랍장 내부 서브 탭 전환
-// 서랍장 세부 화면 진입 (메모장/가계부/책장/쇼룸)
+function deleteRoutineRule(id) {
+  if (!confirm("이 반복 투두를 완전히 삭제할까요?")) return;
+  let rules = getRoutineRules();
+  rules = rules.filter(r => r.id !== id);
+  saveRoutineRules(rules);
+}
+
+// ==========================================
+// 🗄️ [13] 서랍장 허브 & 메모장 모듈 (Drawer & Note)
+// ==========================================
 function enterDrawerSub(type) {
+  sessionStorage.setItem('mingle_drawer_subtab', type); // 새로고침 기억용
   const hub = document.getElementById('drawerHubGrid');
   const backBar = document.getElementById('drawerBackBar');
   const titleElem = document.getElementById('drawerCurrentTitle');
@@ -4184,44 +1872,37 @@ function enterDrawerSub(type) {
     backBar.classList.add('flex');
   }
 
-  const titles = {
-    note: '📝 메모장 서랍',
-    budget: '💰 가계부 서랍',
-    book: '📚 책장 서랍',
-    knit: '🧶 쇼룸 서랍'
-  };
+  const titles = { note: '📝 메모장 서랍', budget: '💰 가계부 서랍', book: '📚 책장 서랍', knit: '🧶 쇼룸 서랍' };
   if (titleElem) titleElem.textContent = titles[type] || '';
 
   ['note', 'budget', 'book', 'knit'].forEach(t => {
     const mod = document.getElementById(`drawer${t.charAt(0).toUpperCase() + t.slice(1)}Module`);
-    if (mod) mod.classList.add('hidden');
+    if (mod) {
+      mod.classList.add('hidden');
+      mod.style.display = 'none';
+    }
   });
 
-  // 선택된 서브 모듈 화면 표시
   const activeSubMod = document.getElementById(`drawer${type.charAt(0).toUpperCase() + type.slice(1)}Module`);
   if (activeSubMod) {
     activeSubMod.classList.remove('hidden');
-    activeSubMod.style.display = 'block';
+    if(type === 'budget') activeSubMod.style.display = 'block';
   }
 
-  // 가계부 서랍 진입 시 달력 및 알림 즉시 렌더링
   if (type === 'budget') {
     if (typeof switchAccountBookTab === 'function') switchAccountBookTab('calendar');
     if (typeof refreshPayMethodSelects === 'function') refreshPayMethodSelects();
     if (typeof checkFixedExpenseAlerts === 'function') checkFixedExpenseAlerts();
   }
 
-  const targetMod = document.getElementById(`drawer${type.charAt(0).toUpperCase() + type.slice(1)}Module`);
-  if (targetMod) targetMod.classList.remove('hidden');
-
-  if (type === 'note' && typeof renderNoteCards === 'function') renderNoteCards();
-  else if (type === 'budget') renderBudgetDashboard();
+  if (type === 'note') renderNoteCards();
+  else if (type === 'budget' && typeof renderBudgetDashboard === 'function') renderBudgetDashboard();
   else if (type === 'book' && typeof renderBookShelf === 'function') renderBookShelf();
   else if (type === 'knit' && typeof renderKnittingShowroom === 'function') renderKnittingShowroom();
 }
 
-// 4칸 서랍장 메인 허브로 돌아가기
 function backToDrawerHub() {
+  sessionStorage.removeItem('mingle_drawer_subtab');
   const hub = document.getElementById('drawerHubGrid');
   const backBar = document.getElementById('drawerBackBar');
 
@@ -4240,1094 +1921,183 @@ function backToDrawerHub() {
   });
 }
 
-// 3. 가계부 마스터 데이터
-function getBudgetMaster() {
-  const defaultData = {
-    totalBudget: 500000,
-    categories: ['고정지출', '생활비', '교통비', '식비', '쇼핑/취미', '기타'],
-    paymentMethods: ['현대카드', '국민카드', '네이버페이', '현금'],
-    expenses: [] 
-  };
-  return JSON.parse(localStorage.getItem('mingle_budget_data') || JSON.stringify(defaultData));
+// 📝 메모장 (리치 텍스트 & 폴더 지원)
+function getNotesLocal() {
+  return JSON.parse(localStorage.getItem('mingle_drawer_notes') || '[]');
 }
 
-function saveBudgetMaster(data) {
-  localStorage.setItem('mingle_budget_data', JSON.stringify(data));
-  renderBudgetDashboard();
-  if (typeof db !== 'undefined' && db) db.collection('drawer_budget').doc('master').set(data).catch(console.error);
+function getNoteFoldersLocal() {
+  const folders = JSON.parse(localStorage.getItem('mingle_drawer_note_folders') || '["기본 폴더"]');
+  if (folders.length === 0) folders.push("기본 폴더");
+  return folders;
 }
 
-// 4. 가계부 대시보드 렌더링
-function renderBudgetDashboard() {
-  const container = document.getElementById('budgetList');
-  const remainingEl = document.getElementById('budgetRemainingAmount');
-  if (!container) return;
-
-  // 서랍 로비(4단 서랍장)에 있을 때는 가계부 화면 강제 노출 방지
-  const hub = document.getElementById('drawerHubGrid');
-  const budgetMod = document.getElementById('drawerBudgetModule');
-  if (hub && !hub.classList.contains('hidden') && budgetMod) {
-    budgetMod.classList.add('hidden');
-  }
-
-  const budgetData = getBudgetMaster();
-  const currentMonthStr = currentDate.slice(0, 7);
-
-  const monthExpenses = budgetData.expenses.filter(e => e.date && e.date.startsWith(currentMonthStr));
-  monthExpenses.sort((a, b) => b.date.localeCompare(a.date));
-
-  const totalSpent = monthExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
-  const remaining = budgetData.totalBudget - totalSpent;
-
-  if (remainingEl) {
-    remainingEl.innerText = `${remaining.toLocaleString()} 원`;
-    remainingEl.className = remaining < 0 ? 'text-lg font-bold text-rose-600 mt-0.5' : 'text-lg font-bold text-stone-800 mt-0.5';
-  }
-
-  if (monthExpenses.length === 0) {
-    container.innerHTML = `
-      <div class="bg-stone-50 rounded-xl p-4 text-center text-stone-400 text-xs border border-stone-200 space-y-1">
-        <p>이번 달 아직 기록된 지출이 없어요 🌿</p>
-        <p class="text-[10px]">우측 상단 [+ 지출 기록] 버튼을 눌러 추가해보세요!</p>
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = monthExpenses.map(item => `
-    <div onclick="openEditExpenseModal(${item.id})" class="p-3 rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-between text-xs cursor-pointer hover:bg-stone-100/70 transition">
-      <div class="min-w-0 pr-2 flex-1">
-        <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="font-bold text-stone-800">${item.memo || item.category || '지출'}</span>
-          <span class="text-[9px] bg-amber-50 text-amber-800 px-1.5 py-0.2 rounded font-semibold border border-amber-200/50">${(item.category || '').includes('>') ? item.category.split('>').pop().trim() : (item.category || '기타')}</span>
-          ${item.payment ? `<span class="text-[9px] text-stone-400 border border-stone-200 px-1 rounded">${item.payment}</span>` : ''}
-        </div>
-        <div class="text-[10px] text-stone-400 mt-0.5">${item.date || ''}</div>
-      </div>
-      <div class="flex items-center gap-2 shrink-0">
-        <span class="font-bold font-mono text-rose-700">-${parseFloat(item.amount || 0).toLocaleString()}원</span>
-        <button type="button" onclick="event.stopPropagation(); deleteExpenseItem(${item.id})" class="text-stone-300 hover:text-rose-500 text-xs px-1" title="삭제">&times;</button>
-      </div>
-    </div>
-  `).join('');
+function saveNotesLocal(notes) {
+  localStorage.setItem('mingle_drawer_notes', JSON.stringify(notes));
+  renderNoteCards();
+  if (db) db.collection('drawer_notes').doc('master').set({ notes }, { merge: true }).catch(console.error);
 }
 
-// ✏️ 지출 내역 상세 수정 모달 (소분류 단독 표시)
-function openEditExpenseModal(id) {
-  const budgetData = getBudgetMaster();
-  const item = (budgetData.expenses || []).find(e => e.id == id);
-  if (!item) return;
+function renderNoteCards() {
+  const container = document.getElementById('noteCardsContainer');
+  const folderTabs = document.getElementById('noteFolderTabs');
+  if (!container || !folderTabs) return;
 
-  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : {};
-  const payMethods = typeof getStoredPayMethods === 'function' ? getStoredPayMethods() : ['현금', '계좌이체', '간편결제'];
+  const notes = getNotesLocal();
+  const folders = getNoteFoldersLocal();
+  const keyword = (document.getElementById('noteSearchInput')?.value || '').toLowerCase();
+  
+  // 현재 선택된 폴더 (없으면 전체)
+  let activeFolder = sessionStorage.getItem('mingle_note_active_folder') || '전체';
 
-  // 모든 소분류 목록을 단일 리스트로 수집 (중복 제거)
-  let subCatList = [];
-  Object.keys(cats).forEach(k => {
-    (cats[k] || []).forEach(s => {
-      if (!subCatList.includes(s)) subCatList.push(s);
-    });
+  // 폴더 탭 렌더링
+  let tabHtml = `<button onclick="setNoteFolder('전체')" class="shrink-0 px-3 py-1.5 rounded-full border ${activeFolder === '전체' ? 'bg-stone-800 text-white font-bold' : 'bg-white text-stone-500'}">전체</button>`;
+  folders.forEach(f => {
+    tabHtml += `<button onclick="setNoteFolder('${f}')" class="shrink-0 px-3 py-1.5 rounded-full border ${activeFolder === f ? 'bg-stone-800 text-white font-bold' : 'bg-white text-stone-500'}">${f}</button>`;
   });
-  if (subCatList.length === 0) subCatList = ['식재료', '외식', '카페·간식', '쇼핑', '교통', '생활', '기타'];
+  tabHtml += `<button onclick="addNoteFolder()" class="shrink-0 px-2 py-1.5 rounded-full border border-dashed border-stone-300 text-stone-400 text-[10px]">+ 폴더추가</button>`;
+  folderTabs.innerHTML = tabHtml;
 
-  // 기존 카테고리에서 소분류 이름만 추출
-  const currentSub = (item.category || '').includes('>') ? item.category.split('>').pop().trim() : (item.category || '');
-
-  let modalEl = document.getElementById('modalExpenseEdit');
-  if (!modalEl) {
-    modalEl = document.createElement('div');
-    modalEl.id = 'modalExpenseEdit';
-    document.body.appendChild(modalEl);
-  }
-
-  modalEl.className = 'fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4';
-  modalEl.innerHTML = `
-    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-xl border border-stone-200">
-      <div class="flex items-center justify-between border-b border-stone-100 pb-2.5">
-        <h3 class="text-sm font-bold text-stone-800 flex items-center gap-1.5">
-          <span>✏️</span> 지출 내역 수정
-        </h3>
-        <button type="button" onclick="document.getElementById('modalExpenseEdit').remove()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
-      </div>
-
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="text-[11px] text-stone-500 font-medium block mb-1">날짜 / 시간</label>
-          <input type="text" id="editExpDate" value="${item.date || ''}" class="w-full border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-800 focus:outline-stone-400 font-mono">
-        </div>
-
-        <div>
-          <label class="text-[11px] text-stone-500 font-medium block mb-1">카테고리 (소분류)</label>
-          <select id="editExpCat" class="w-full border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-800 focus:outline-stone-400 bg-white">
-            ${subCatList.map(s => `<option value="${s}" ${s === currentSub ? 'selected' : ''}>${s}</option>`).join('')}
-          </select>
-        </div>
-
-        <div>
-          <label class="text-[11px] text-stone-500 font-medium block mb-1">지출 내역 (항목명)</label>
-          <input type="text" id="editExpMemo" value="${item.memo || ''}" class="w-full border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-800 focus:outline-stone-400">
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[11px] text-stone-500 font-medium block mb-1">결제수단</label>
-            <select id="editExpPay" class="w-full border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-800 focus:outline-stone-400 bg-white">
-              ${payMethods.map(m => `<option value="${m}" ${m === item.payment ? 'selected' : ''}>${m}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="text-[11px] text-stone-500 font-medium block mb-1">금액 (원)</label>
-            <input type="number" id="editExpAmount" value="${item.amount || 0}" class="w-full border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-800 focus:outline-stone-400 font-mono font-bold">
-          </div>
-        </div>
-      </div>
-
-      <div class="flex gap-2 pt-2">
-        <button type="button" onclick="document.getElementById('modalExpenseEdit').remove()" class="flex-1 py-2 bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200 font-medium text-xs transition">취소</button>
-        <button type="button" onclick="saveEditedExpense(${id})" class="flex-1 py-2 bg-stone-800 text-white rounded-xl hover:bg-stone-900 font-bold text-xs transition shadow-sm">수정 완료</button>
-      </div>
-    </div>
-  `;
-}
-
-// 💾 수정된 지출 내역 저장 & 화면 갱신
-function saveEditedExpense(id) {
-  const budgetData = getBudgetMaster();
-  const idx = (budgetData.expenses || []).findIndex(e => e.id == id);
-  if (idx === -1) return;
-
-  const newDate = document.getElementById('editExpDate').value.trim();
-  const newCat = document.getElementById('editExpCat').value;
-  const newMemo = document.getElementById('editExpMemo').value.trim();
-  const newPay = document.getElementById('editExpPay').value;
-  const newAmount = parseFloat(document.getElementById('editExpAmount').value) || 0;
-
-  budgetData.expenses[idx].date = newDate;
-  budgetData.expenses[idx].category = newCat;
-  budgetData.expenses[idx].memo = newMemo;
-  budgetData.expenses[idx].payment = newPay;
-  budgetData.expenses[idx].amount = newAmount;
-
-  saveBudgetMaster(budgetData);
-  document.getElementById('modalExpenseEdit')?.remove();
-
-  if (typeof renderAccountBookDailyList === 'function') renderAccountBookDailyList();
-
-// ==========================================
-// 🗄️ [신규 업뎃] 서랍장 감성 가계부 & 서브 탭 통합 로직
-// ==========================================
-
-// 1. 서랍장 내부 서브 탭 전환 (가계부 / 독서 / 뜨개)
-function setDrawerSubTab(type) {
-  ['budget', 'book', 'knit'].forEach(t => {
-    const mod = document.getElementById(`drawer${t.charAt(0).toUpperCase() + t.slice(1)}Module`);
-    const btn = document.getElementById(`drawerSubTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
-    if (mod) mod.classList.add('hidden');
-    if (btn) btn.className = 'flex-1 py-2 rounded-xl text-xs font-medium text-stone-500 transition-all';
+  // 메모 필터링 및 렌더링
+  let filtered = notes.filter(n => {
+    if (activeFolder !== '전체' && n.folder !== activeFolder) return false;
+    if (keyword && !n.title.toLowerCase().includes(keyword) && !n.content.toLowerCase().includes(keyword)) return false;
+    return true;
   });
 
-  const targetMod = document.getElementById(`drawer${type.charAt(0).toUpperCase() + type.slice(1)}Module`);
-  const targetBtn = document.getElementById(`drawerSubTab${type.charAt(0).toUpperCase() + type.slice(1)}`);
-  
-  if (targetMod) targetMod.classList.remove('hidden');
-  
-  const activeColor = type === 'budget' ? 'bg-amber-100 text-amber-900' : (type === 'book' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900');
-  if (targetBtn) targetBtn.className = `flex-1 py-2 rounded-xl text-xs font-bold ${activeColor} shadow-xs transition-all`;
-
-  if (type === 'budget') renderBudgetDashboard();
-  else if (type === 'book' && typeof renderBookShelf === 'function') renderBookShelf();
-  else if (type === 'knit' && typeof renderKnittingShowroom === 'function') renderKnittingShowroom();
-}
-
-// 2. 가계부 데이터 로드 및 저장
-function getBudgetMaster() {
-  const defaultData = {
-    totalBudget: 500000,
-    categories: ['고정지출', '생활비', '교통비', '식비', '쇼핑/취미', '기타'],
-    paymentMethods: ['현대카드', '국민카드', '네이버페이', '현금'],
-    expenses: [] 
-  };
-  return JSON.parse(localStorage.getItem('mingle_budget_data') || JSON.stringify(defaultData));
-}
-
-function saveBudgetMaster(data) {
-  localStorage.setItem('mingle_budget_data', JSON.stringify(data));
-  renderBudgetDashboard();
-  if (typeof db !== 'undefined' && db) db.collection('drawer_budget').doc('master').set(data).catch(console.error);
-}
-
-// 3. 가계부 대시보드 및 잔액 계산
-function renderBudgetDashboard() {
-  const container = document.getElementById('budgetList');
-  const remainingEl = document.getElementById('budgetRemainingAmount');
-  if (!container) return;
-
-  const budgetData = getBudgetMaster();
-  const currentMonthStr = typeof currentDate !== 'undefined' ? currentDate.slice(0, 7) : '2026-10';
-
-  const monthExpenses = budgetData.expenses.filter(e => e.date && e.date.startsWith(currentMonthStr));
-  monthExpenses.sort((a, b) => b.date.localeCompare(a.date));
-
-  const totalSpent = monthExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
-  const remaining = budgetData.totalBudget - totalSpent;
-
-  if (remainingEl) {
-    remainingEl.innerText = `${remaining.toLocaleString()} 원`;
-    remainingEl.className = remaining < 0 ? 'text-lg font-bold text-rose-600 mt-0.5' : 'text-lg font-bold text-stone-800 mt-0.5';
-  }
-
-  if (monthExpenses.length === 0) {
-    container.innerHTML = `
-      <div class="bg-stone-50 rounded-xl p-4 text-center text-stone-400 text-xs border border-stone-200 space-y-1">
-        <p>이번 달 아직 기록된 지출이 없어요 🌿</p>
-        <p class="text-[10px]">우측 상단 [+ 지출 기록] 버튼을 눌러 추가해보세요!</p>
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = monthExpenses.map(item => `
-    <div class="p-3 rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-between text-xs">
-      <div class="min-w-0 pr-2 flex-1">
-        <div class="flex items-center gap-1.5">
-          <span class="font-bold text-stone-800">${item.memo || item.category}</span>
-          <span class="text-[9px] bg-amber-50 text-amber-800 px-1.5 py-0.2 rounded font-semibold border border-amber-200">${item.category}</span>
-          <span class="text-[9px] text-stone-400">${item.payment || ''}</span>
-        </div>
-        <div class="text-[10px] text-stone-400 mt-0.5">${item.date}</div>
-      </div>
-      <div class="flex items-center gap-2 shrink-0">
-        <span class="font-bold font-mono text-rose-700">-${parseFloat(item.amount).toLocaleString()}원</span>
-        <button onclick="deleteExpenseItem(${item.id})" class="text-stone-300 hover:text-rose-500 text-xs px-1">✕</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-// 4. 지출 상세 기록 모달
-function openBudgetModal() {
-  const budgetData = getBudgetMaster();
-  let modalContainer = document.getElementById('modal-container');
-  if (!modalContainer) {
-    modalContainer = document.createElement('div');
-    modalContainer.id = 'modal-container';
-    document.body.appendChild(modalContainer);
-  }
-  modalContainer.innerHTML = `
-    <div class="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
-        <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-          <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>💸</span> 지출 상세 기록</h3>
-          <button onclick="closeBudgetModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
-        </div>
-        <div class="space-y-2 text-xs">
-          <div><label class="text-[10px] text-stone-500 block mb-1">지출 금액 (원)</label><input type="number" id="budgetItemAmount" placeholder="예: 15000" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-amber-400"></div>
-          <div><label class="text-[10px] text-stone-500 block mb-1">카테고리</label><select id="budgetItemCategory" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-2 text-xs text-stone-700 cursor-pointer">${budgetData.categories.map(c => `<option value="${c}">${c}</option>`).join('')}</select></div>
-          <div><label class="text-[10px] text-stone-500 block mb-1">결제 수단</label><select id="budgetItemPayment" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-2 text-xs text-stone-700 cursor-pointer">${budgetData.paymentMethods.map(p => `<option value="${p}">${p}</option>`).join('')}</select></div>
-          <div class="grid grid-cols-2 gap-2">
-            <div><label class="text-[10px] text-stone-500 block mb-1">지출 일자</label><input type="date" id="budgetItemDate" value="${typeof currentDate !== 'undefined' ? currentDate : '2026-10-02'}" class="w-full bg-stone-50 border border-stone-200 rounded-xl p-1.5 text-[11px]"></div>
-            <div><label class="text-[10px] text-stone-500 block mb-1">메모</label><input type="text" id="budgetItemMemo" placeholder="예: 커피" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-2 text-xs"></div>
-          </div>
-        </div>
-        <div class="flex gap-2 pt-2">
-          <button onclick="confirmSaveExpense()" class="flex-1 py-2 bg-amber-400 hover:bg-amber-500 text-stone-900 font-bold text-xs rounded-xl transition-colors">저장</button>
-          <button onclick="closeBudgetModal()" class="py-2 px-3 bg-stone-100 text-stone-600 text-xs rounded-xl">취소</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function deleteExpenseItem(id) {
-  if (!confirm("이 지출 내역을 삭제할까요?")) return;
-  const budgetData = getBudgetMaster();
-  budgetData.expenses = budgetData.expenses.filter(e => e.id !== id);
-  saveBudgetMaster(budgetData);
-}
-
-// 5. 총 예산 설정 모달
-function openBudgetSettingModal() {
-  const budgetData = getBudgetMaster();
-  let modalContainer = document.getElementById('modal-container');
-  if (!modalContainer) {
-    modalContainer = document.createElement('div');
-    modalContainer.id = 'modal-container';
-    document.body.appendChild(modalContainer);
-  }
-  modalContainer.innerHTML = `
-    <div class="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl">
-        <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-          <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>⚙️</span> 월별 예산 설정</h3>
-          <button onclick="closeBudgetModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
-        </div>
-        <div class="space-y-2 text-xs">
-          <div><label class="text-[10px] text-stone-500 block mb-1">이번 달 목표 총 예산 (원)</label><input type="number" id="settingTotalBudget" value="${budgetData.totalBudget}" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs font-mono focus:outline-none"></div>
-        </div>
-        <div class="flex gap-2 pt-2">
-          <button onclick="confirmSaveBudgetSetting()" class="flex-1 py-2 bg-stone-800 text-white font-bold text-xs rounded-xl">저장</button>
-          <button onclick="closeBudgetModal()" class="py-2 px-3 bg-stone-100 text-stone-600 text-xs rounded-xl">취소</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function confirmSaveBudgetSetting() {
-  const val = document.getElementById('settingTotalBudget').value;
-  if (!val) return;
-  const budgetData = getBudgetMaster();
-  budgetData.totalBudget = parseFloat(val);
-  saveBudgetMaster(budgetData);
-  closeBudgetModal();
-}
-// ==========================================
-// 📚 구글 북스 API 검색 & 4단계 도서 책장 엔진
-// ==========================================
-
-// ==========================================
-// 📚 구글 북스 검색 & 4단계 도서 책장 엔진
-// ==========================================
-
-function getBooksMaster() {
-  return JSON.parse(localStorage.getItem('mingle_books_data') || '[]');
-}
-
-function saveBooksMaster(data) {
-  localStorage.setItem('mingle_books_data', JSON.stringify(data));
-  if (typeof renderBookShelf === 'function') renderBookShelf();
-  if (typeof db !== 'undefined' && db) {
-    db.collection('drawer_book').doc('master').set({ books: data }).catch(console.error);
-  }
-}
-
-// 구글 북스 검색 (호출량 초과 대비 안전 처리 + 표지 링크 지원)
-async function searchGoogleBooks() {
-  const inputEl = document.getElementById('bookSearchKeyword');
-  const query = inputEl ? inputEl.value.trim() : '';
-  const container = document.getElementById('bookSearchResults');
-  if (!container || !query) return;
-
-  container.classList.remove('hidden');
-  container.innerHTML = '<div class="p-2.5 text-center text-xs text-stone-400 animate-pulse">도서 검색 중... 🔍</div>';
-
-  try {
-    let url = 'https://www.googleapis.com/books/v1/volumes?q=' + encodeURIComponent(query) + '&maxResults=8';
-    let res = await fetch(url);
-    let data = await res.json();
-
-    if (data.error || !data.items || data.items.length === 0) {
-      container.innerHTML = `
-        <div class="p-3 text-center text-xs text-stone-600 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1.5">
-          <p class="font-bold text-amber-900">구글 도서관 호출이 원활하지 않아요 🥺</p>
-          <p class="text-[11px] text-stone-500">'${query}' 제목으로 바로 입력하고, 표지는 링크로 예쁘게 넣어보세요!</p>
-          <div class="flex gap-1.5 justify-center pt-1">
-            <button type="button" onclick="applyDirectBookTitle('${query.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-amber-200 text-amber-950 font-bold rounded-lg text-xs shadow-2xs">👉 제목 바로 적용</button>
-            <button type="button" onclick="promptCustomCoverUrl()" class="px-2.5 py-1 bg-white border border-amber-300 text-stone-700 font-bold rounded-lg text-xs shadow-2xs">🖼️ 표지 URL 넣기</button>
-          </div>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = data.items.map(function(item) {
-      const info = item.volumeInfo || {};
-      const title = (info.title || '제목 없음').replace(/"/g, '&quot;');
-      const author = ((info.authors || []).join(', ') || info.publisher || '저자 미상').replace(/"/g, '&quot;');
-      const cover = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail || '').replace('http:', 'https:') : 'https://via.placeholder.com/60x85?text=No+Cover';
-      const pageCount = info.pageCount || 0;
-
-      return `
-        <div onclick="selectGoogleBook('${title.replace(/'/g, "\\'")}', '${author.replace(/'/g, "\\'")}', '${cover}', ${pageCount})" class="p-2 bg-white rounded-lg border border-stone-200 flex items-center gap-2.5 cursor-pointer hover:bg-emerald-50 transition-colors">
-          <img src="${cover}" class="w-8 h-11 object-cover rounded shadow-2xs shrink-0" onerror="this.src='https://via.placeholder.com/60x85?text=Cover'">
-          <div class="min-w-0 flex-1">
-            <p class="font-bold text-xs text-stone-800 truncate">${title}</p>
-            <p class="text-[10px] text-stone-500 truncate">${author} · ${pageCount ? pageCount + '쪽' : '페이지 미상'}</p>
-          </div>
-        </div>
-      `;
-    }).join('');
-  } catch (err) {
-    console.error(err);
-    container.innerHTML = `
-      <div class="p-3 text-center text-xs text-stone-600 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1.5">
-        <p class="font-bold text-amber-900">검색 결과를 불러오지 못했어요 😢</p>
-        <button type="button" onclick="applyDirectBookTitle('${query.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-amber-200 text-amber-950 font-bold rounded-lg text-xs shadow-2xs">👉 '${query}' 제목으로 쓰기</button>
-      </div>
-    `;
-  }
-}
-
-// 직접 제목 넣기 & 표지 URL 등록 헬퍼
-function applyDirectBookTitle(title) {
-  const inp = document.getElementById('bookInputTitle');
-  if (inp) inp.value = title;
-  document.getElementById('bookSearchResults')?.classList.add('hidden');
-}
-
-function promptCustomCoverUrl() {
-  const url = prompt('원하는 책 표지 이미지 주소(URL)를 붙여넣어 주세요:\n(네이버/구글 이미지 검색에서 "이미지 주소 복사")');
-  if (!url || !url.trim()) return;
-  const cleanUrl = url.trim();
-  const coverUrlInput = document.getElementById('bookCoverUrl');
-  if (coverUrlInput) coverUrlInput.value = cleanUrl;
-
-  const coverImg = document.getElementById('bookPreviewCover');
-  const icon = document.getElementById('bookPreviewIcon');
-  const text = document.getElementById('bookPreviewText');
-
-  if (coverImg) {
-    coverImg.src = cleanUrl;
-    coverImg.classList.remove('hidden');
-  }
-  if (icon) icon.classList.add('hidden');
-  if (text) text.classList.add('hidden');
-  document.getElementById('bookSearchResults')?.classList.add('hidden');
-}
-
-function selectGoogleBook(title, author, cover, pageCount) {
-  document.getElementById('bookInputTitle').value = title;
-  document.getElementById('bookInputAuthor').value = author;
-  document.getElementById('bookInputTotalPage').value = pageCount || '';
-  document.getElementById('bookCoverUrl').value = cover;
-
-  const coverImg = document.getElementById('bookPreviewCover');
-  const icon = document.getElementById('bookPreviewIcon');
-  const text = document.getElementById('bookPreviewText');
-
-  if (cover && !cover.includes('placeholder')) {
-    coverImg.src = cover;
-    coverImg.classList.remove('hidden');
-    if (icon) icon.classList.add('hidden');
-    if (text) text.classList.add('hidden');
-  }
-  document.getElementById('bookSearchResults')?.classList.add('hidden');
-}
-
-// 도서 저장 로직
-function saveBookMaster() {
-  const title = document.getElementById('bookInputTitle')?.value.trim();
-  if (!title) {
-    alert('도서명을 입력해주세요!');
-    return;
-  }
-
-  const books = getBooksMaster();
-  const editId = document.getElementById('bookEditId')?.value;
-  const bookData = {
-    title,
-    author: document.getElementById('bookInputAuthor')?.value.trim() || '저자 미상',
-    totalPage: parseInt(document.getElementById('bookInputTotalPage')?.value, 10) || 0,
-    cover: document.getElementById('bookCoverUrl')?.value || '',
-    status: document.getElementById('bookInputStatus')?.value || 'reading',
-    startDate: document.getElementById('bookInputStartDate')?.value || '',
-    endDate: document.getElementById('bookInputEndDate')?.value || '',
-    rating: document.getElementById('bookInputRating')?.value || '5',
-    review: document.getElementById('bookInputReview')?.value.trim() || ''
-  };
-
-  if (editId) {
-    const idx = books.findIndex(b => String(b.id) === String(editId));
-    if (idx !== -1) {
-      books[idx] = { ...books[idx], ...bookData };
-    }
-  } else {
-    books.unshift({
-      id: Date.now(),
-      currentPage: 0,
-      history: [],
-      ...bookData
-    });
-  }
-
-  saveBooksMaster(books);
-  document.getElementById('bookDetailModal')?.classList.add('hidden');
-}
-
-// 삭제 로직
-function deleteCurrentBook() {
-  const editId = document.getElementById('bookEditId').value;
-  if (!editId) return;
-  if (!confirm('이 책을 책장에서 삭제할까요?')) return;
-
-  let books = getBooksMaster();
-  books = books.filter(b => b.id != editId);
-  saveBooksMaster(books);
-  closeBookDetailModal();
-}
-
-// 책장 목록 렌더링 (4단계 탭/상태 지원)
-let currentBookFilter = 'all';
-function filterBooks(status) {
-  currentBookFilter = status;
-  renderBookShelf();
-}
-
-function renderBookShelf() {
-  const container = document.getElementById('bookshelfList');
-  if (!container) return;
-
-  const books = getBooksMaster();
-  const filtered = currentBookFilter === 'all' ? books : books.filter(b => b.status === currentBookFilter);
+  filtered.sort((a, b) => b.updatedAt - a.updatedAt); // 최신순
 
   if (filtered.length === 0) {
-    container.innerHTML = `
-      <div class="bg-stone-50 rounded-xl p-6 text-center text-stone-400 text-xs border border-stone-200">
-        <p>등록된 도서가 없어요 📚</p>
-        <p class="text-[10px] mt-1 text-stone-400">[+ 도서 등록]을 눌러 구글 책 검색으로 손쉽게 추가해보세요!</p>
-      </div>
-    `;
+    container.innerHTML = '<div class="col-span-2 text-center text-stone-400 text-xs py-8 bg-stone-50 rounded-xl border border-stone-100">조건에 맞는 메모가 없어요.</div>';
     return;
   }
 
-  const statusBadges = {
-    reading: '<span class="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9px] px-1.5 py-0.2 rounded font-bold">읽는 중</span>',
-    completed: '<span class="bg-amber-50 text-amber-900 border border-amber-200 text-[9px] px-1.5 py-0.2 rounded font-bold">완독 🏆</span>',
-    wish: '<span class="bg-stone-100 text-stone-600 border border-stone-200 text-[9px] px-1.5 py-0.2 rounded font-bold">위시 🔖</span>',
-    stopped: '<span class="bg-rose-50 text-rose-800 border border-rose-200 text-[9px] px-1.5 py-0.2 rounded font-bold">중단</span>'
-  };
-
-  container.innerHTML = filtered.map(b => {
-    const totalP = b.totalPage || 0;
-    const currP = b.currentPage || 0;
-    const percent = totalP > 0 ? Math.min(100, Math.round((currP / totalP) * 100)) : 0;
-
+  container.innerHTML = filtered.map(n => {
+    const plainText = n.content.replace(/<[^>]+>/g, ' '); // 미리보기를 위해 태그 제거
     return `
-      <div onclick="openBookEditModal(${b.id})" class="p-3 bg-white rounded-xl border border-stone-200 shadow-2xs hover:border-emerald-300 transition-all cursor-pointer flex gap-3">
-        <img src="${b.cover || 'https://via.placeholder.com/60x85?text=Cover'}" class="w-12 h-16 object-cover rounded-md border border-stone-200 shrink-0">
-        <div class="flex-1 min-w-0 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between gap-1">
-              <h4 class="font-bold text-xs text-stone-800 truncate">${b.title}</h4>
-              ${statusBadges[b.status] || ''}
-            </div>
-            <p class="text-[10px] text-stone-500 truncate mt-0.5">${b.author || '저자 미상'}</p>
-          </div>
-
-          <!-- 진행률 바 (읽는 중이거나 페이지 정보가 있을 때) -->
-          ${totalP > 0 ? `
-            <div class="space-y-0.5 mt-1.5">
-              <div class="flex justify-between text-[9px] font-mono text-stone-500">
-                <span>${currP} /${totalP}p</span>
-                <span>${percent}%</span>
-              </div>
-              <div class="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
-                <div class="bg-emerald-500 h-full rounded-full transition-all" style="width: ${percent}%"></div>
-              </div>
-            </div>
-          ` : `
-            <div class="text-[10px] text-amber-500 mt-1">${'⭐'.repeat(parseInt(b.rating) || 5)}</div>
-          `}
+      <div onclick="openNoteEditorModal(${n.id})" class="p-3 bg-white border border-stone-200 rounded-xl shadow-2xs cursor-pointer hover:shadow-md transition flex flex-col h-32">
+        <div class="flex justify-between items-start mb-1">
+          <h4 class="font-bold text-sm text-stone-800 truncate pr-2">${n.title || '제목 없음'}</h4>
+          <span class="text-[9px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded shrink-0">${n.folder || '기본'}</span>
+        </div>
+        <p class="text-[11px] text-stone-500 line-clamp-3 leading-relaxed flex-1">${plainText}</p>
+        <div class="text-[9px] text-stone-300 mt-2 text-right">
+          ${new Date(n.updatedAt).toLocaleDateString()}
         </div>
       </div>
     `;
   }).join('');
 }
 
-// ⭐ 쩜오(0.5) 별점 계산 헬퍼 함수
-function getRatingStars(rating) {
-  const score = parseFloat(rating) || 5;
-  const fullStars = Math.floor(score);
-  const hasHalf = score % 1 !== 0;
-  return '⭐'.repeat(fullStars) + (hasHalf ? '✨' : '');
+function setNoteFolder(folderName) {
+  sessionStorage.setItem('mingle_note_active_folder', folderName);
+  renderNoteCards();
 }
 
-// 시간 입력창에 숫자만 치면 자동으로 HH:mm 형식 포맷팅해주는 스마트 함수
-function formatTimeInput(input) {
-  let val = input.value.replace(/[^0-9]/g, '');
-  if (val.length >= 3) {
-    val = val.slice(0, 2) + ':' + val.slice(2, 4);
-  }
-  input.value = val;
-}
-
-// ==========================================
-// 💸 데일리 가계부 & 스마트 시간 입력 로직
-// ==========================================
-
-// 기본 카테고리 맵 (대분류 -> 소분류 목록)
-window.DEFAULT_EXPENSE_CATS = {
-  '식비': ['식재료', '외식', '카페·간식', '배달'],
-  '생활비': ['생필품', '반려묘', '주거/통신', '생활잡화'],
-  '교통': ['대중교통', '택시', '주유/차량'],
-  '쇼핑': ['의류/패션', '화장품/뷰티', '취미/도서'],
-  '문화/여가': ['영화/공연', '여행/숙박', '운동'],
-  '의료/건강': ['병원/약국', '영양제/건강식'],
-  '기타': ['경조사/선물', '기타지출']
-};
-
-// 스마트 시간 포맷터 (숫자만 치면 00:00 자동 변환)
-function formatSmartTimeInput(el) {
-  if (!el) return;
-  let val = el.value.replace(/[^0-9]/g, '');
-  if (val.length >= 4) {
-    let hh = parseInt(val.slice(0, 2), 10);
-    let mm = parseInt(val.slice(2, 4), 10);
-    if (isNaN(hh) || hh > 23) hh = 23;
-    if (isNaN(mm) || mm > 59) mm = 59;
-    el.value = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
-  } else {
-    el.value = val;
+function addNoteFolder() {
+  const name = prompt("새로운 폴더 이름을 입력하세요:");
+  if (!name || !name.trim()) return;
+  const folders = getNoteFoldersLocal();
+  if (!folders.includes(name.trim())) {
+    folders.push(name.trim());
+    localStorage.setItem('mingle_drawer_note_folders', JSON.stringify(folders));
+    renderNoteCards();
   }
 }
 
-// 현재 시간 기본 세팅 함수 (HH:mm)
-function setExpenseNowTime() {
-  const timeInput = document.getElementById('expenseTimeInput');
-  if (!timeInput) return;
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  timeInput.value = `${hh}:${mm}`;
-
-  // 💡 클릭하거나 터치(포커스)하면 기존 시간 싹 비워서 편하게 입력 가능!
-  timeInput.onfocus = function() {
-    this.value = '';
-  };
-}
-
-// 대분류 변경 시 소분류 셀렉트박스 동적 업데이트
-function onExpenseMainCatChange() {
-  const mainSelect = document.getElementById('expenseMainCatSelect');
-  const subSelect = document.getElementById('expenseSubCatSelect');
-  if (!mainSelect || !subSelect) return;
-
-  const mainCat = mainSelect.value;
-  const subCats = (window.DEFAULT_EXPENSE_CATS && window.DEFAULT_EXPENSE_CATS[mainCat]) || ['기본'];
+// 메모 에디터 모달 열기/닫기
+let currentEditNoteId = null;
+function openNoteEditorModal(id = null) {
+  currentEditNoteId = id;
+  const modal = document.getElementById('noteEditorModal');
+  const titleInp = document.getElementById('noteEditorTitle');
+  const contentInp = document.getElementById('noteEditorContent');
+  const folderSel = document.getElementById('noteEditorFolder');
   
-  subSelect.innerHTML = '';
-  subCats.forEach(sub => {
-    const opt = document.createElement('option');
-    opt.value = sub;
-    opt.textContent = sub;
-    subSelect.appendChild(opt);
-  });
-}
+  // 폴더 셀렉트 세팅
+  const folders = getNoteFoldersLocal();
+  folderSel.innerHTML = folders.map(f => `<option value="${f}">${f}</option>`).join('');
 
-// 오늘 지출 목록 화면 렌더링
-function renderExpenseWidget() {
-  try {
-    const container = document.getElementById('expenseListContainer');
-    const totalChip = document.getElementById('expenseTodayTotalChip');
-    if (!container) return;
-
-    // 오직 현재 날짜의 파이어베이스 데이터만 정직하게 조회!
-    const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
-    let dayData = (window.currentDayData && window.currentDayData.date === curDate) ? window.currentDayData : {};
-    const expenses = Array.isArray(dayData.expenses) ? dayData.expenses : [];
-    container.innerHTML = '';
-
-    let totalSum = 0;
-
-    if (expenses.length === 0) {
-      container.innerHTML = '<p class="text-[11px] text-stone-300 italic text-center py-2">오늘 지출 내역이 없습니다 ✨</p>';
-    } else {
-      expenses.forEach((item, idx) => {
-        const amt = Number(item.amount) || 0;
-        totalSum += amt;
-
-        const row = document.createElement('div');
-        row.className = 'flex items-center justify-between bg-white border border-stone-150 rounded-xl px-2.5 py-1.5 shadow-2xs hover:bg-stone-50 cursor-pointer transition';
-        row.onclick = () => openEditTodayExpenseModal(idx);
-
-        // 카테고리에서 슬래시(/) 앞의 대분류 제거하고 소분류만 깔끔하게 추출
-        const rawCat = item.category || item.subCategory || '';
-        const displaySubCat = rawCat.includes('/') ? rawCat.split('/').pop().trim() : (rawCat || '기타');
-
-        row.innerHTML = `
-          <div class="flex items-center gap-1.5 min-w-0 flex-1">
-            <span class="font-mono text-[10px] text-stone-400 shrink-0">${item.time || '--:--'}</span>
-            <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 text-[10px] font-medium border border-amber-200/50 shrink-0">${displaySubCat}</span>
-            <span class="truncate font-medium text-stone-800 text-xs">${item.title || item.memo || '지출'}</span>
-            <span class="text-[10px] text-stone-400 shrink-0">(${item.payMethod || item.payment || '카드'})</span>
-          </div>
-          <div class="flex items-center gap-1.5 shrink-0 ml-2">
-            <span class="font-mono font-semibold text-stone-900 text-xs">${amt.toLocaleString()}원</span>
-            <button type="button" onclick="event.stopPropagation(); deleteExpenseEntry(${idx})" class="text-stone-300 hover:text-rose-500 font-bold px-1 text-sm leading-none" title="삭제">&times;</button>
-          </div>
-        `;
-        container.appendChild(row);
-      });
+  if (id) {
+    const note = getNotesLocal().find(n => n.id === id);
+    if (note) {
+      titleInp.value = note.title;
+      contentInp.innerHTML = note.content;
+      folderSel.value = note.folder || folders[0];
     }
-
-    if (totalChip) {
-      totalChip.innerText = `총 ${totalSum.toLocaleString()}원`;
-    }
-
-    // 소분류 초기화 확인 & 시간 세팅
-    if (document.getElementById('expenseSubCatSelect')?.options?.length === 0) {
-      onExpenseMainCatChange();
-    }
-    const timeInput = document.getElementById('expenseTimeInput');
-    if (timeInput && !timeInput.value) {
-      setExpenseNowTime();
-    }
-  } catch(err) {
-    console.warn('renderExpenseWidget 에러 패스:', err);
+  } else {
+    titleInp.value = '';
+    contentInp.innerHTML = '';
+    const activeFolder = sessionStorage.getItem('mingle_note_active_folder');
+    folderSel.value = (activeFolder && activeFolder !== '전체') ? activeFolder : folders[0];
   }
+  
+  modal.classList.remove('hidden');
 }
 
-// ✏️ [오늘의 지출] 상세 수정 모달 (소분류 단독 표시)
-function openEditTodayExpenseModal(idx) {
-  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
-  let dayData = (window.currentDayData && window.currentDayData.date === curDate) ? window.currentDayData : {};
-  const list = Array.isArray(dayData.expenses) ? dayData.expenses : [];
-  const item = list[idx];
-  if (!item) return;
+function closeNoteEditorModal() {
+  document.getElementById('noteEditorModal').classList.add('hidden');
+  currentEditNoteId = null;
+}
 
-  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : {};
-  const payMethods = typeof getStoredPayMethods === 'function' ? getStoredPayMethods() : ['현금', '카드', '계좌이체', '간편결제'];
-
-  // 대분류 없이 소분류만 모으기
-  let subCatList = [];
-  Object.keys(cats).forEach(k => {
-    (cats[k] || []).forEach(s => {
-      if (!subCatList.includes(s)) subCatList.push(s);
+function saveNoteEditor() {
+  const title = document.getElementById('noteEditorTitle').value.trim() || '제목 없음';
+  const content = document.getElementById('noteEditorContent').innerHTML;
+  const folder = document.getElementById('noteEditorFolder').value;
+  
+  const notes = getNotesLocal();
+  if (currentEditNoteId) {
+    const idx = notes.findIndex(n => n.id === currentEditNoteId);
+    if (idx > -1) {
+      notes[idx].title = title;
+      notes[idx].content = content;
+      notes[idx].folder = folder;
+      notes[idx].updatedAt = Date.now();
+    }
+  } else {
+    notes.push({
+      id: Date.now(),
+      title,
+      content,
+      folder,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     });
-  });
-  if (subCatList.length === 0) subCatList = ['식재료', '외식', '카페·간식', '쇼핑', '대중교통', '생활', '기타지출'];
-
-  const rawCat = item.category || item.subCategory || '';
-  const currentSub = rawCat.includes('/') ? rawCat.split('/').pop().trim() : rawCat;
-
-  let modalEl = document.getElementById('modalTodayExpenseEdit');
-  if (!modalEl) {
-    modalEl = document.createElement('div');
-    modalEl.id = 'modalTodayExpenseEdit';
-    document.body.appendChild(modalEl);
   }
-
-  modalEl.className = 'fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4';
-  modalEl.innerHTML = `
-    <div class="bg-white rounded-2xl p-5 max-w-xs w-full space-y-3.5 shadow-xl border border-stone-200">
-      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-          <span>✏️</span> 지출 내역 수정
-        </h3>
-        <button type="button" onclick="document.getElementById('modalTodayExpenseEdit').remove()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
-      </div>
-
-      <div class="space-y-2.5 text-xs">
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">시간</label>
-            <input type="text" id="editTodayExpTime" value="${item.time || ''}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono text-xs">
-          </div>
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">카테고리</label>
-            <select id="editTodayExpCat" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
-              ${subCatList.map(s => `<option value="${s}" ${s === currentSub ? 'selected' : ''}>${s}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label class="text-[10px] text-stone-500 font-medium block mb-1">지출 내용</label>
-          <input type="text" id="editTodayExpTitle" value="${item.title || item.memo || ''}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs">
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">결제수단</label>
-            <select id="editTodayExpPay" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
-            ${payMethods.map(m => `<option value="${m}" ${m === (item.payMethod || item.payment) ? 'selected' : ''}>${m}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">금액 (원)</label>
-            <input type="number" id="editTodayExpAmt" value="${item.amount || 0}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono font-bold text-xs">
-          </div>
-        </div>
-      </div>
-
-      <div class="flex gap-2 pt-1.5">
-        <button type="button" onclick="document.getElementById('modalTodayExpenseEdit').remove()" class="flex-1 py-1.5 bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200 font-medium text-xs">취소</button>
-        <button type="button" onclick="saveEditedTodayExpense(${idx})" class="flex-1 py-1.5 bg-stone-800 text-white rounded-xl hover:bg-stone-900 font-bold text-xs shadow-sm">수정 완료</button>
-      </div>
-    </div>
-  `;
+  
+  saveNotesLocal(notes);
+  closeNoteEditorModal();
 }
-
-// 💾 오늘 지출 수정 내용 저장 & 동기화
-function saveEditedTodayExpense(idx) {
-  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
-  let dayData = (window.currentDayData && window.currentDayData.date === curDate) ? window.currentDayData : null;
-  if (!dayData || !Array.isArray(dayData.expenses) || !dayData.expenses[idx]) return;
-
-  const newTime = document.getElementById('editTodayExpTime').value.trim();
-  const newCat = document.getElementById('editTodayExpCat').value;
-  const newTitle = document.getElementById('editTodayExpTitle').value.trim();
-  const newPay = document.getElementById('editTodayExpPay').value;
-  const newAmt = parseFloat(document.getElementById('editTodayExpAmt').value) || 0;
-
-  dayData.expenses[idx].time = newTime;
-  dayData.expenses[idx].category = newCat;
-  dayData.expenses[idx].subCategory = newCat;
-  dayData.expenses[idx].title = newTitle;
-  dayData.expenses[idx].memo = newTitle;
-  dayData.expenses[idx].payMethod = newPay;
-  dayData.expenses[idx].payment = newPay;
-  dayData.expenses[idx].amount = newAmt;
-
-  if (typeof saveDayDataLocal === 'function') saveDayDataLocal(curDate, dayData);
-  if (typeof syncDayDataToFirebase === 'function') syncDayDataToFirebase(curDate, dayData);
-
-  document.getElementById('modalTodayExpenseEdit')?.remove();
-  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
-}
-
-// 지출 새 항목 추가
-function addExpenseEntry() {
-  const timeInput = document.getElementById('expenseTimeInput');
-  const mainSelect = document.getElementById('expenseMainCatSelect');
-  const subSelect = document.getElementById('expenseSubCatSelect');
-  const paySelect = document.getElementById('expensePayMethodSelect');
-  const itemInput = document.getElementById('expenseItemInput');
-  const amountInput = document.getElementById('expenseAmountInput');
-
-  const amount = parseInt(amountInput?.value, 10);
-  if (isNaN(amount) || amount <= 0) {
-    alert('금액을 올바르게 입력해 주세요!');
-    amountInput?.focus();
-    return;
-  }
-
-  const title = (itemInput?.value || '').trim() || subSelect?.value || '기타 지출';
-  const newEntry = {
-    id: 'exp_' + Date.now(),
-    time: timeInput?.value || '00:00',
-    mainCat: mainSelect?.value || '기타',
-    subCat: subSelect?.value || '일반',
-    payMethod: paySelect?.value || '카드',
-    title: title,
-    amount: amount
-  };
-
-    const key = 'mingle_day_' + currentDate;
-    let dayData = {};
-    try {
-      const stored = localStorage.getItem(key);
-      dayData = stored ? JSON.parse(stored) : {};
-    } catch(e) {
-      dayData = {};
-    }
-
-    if (!Array.isArray(dayData.expenses)) {
-      dayData.expenses = [];
-    }
-    dayData.expenses.push(newEntry);
-
-    // 시간순 정렬
-    dayData.expenses.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-
-    // 1. 로컬 스토리지 안전 저장
-    localStorage.setItem(key, JSON.stringify(dayData));
-    if (typeof saveDayDataLocal === 'function') {
-      try { saveDayDataLocal(currentDate, dayData); } catch(e) {}
-    }
-    if (window.currentDayData) window.currentDayData.expenses = dayData.expenses;
-
-    // 2. 파이어베이스에 즉시 동기화 (기존 다른 데이터 절대 안 건드림)
-    if (typeof db !== 'undefined' && db) {
-      db.collection('diary_days').doc(currentDate).set({
-        expenses: dayData.expenses
-      }, { merge: true }).catch(err => console.error(err));
-    }
-
-    // 3. 화면 지출 목록 갱신
-    if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
-    if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
-    if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
-
-  // 인풋 초기화
-  if (itemInput) itemInput.value = '';
-  if (amountInput) amountInput.value = '';
-  setExpenseNowTime();
-
-  renderExpenseWidget();
-}
-
-// 지출 항목 삭제
-function deleteExpenseEntry(idx) {
-  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
-  const key = 'mingle_day_' + curDate;
-  let dayData = {};
-  try {
-    const stored = localStorage.getItem(key);
-    dayData = stored ? JSON.parse(stored) : {};
-  } catch(e) {
-    dayData = {};
-  }
-
-  if (Array.isArray(dayData.expenses)) {
-    dayData.expenses.splice(idx, 1);
-    localStorage.setItem(key, JSON.stringify(dayData));
-    if (typeof saveDayDataLocal === 'function') {
-      try { saveDayDataLocal(curDate, dayData); } catch(e) {}
-    }
-    if (window.currentDayData) window.currentDayData.expenses = dayData.expenses;
-
-    // 파이어베이스 즉시 동기화 삭제 반영
-    if (typeof db !== 'undefined' && db) {
-      db.collection('diary_days').doc(curDate).set({
-        expenses: dayData.expenses
-      }, { merge: true }).catch(err => console.error(err));
-    }
-
-    if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
-    if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
-    if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
-  }
-}
-
 // ==========================================
-// 💰 밍글 똑똑 가계부 통합 관리 엔진
+// 💰 [14] 가계부 코어 (Account Book) - 달력, 전체내역, 예산, 고정지출
 // ==========================================
 
-// 현재 가계부 달력 조회 기준 연/월 (기본값: 오늘)
-window.abCurrentYear = new Date().getFullYear();
-window.abCurrentMonth = new Date().getMonth() + 1; // 1 ~ 12
-window.abSelectedDate = typeof currentDate !== 'undefined' ? currentDate : new Date().toISOString().slice(0, 10);
-
-// 결제수단 기본값
-window.DEFAULT_PAY_METHODS = ['카드', '현금', '계좌이체', '간편결제'];
-
-function getStoredPayMethods() {
-  try {
-    const saved = localStorage.getItem('mingle_expense_pay_methods');
-    return saved ? JSON.parse(saved) : window.DEFAULT_PAY_METHODS;
-  } catch(e) {
-    return window.DEFAULT_PAY_METHODS;
-  }
-}
-
-function saveStoredPayMethods(list) {
-  localStorage.setItem('mingle_expense_pay_methods', JSON.stringify(list));
-  refreshPayMethodSelects();
-  if (typeof db !== 'undefined' && db) {
-    db.collection('account_book_settings').doc('master').set({
-      payMethods: list
-    }, { merge: true }).catch(console.error);
-  }
-}
-
-// ✏️ 결제수단 이름 수정 (클라우드 즉시 동기화)
-function editStoredPayMethod(idx) {
-  let list = getStoredPayMethods();
-  if (idx < 0 || idx >= list.length) return;
-  const oldName = list[idx];
-  const newName = prompt('결제수단 이름을 수정해주세요:', oldName);
-  if (!newName || !newName.trim() || newName.trim() === oldName) return;
-
-  list[idx] = newName.trim();
-  saveStoredPayMethods(list);
-  if (typeof renderPayMethodSettingsModal === 'function') renderPayMethodSettingsModal();
-}
-
-function getStoredCategories() {
-  try {
-    const saved = localStorage.getItem('mingle_expense_custom_cats');
-    return saved ? JSON.parse(saved) : (window.DEFAULT_EXPENSE_CATS || {});
-  } catch(e) {
-    return window.DEFAULT_EXPENSE_CATS || {};
-  }
-}
-
-function saveStoredCategories(cats) {
-  localStorage.setItem('mingle_expense_custom_cats', JSON.stringify(cats));
-  window.DEFAULT_EXPENSE_CATS = cats;
-  if (typeof onExpenseMainCatChange === 'function') onExpenseMainCatChange();
-  if (typeof db !== 'undefined' && db) {
-    db.collection('account_book_settings').doc('master').set({
-      categories: cats
-    }, { merge: true }).catch(console.error);
-  }
-}
-
-// ✏️️ 카테고리(중분류) 이름 수정 도우미
-function editStoredSubCategory(mainKey, idx) {
-  let cats = getStoredCategories();
-  let list = cats[mainKey] || [];
-  if (idx < 0 || idx >= list.length) return;
-  const oldName = list[idx];
-  const newName = prompt('카테고리 이름을 수정해주세요:', oldName);
-  if (!newName || !newName.trim() || newName.trim() === oldName) return;
-
-  list[idx] = newName.trim();
-  cats[mainKey] = list;
-  saveStoredCategories(cats);
-  if (typeof renderCategorySettingsModal === 'function') renderCategorySettingsModal();
-  if (typeof refreshCategorySelects === 'function') refreshCategorySelects();
-  if (typeof onExpenseMainCatChange === 'function') onExpenseMainCatChange();
-}
-
-function refreshPayMethodSelects() {
-  const paySelect = document.getElementById('expensePayMethodSelect');
-  if (!paySelect) return;
-  const methods = getStoredPayMethods();
-  paySelect.innerHTML = '';
-  methods.forEach(m => {
-    const opt = document.createElement('option');
-    opt.value = m;
-    opt.textContent = m;
-    paySelect.appendChild(opt);
-  });
-}
-
-// 탭 전환 (달력 / 예산 / 고정지출)
+// 가계부 4단 탭 전환
 function switchAccountBookTab(tab) {
-  const vCal = document.getElementById('abViewCalendar');
-  const vBud = document.getElementById('abViewBudget');
-  const vFix = document.getElementById('abViewFixed');
-  const bCal = document.getElementById('abTabBtnCalendar');
-  const bBud = document.getElementById('abTabBtnBudget');
-  const bFix = document.getElementById('abTabBtnFixed');
-
-  [vCal, vBud, vFix].forEach(el => el && el.classList.add('hidden'));
-  [bCal, bBud, bFix].forEach(el => {
-    if (el) {
-      el.className = 'py-1.5 rounded-lg hover:text-stone-700 transition';
-    }
+  const tabs = ['Calendar', 'All', 'Budget', 'Fixed'];
+  tabs.forEach(t => {
+    const view = document.getElementById(`abView${t}`);
+    const btn = document.getElementById(`abTabBtn${t}`);
+    if (view) view.classList.add('hidden');
+    if (btn) btn.className = 'py-1.5 rounded-lg hover:text-stone-700 transition';
   });
 
-  if (tab === 'calendar') {
-    if (vCal) vCal.classList.remove('hidden');
-    if (bCal) bCal.className = 'py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-semibold transition';
-    renderAccountBookCalendar();
-  } else if (tab === 'budget') {
-    if (vBud) vBud.classList.remove('hidden');
-    if (bBud) bBud.className = 'py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-semibold transition';
-    renderAccountBookBudget();
-  } else if (tab === 'fixed') {
-    if (vFix) vFix.classList.remove('hidden');
-    if (bFix) bFix.className = 'py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-semibold transition';
-    renderAccountBookFixed();
-  }
+  const activeView = document.getElementById(`abView${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+  const activeBtn = document.getElementById(`abTabBtn${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+  if (activeView) activeView.classList.remove('hidden');
+  if (activeBtn) activeBtn.className = 'py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-semibold transition';
+
+  if (tab === 'calendar') renderAccountBookCalendar();
+  else if (tab === 'all') renderAccountBookAllList();
+  else if (tab === 'budget') renderAccountBookBudget();
+  else if (tab === 'fixed') renderAccountBookFixed();
 }
 
-// 가계부 달력 월 변경 (< > 버튼)
-function changeAccountBookMonth(delta) {
-  window.abCurrentMonth += delta;
-  if (window.abCurrentMonth < 1) {
-    window.abCurrentMonth = 12;
-    window.abCurrentYear -= 1;
-  } else if (window.abCurrentMonth > 12) {
-    window.abCurrentMonth = 1;
-    window.abCurrentYear += 1;
-  }
-  renderAccountBookCalendar();
-}
-
-// 날짜별 총 지출 데이터 수집 (해당 월 전체)
+// 해당 월 전체 데이터 긁어오기 헬퍼
 function getMonthExpensesData(year, month) {
-  const result = {
-    dailyTotals: {}, // 'YYYY-MM-DD': 총금액
-    monthTotal: 0,
-    totalCount: 0,
-    catTotals: {}
-  };
-
+  const result = { dailyTotals: {}, monthTotal: 0, totalCount: 0, catTotals: {} };
   const prefix = `mingle_day_${year}-${String(month).padStart(2, '0')}`;
+  
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key && key.startsWith(prefix)) {
@@ -5341,887 +2111,213 @@ function getMonthExpensesData(year, month) {
           daySum += amt;
           result.monthTotal += amt;
           result.totalCount += 1;
-          const main = item.mainCat || '기타';
+          const main = item.mainCat || (item.category && item.category.includes('/') ? item.category.split('/')[0] : '기타');
           result.catTotals[main] = (result.catTotals[main] || 0) + amt;
         });
-        if (daySum > 0) {
-          result.dailyTotals[dateStr] = daySum;
-        }
+        if (daySum > 0) result.dailyTotals[dateStr] = daySum;
       } catch(e) {}
     }
   }
   return result;
 }
 
-// 가계부 달력 화면 렌더링
-function renderAccountBookCalendar() {
-  const y = window.abCurrentYear;
-  const m = window.abCurrentMonth;
-  const monthData = getMonthExpensesData(y, m);
+// 📋 [신규] 가계부 전체 내역 뷰
+function renderAccountBookAllList() {
+  const container = document.getElementById('abAllExpenseList');
+  if (!container) return;
 
-  // 헤더 텍스트 반영
-  const badge = document.getElementById('accountBookMonthBadge');
-  if (badge) badge.innerText = `${y}년 ${m}월`;
-  const title = document.getElementById('abCalendarMonthTitle');
-  if (title) title.innerText = `${y}.${String(m).padStart(2, '0')}`;
+  const y = window.abCurrentYear || new Date().getFullYear();
+  const m = window.abCurrentMonth || (new Date().getMonth() + 1);
+  const prefix = `mingle_day_${y}-${String(m).padStart(2, '0')}`;
+  let allExpenses = [];
 
-  const totalEl = document.getElementById('abMonthTotalExpense');
-  if (totalEl) totalEl.innerText = `${monthData.monthTotal.toLocaleString()}원`;
-  const countBadge = document.getElementById('abMonthCountBadge');
-  if (countBadge) countBadge.innerText = `총 ${monthData.totalCount}건 기록`;
-
-  // 달력 그리드 계산
-  const grid = document.getElementById('abCalendarGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
-
-  const firstDayIndex = new Date(y, m - 1, 1).getDay(); // 0(일) ~ 6(토)
-  const lastDate = new Date(y, m, 0).getDate();
-
-  // 빈 칸
-  for (let b = 0; b < firstDayIndex; b++) {
-    const emptyCell = document.createElement('div');
-    emptyCell.className = 'h-12';
-    grid.appendChild(emptyCell);
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(prefix)) {
+      try {
+        const exps = JSON.parse(localStorage.getItem(key) || '{}').expenses || [];
+        exps.forEach(e => allExpenses.push({ ...e, dateStr: key.replace('mingle_day_', '') }));
+      } catch(e) {}
+    }
   }
 
-  // 1일 ~ 말일 셀 생성
-  for (let d = 1; d <= lastDate; d++) {
-    const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const dayTotal = monthData.dailyTotals[dateStr] || 0;
-    const isSelected = (window.abSelectedDate === dateStr);
+  // 최신 날짜/시간 순 정렬
+  allExpenses.sort((a, b) => {
+    const dateDiff = b.dateStr.localeCompare(a.dateStr);
+    if (dateDiff !== 0) return dateDiff;
+    return (b.time || '').localeCompare(a.time || '');
+  });
 
-    const cell = document.createElement('div');
-    cell.onclick = () => {
-      window.abSelectedDate = dateStr;
-      renderAccountBookCalendar();
-    };
-
-    let borderClass = isSelected ? 'border-amber-500 bg-amber-50/50 font-bold' : 'border-stone-100 hover:border-stone-300 bg-white';
-    cell.className = `h-12 border rounded-lg p-0.5 flex flex-col justify-between cursor-pointer transition text-left ${borderClass}`;
-
-      cell.innerHTML = `
-        <span class="text-[10px] text-stone-600 leading-none pl-0.5">${d}</span>
-        ${dayTotal > 0 ? `<span class="text-[8px] sm:text-[9px] font-mono font-bold text-rose-500 whitespace-nowrap text-right pr-0.5 tracking-tighter leading-none">${dayTotal.toLocaleString()}</span>` : ''}
-      `;
-    grid.appendChild(cell);
+  if (allExpenses.length === 0) {
+    container.innerHTML = '<p class="text-center text-stone-400 py-6 text-xs bg-stone-50 rounded-xl border border-stone-100">이번 달 기록된 지출이 없어요 💸</p>';
+    return;
   }
 
-  // 선택된 날짜 상세 지출 목록 렌더링
-  renderSelectedDayExpenses();
-}
-
-// 선택한 날짜 지출 목록 출력
-function renderSelectedDayExpenses() {
-  const targetDate = window.abSelectedDate;
-  const labelEl = document.getElementById('abSelectedDateLabel');
-  const totalEl = document.getElementById('abSelectedDateTotal');
-  const listEl = document.getElementById('abDayExpenseList');
-  if (!listEl) return;
-
-  if (labelEl) {
-    const parts = targetDate.split('-');
-    labelEl.innerText = parseInt(parts[1], 10) + '월 ' + parseInt(parts[2], 10) + '일';
-  }
-
-  // 💡 심플한 '+ 지출 추가' 텍스트 버튼 배치
-  if (totalEl) {
-    totalEl.innerHTML = '<button type="button" onclick="openAddAccountBookExpenseModal(\'' + targetDate + '\')" class="text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 px-2.5 py-1 rounded-xl transition shadow-2xs">+ 지출 추가</button>';
-  }
-
-  let dayData = {};
-  try {
-    dayData = JSON.parse(localStorage.getItem('mingle_day_' + targetDate) || '{}');
-  } catch(e) {}
-
-  const expenses = Array.isArray(dayData.expenses) ? dayData.expenses : [];
-  listEl.innerHTML = '';
-  let sum = 0;
-
-  if (expenses.length === 0) {
-    listEl.innerHTML = '<p class="text-[11px] text-stone-300 italic text-center py-3">지출 내역이 없습니다 ✨</p>';
-  } else {
-    expenses.forEach((item, idx) => {
-      const amt = Number(item.amount) || 0;
-      sum += amt;
-
-      const row = document.createElement('div');
-      row.className = 'flex items-center justify-between bg-stone-50 border border-stone-150 rounded-xl px-2.5 py-1.5 hover:bg-stone-100/70 cursor-pointer transition text-xs';
-      row.onclick = () => openEditAccountBookExpenseModal(targetDate, idx);
-
-      const rawCat = item.category || item.subCategory || '';
-      const displaySubCat = rawCat.includes('/') ? rawCat.split('/').pop().trim() : (rawCat || '기타');
-
-      row.innerHTML = `
-        <div class="flex items-center gap-1.5 min-w-0 flex-1">
-          <span class="font-mono text-[10px] text-stone-400 shrink-0">${item.time || '--:--'}</span>
-          <span class="px-1.5 py-0.5 rounded bg-amber-100/60 text-amber-800 text-[10px] font-medium border border-amber-200/50 shrink-0">${displaySubCat}</span>
-          <span class="truncate font-medium text-stone-800">${item.title || item.memo || '지출'}</span>
-          <span class="text-[10px] text-stone-400 shrink-0">(${item.payMethod || item.payment || '카드'})</span>
+  container.innerHTML = allExpenses.map(item => {
+    const rawCat = item.category || item.subCategory || '';
+    const displaySubCat = rawCat.includes('/') ? rawCat.split('/').pop().trim() : (rawCat || '기타');
+    const amt = Number(item.amount) || 0;
+    
+    return `
+      <div class="p-3 bg-stone-50 border border-stone-200/60 rounded-xl flex items-center justify-between text-xs mb-1.5 hover:bg-stone-100 transition">
+        <div class="flex-1 min-w-0 pr-2">
+          <div class="flex items-center gap-1.5 mb-0.5">
+            <span class="font-bold text-stone-800 truncate">${item.title || item.memo || '지출'}</span>
+            <span class="text-[9px] bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded font-bold shrink-0">${displaySubCat}</span>
+          </div>
+          <div class="text-[10px] text-stone-400 font-mono">
+            ${item.dateStr} ${item.time || ''} · ${item.payMethod || item.payment || '카드'}
+          </div>
         </div>
-        <div class="flex items-center gap-1.5 shrink-0 ml-2">
-          <span class="font-mono font-bold text-stone-900">${amt.toLocaleString()}원</span>
-          <button type="button" onclick="event.stopPropagation(); deleteAccountBookExpenseEntry('${targetDate}', ${idx})" class="text-stone-300 hover:text-rose-500 font-bold px-1 text-sm leading-none" title="삭제">&times;</button>
+        <div class="font-mono font-bold text-rose-600 shrink-0">
+          -${amt.toLocaleString()}원
         </div>
-      `;
-      listEl.appendChild(row);
-    });
-
-    // 💡 마이너스(-) 뺀 단정한 일별 합계 줄
-    const totalRow = document.createElement('div');
-    totalRow.className = 'flex items-center justify-between pt-2 border-t border-dashed border-stone-200 text-xs px-1 text-stone-500 font-medium';
-    totalRow.innerHTML = `
-      <span>일별 합계</span>
-      <span class="font-mono font-bold text-stone-900 text-sm">${sum.toLocaleString()}원</span>
+      </div>
     `;
-    listEl.appendChild(totalRow);
-  }
+  }).join('');
 }
 
-// ==========================================
-// 💰 [밍글 가계부] 단일 통합 모달 & 파이어베이스 diary_days 직통 저장 엔진
-// ==========================================
-
-// 1. 단일 통합 가계부 지출 모달 열기
-function openAddAccountBookExpenseModal(defaultDate) {
-  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
-  const mainCats = Object.keys(cats);
-  const defaultMain = mainCats[0] || '식비';
-  const defaultSubs = cats[defaultMain] || ['식재료'];
-  const payMethods = typeof getStoredPayMethods === 'function' ? getStoredPayMethods() : ['현금', '카드', '계좌이체', '간편결제'];
-
-  const now = new Date();
-  const curTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  
-  // 날짜 YYYY-MM-DD 엄격 표준화
-  let cleanDate = defaultDate || (typeof currentDate !== 'undefined' ? currentDate : '');
-  if (cleanDate) {
-    cleanDate = cleanDate.replace(/\./g, '-').replace(/\s+/g, '').replace(/-$/, '');
-    const parts = cleanDate.split('-');
-    if (parts.length === 3) {
-      cleanDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-    }
-  }
-
-  let modalEl = document.getElementById('modalAbExpenseAdd');
-  if (!modalEl) {
-    modalEl = document.createElement('div');
-    modalEl.id = 'modalAbExpenseAdd';
-    document.body.appendChild(modalEl);
-  }
-
-  modalEl.className = 'fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4';
-  modalEl.innerHTML = `
-    <div class="bg-white rounded-2xl p-5 max-w-xs w-full space-y-3.5 shadow-xl border border-stone-200">
-      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-          <span>➕</span> 가계부 지출 추가
-        </h3>
-        <button type="button" onclick="document.getElementById('modalAbExpenseAdd').remove()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
-      </div>
-
-      <div class="space-y-2.5 text-xs">
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">날짜</label>
-            <input type="date" id="addAbExpDate" value="${cleanDate}" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 focus:outline-stone-400 bg-white">
-          </div>
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">시간</label>
-            <input type="text" id="addAbExpTime" value="${curTime}" maxlength="5" placeholder="12:00" 
-                   oninput="handleTimeAutoFormat(this)"
-                   class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 font-mono focus:outline-stone-400 bg-white">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">대분류</label>
-            <select id="addAbExpMainCat" onchange="onAbAddMainCatChange()" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 focus:outline-stone-400 bg-white">
-              ${mainCats.map(m => `<option value="${m}">${m}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">소분류</label>
-            <select id="addAbExpSubCat" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 bg-white text-xs font-medium focus:outline-stone-400">
-              ${defaultSubs.map(s => `<option value="${s}">${s}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label class="text-[10px] text-stone-500 font-medium block mb-1">지출 내용</label>
-          <input type="text" id="addAbExpTitle" placeholder="예: 맛있는 점심" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 focus:outline-stone-400 bg-white">
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">결제수단</label>
-            <select id="addAbExpPay" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 bg-white text-xs focus:outline-stone-400">
-              ${payMethods.map(m => `<option value="${m}">${m}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">금액 (원)</label>
-            <input type="number" id="addAbExpAmt" placeholder="0" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-stone-800 font-mono focus:outline-stone-400 bg-white">
-          </div>
-        </div>
-
-        <div class="flex gap-2 pt-1.5">
-          <button type="button" onclick="document.getElementById('modalAbExpenseAdd').remove()" class="flex-1 py-1.5 bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200 font-medium transition">취소</button>
-          <button type="button" onclick="saveNewAccountBookExpense()" class="flex-1 py-1.5 bg-stone-800 text-white rounded-xl hover:bg-stone-900 font-medium shadow-sm transition">저장</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// 구버전 모달 호출 호환 브릿지
-window.openBudgetModal = function() {
-  openAddAccountBookExpenseModal(typeof currentDate !== 'undefined' ? currentDate : '');
-};
-
-// 2. 시간 4자리 자동 포맷터 (숫자 치면 00:00)
-function handleTimeAutoFormat(el) {
-  let val = el.value.replace(/[^0-9]/g, '');
-  if (val.length > 4) val = val.slice(0, 4);
-  if (val.length >= 3) {
-    el.value = val.slice(0, 2) + ':' + val.slice(2);
-  } else {
-    el.value = val;
-  }
-}
-
-// 3. 대분류 변경 시 소분류 셀렉트 갱신
-function onAbAddMainCatChange() {
-  const mainVal = document.getElementById('addAbExpMainCat').value;
-  const subSelect = document.getElementById('addAbExpSubCat');
-  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
-  const subs = cats[mainVal] || ['기타'];
-  subSelect.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
-}
-
-// 4. 단일 통합 저장 함수 (로컬스토리지 & 파이어베이스 diary_days 동시 저장)
-function saveNewAccountBookExpense() {
-  try {
-    const dateInp = document.getElementById('addAbExpDate');
-    const timeInp = document.getElementById('addAbExpTime');
-    const titleInp = document.getElementById('addAbExpTitle');
-    const amtInp = document.getElementById('addAbExpAmt');
-    const mainCatInp = document.getElementById('addAbExpMainCat');
-    const subCatInp = document.getElementById('addAbExpSubCat');
-    const payInp = document.getElementById('addAbExpPay');
-
-    const amtVal = parseFloat(amtInp ? amtInp.value : 0) || 0;
-    if (amtVal <= 0) {
-      alert('금액을 올바르게 입력해 주세요!');
-      if (amtInp) amtInp.focus();
-      return;
-    }
-
-    // 날짜 YYYY-MM-DD 엄격 통일
-    let rawDate = (dateInp && dateInp.value) ? dateInp.value : (window.abSelectedDate || currentDate);
-    let expDate = String(rawDate).replace(/\./g, '-').replace(/\s+/g, '').replace(/-$/, '');
-    const parts = expDate.split('-');
-    if (parts.length === 3) {
-      expDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-    }
-
-    const now = new Date();
-    const defaultTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    let expTime = (timeInp && timeInp.value.trim()) ? timeInp.value.trim() : defaultTime;
-    if (/^\d{4}$/.test(expTime)) expTime = expTime.slice(0, 2) + ':' + expTime.slice(2);
-
-    const mainCat = (mainCatInp && mainCatInp.value) ? mainCatInp.value : '식비';
-    const subCat = (subCatInp && subCatInp.value) ? subCatInp.value : '식재료';
-    const fullCategory = `${mainCat}/${subCat}`;
-    const titleVal = (titleInp && titleInp.value.trim()) ? titleInp.value.trim() : subCat;
-    const payVal = (payInp && payInp.value) ? payInp.value : '카드';
-
-    const newEntry = {
-      id: Date.now(),
-      date: expDate,
-      time: expTime,
-      mainCat: mainCat,
-      category: fullCategory,
-      subCategory: subCat,
-      title: titleVal,
-      memo: titleVal,
-      payMethod: payVal,
-      payment: payVal,
-      amount: amtVal
-    };
-
-    // (1) 해당 일자 로컬 및 전역 캐시 즉시 반영 (화면 즉시 렌더링용)
-    const dayKey = 'mingle_day_' + expDate;
-    let dayData = {};
-    try {
-      dayData = JSON.parse(localStorage.getItem(dayKey) || '{}');
-    } catch(e) {
-      dayData = {};
-    }
-    if (!Array.isArray(dayData.expenses)) dayData.expenses = [];
-    dayData.expenses.push(newEntry);
-    dayData.expenses.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-
-    localStorage.setItem(dayKey, JSON.stringify(dayData));
-    if (typeof saveDayDataLocal === 'function') {
-      try { saveDayDataLocal(expDate, dayData); } catch(e) {}
-    }
-
-    if (window.currentDayData && window.currentDayData.date === expDate) {
-      window.currentDayData.expenses = dayData.expenses;
-    }
-
-    // (2) ☁️ [핵심] 파이어베이스 Firestore 클라우드 즉시 영구 저장!
-    if (typeof db !== 'undefined' && db) {
-      db.collection('diary_days').doc(expDate).set({
-        expenses: dayData.expenses
-      }, { merge: true }).catch(err => console.error("파이어베이스 가계부 연동 실패:", err));
-    }
-
-
-    // (3) 모달 닫기
-    const modal = document.getElementById('modalAbExpenseAdd');
-    if (modal) modal.remove();
-
-    // (4) 화면 일괄 새로고침
-    window.abSelectedDate = expDate;
-    if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
-    if (typeof renderSelectedDayExpenses === 'function') renderSelectedDayExpenses();
-    if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
-    if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
-    if (typeof renderBudgetDashboard === 'function') renderBudgetDashboard();
-
-  } catch (err) {
-    alert("저장 에러: " + err.message);
-  }
-}
-
-// ✏️ [가계부 서랍] 지출 수정 모달 (대분류-소분류 동적 연동)
-function openEditAccountBookExpenseModal(dateStr, idx) {
-  let dayData = {};
-  try {
-    dayData = JSON.parse(localStorage.getItem('mingle_day_' + dateStr) || '{}');
-  } catch(e) {}
-  const list = Array.isArray(dayData.expenses) ? dayData.expenses : [];
-  const item = list[idx];
-  if (!item) return;
-
-  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
-  const mainCats = Object.keys(cats);
-  const payMethods = typeof getStoredPayMethods === 'function' ? getStoredPayMethods() : ['현금', '카드', '계좌이체', '간편결제'];
-
-  const rawCat = item.category || item.subCategory || '';
-  let curMain = item.mainCat || '';
-  let curSub = '';
-
-  if (rawCat.includes('/')) {
-    const parts = rawCat.split('/');
-    if (!curMain) curMain = parts[0].trim();
-    curSub = parts[1].trim();
-  } else {
-    curSub = rawCat;
-    if (!curMain) {
-      curMain = mainCats.find(k => (cats[k] || []).includes(curSub)) || mainCats[0] || '식비';
-    }
-  }
-  if (!curMain) curMain = mainCats[0] || '식비';
-
-  const subOptions = cats[curMain] || [curSub || '기타'];
-
-  let modalEl = document.getElementById('modalAbExpenseEdit');
-  if (!modalEl) {
-    modalEl = document.createElement('div');
-    modalEl.id = 'modalAbExpenseEdit';
-    document.body.appendChild(modalEl);
-  }
-
-  modalEl.className = 'fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4';
-  modalEl.innerHTML = `
-    <div class="bg-white rounded-2xl p-5 max-w-xs w-full space-y-3.5 shadow-xl border border-stone-200">
-      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-          <span>✏️</span> 지출 내역 수정
-        </h3>
-        <button type="button" onclick="document.getElementById('modalAbExpenseEdit').remove()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
-      </div>
-
-      <div class="space-y-2.5 text-xs">
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">날짜</label>
-            <input type="date" id="editAbExpDate" value="${item.date || dateStr}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs">
-          </div>
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">시간</label>
-            <input type="text" id="editAbExpTime" value="${item.time || ''}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono text-xs">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">대분류</label>
-            <select id="editAbExpMainCat" onchange="onAbEditMainCatChange()" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs font-medium">
-              ${mainCats.map(m => `<option value="${m}" ${m === curMain ? 'selected' : ''}>${m}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">소분류</label>
-            <select id="editAbExpSubCat" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs font-medium">
-              ${subOptions.map(s => `<option value="${s}" ${s === curSub ? 'selected' : ''}>${s}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label class="text-[10px] text-stone-500 font-medium block mb-1">지출 내용</label>
-          <input type="text" id="editAbExpTitle" value="${item.title || item.memo || ''}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs">
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">결제수단</label>
-            <select id="editAbExpPay" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">
-            ${payMethods.map(function(m) { return '<option value="' + m + '" ' + (m === (item.payMethod ? item.payMethod : item.payment) ? 'selected' : '') + '>' + m + '</option>'; }).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="text-[10px] text-stone-500 font-medium block mb-1">금액 (원)</label>
-            <input type="number" id="editAbExpAmt" value="${item.amount || 0}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono font-bold text-xs">
-          </div>
-        </div>
-      </div>
-
-      <div class="flex gap-2 pt-1.5">
-        <button type="button" onclick="document.getElementById('modalAbExpenseEdit').remove()" class="flex-1 py-1.5 bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200 font-medium text-xs">취소</button>
-        <button type="button" onclick="saveEditedAccountBookExpense('${dateStr}', ${idx})" class="flex-1 py-1.5 bg-stone-800 text-white rounded-xl hover:bg-stone-900 font-bold text-xs shadow-sm">수정 완료</button>
-      </div>
-    </div>
-  `;
-
-  const timeInp = document.getElementById('editAbExpTime');
-  if (timeInp) timeInp.onfocus = function() { this.value = ''; };
-}
-
-// 🔄 가계부 수정 모달 대분류 변경 시 소분류 셀렉트 갱신
-function onAbEditMainCatChange() {
-  const mainVal = document.getElementById('editAbExpMainCat').value;
-  const subSelect = document.getElementById('editAbExpSubCat');
-  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
-  const subs = cats[mainVal] || ['기타'];
-  subSelect.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
-}
-
-// 💾 [가계부 서랍] 지출 수정 저장 (대분류/소분류 통합 저장)
-function saveEditedAccountBookExpense(oldDate, idx) {
-  let oldDayData = {};
-  try {
-    oldDayData = JSON.parse(localStorage.getItem('mingle_day_' + oldDate) || '{}');
-  } catch(e) {}
-  if (!Array.isArray(oldDayData.expenses) || !oldDayData.expenses[idx]) return;
-
-  const newDate = document.getElementById('editAbExpDate').value;
-  const newTime = document.getElementById('editAbExpTime').value.trim();
-  const mainCat = document.getElementById('editAbExpMainCat').value;
-  const subCat = document.getElementById('editAbExpSubCat').value;
-  const newTitle = document.getElementById('editAbExpTitle').value.trim();
-  const newPay = document.getElementById('editAbExpPay').value;
-  const newAmt = parseFloat(document.getElementById('editAbExpAmt').value) || 0;
-
-  const fullCategory = `${mainCat}/${subCat}`;
-
-  if (newDate === oldDate) {
-    oldDayData.expenses[idx].time = newTime;
-    oldDayData.expenses[idx].mainCat = mainCat;
-    oldDayData.expenses[idx].category = fullCategory;
-    oldDayData.expenses[idx].subCategory = subCat;
-    oldDayData.expenses[idx].title = newTitle;
-    oldDayData.expenses[idx].memo = newTitle;
-    oldDayData.expenses[idx].payMethod = newPay;
-    oldDayData.expenses[idx].payment = newPay;
-    oldDayData.expenses[idx].amount = newAmt;
-
-    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(oldDate, oldDayData);
-    if (typeof syncDayDataToFirebase === 'function') syncDayDataToFirebase(oldDate, oldDayData);
-  } else {
-    const movedItem = oldDayData.expenses.splice(idx, 1)[0];
-    movedItem.date = newDate;
-    movedItem.time = newTime;
-    movedItem.mainCat = mainCat;
-    movedItem.category = fullCategory;
-    movedItem.subCategory = subCat;
-    movedItem.title = newTitle;
-    movedItem.memo = newTitle;
-    movedItem.payMethod = newPay;
-    movedItem.payment = newPay;
-    movedItem.amount = newAmt;
-
-    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(oldDate, oldDayData);
-    if (typeof syncDayDataToFirebase === 'function') syncDayDataToFirebase(oldDate, oldDayData);
-
-    let newDayData = {};
-    try {
-      newDayData = JSON.parse(localStorage.getItem('mingle_day_' + newDate) || '{}');
-    } catch(e) {}
-    if (!Array.isArray(newDayData.expenses)) newDayData.expenses = [];
-    newDayData.expenses.push(movedItem);
-
-    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(newDate, newDayData);
-    if (typeof syncDayDataToFirebase === 'function') syncDayDataToFirebase(newDate, newDayData);
-    window.abSelectedDate = newDate;
-  }
-
-  document.getElementById('modalAbExpenseEdit')?.remove();
-  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
-  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
-}
-
-// 🗑️ [가계부 서랍] 지출 단건 삭제
-function deleteAccountBookExpenseEntry(dateStr, idx) {
-  if (!confirm('이 지출 내역을 삭제할까요?')) return;
-  let dayData = {};
-  try {
-    dayData = JSON.parse(localStorage.getItem('mingle_day_' + dateStr) || '{}');
-  } catch(e) {}
-  if (!Array.isArray(dayData.expenses)) return;
-
-  dayData.expenses.splice(idx, 1);
-  if (typeof saveDayDataLocal === 'function') saveDayDataLocal(dateStr, dayData);
-  if (typeof syncDayDataToFirebase === 'function') syncDayDataToFirebase(dateStr, dayData);
-
-  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
-  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
-}
-
-// 2. 월간 예산 렌더링
+// 📊 가계부 예산 뷰 (세부 예산 바 시각화)
 function renderAccountBookBudget() {
-  const y = window.abCurrentYear;
-  const m = window.abCurrentMonth;
+  const y = window.abCurrentYear || new Date().getFullYear();
+  const m = window.abCurrentMonth || (new Date().getMonth() + 1);
   const monthData = getMonthExpensesData(y, m);
 
   const budgetTotal = parseInt(localStorage.getItem('mingle_monthly_budget_target') || '1000000', 10);
-  const totalAmtEl = document.getElementById('abTotalBudgetAmount');
+  if (document.getElementById('abTotalBudgetAmount')) document.getElementById('abTotalBudgetAmount').innerText = `${budgetTotal.toLocaleString()}원`;
+  
   const remainEl = document.getElementById('abRemainingBudgetLabel');
-  const barEl = document.getElementById('abBudgetProgressBar');
-
-  if (totalAmtEl) totalAmtEl.innerText = `${budgetTotal.toLocaleString()}원`;
   const remain = budgetTotal - monthData.monthTotal;
   if (remainEl) {
-    if (remain >= 0) {
-      remainEl.className = 'text-xs font-semibold text-emerald-700';
-      remainEl.innerText = `잔여: ${remain.toLocaleString()}원`;
-    } else {
-      remainEl.className = 'text-xs font-semibold text-rose-600';
-      remainEl.innerText = `초과: ${Math.abs(remain).toLocaleString()}원!`;
-    }
+    remainEl.className = remain >= 0 ? 'text-xs font-semibold text-emerald-700' : 'text-xs font-semibold text-rose-600';
+    remainEl.innerText = remain >= 0 ? `잔여: ${remain.toLocaleString()}원` : `초과: ${Math.abs(remain).toLocaleString()}원!`;
   }
 
+  const barEl = document.getElementById('abBudgetProgressBar');
   if (barEl) {
     const pct = Math.min(100, Math.round((monthData.monthTotal / budgetTotal) * 100));
     barEl.style.width = `${pct}%`;
-    barEl.className = pct > 90 ? 'bg-rose-500 h-2 rounded-full transition-all duration-300' : 'bg-amber-500 h-2 rounded-full transition-all duration-300';
+    barEl.className = pct > 90 ? 'bg-rose-500 h-2 rounded-full transition-all' : 'bg-amber-500 h-2 rounded-full transition-all';
   }
 
-  // 카테고리별 분배 목록
   const catListEl = document.getElementById('abCategoryBudgetList');
   if (!catListEl) return;
-  catListEl.innerHTML = '';
-
   const cats = Object.keys(monthData.catTotals);
+
   if (cats.length === 0) {
-    catListEl.innerHTML = '<p class="text-[11px] text-stone-300 italic text-center py-2">이번 달 지출 내역이 없습니다.</p>';
-  } else {
-    cats.forEach(cat => {
-      const amt = monthData.catTotals[cat];
-      const pct = monthData.monthTotal > 0 ? Math.round((amt / monthData.monthTotal) * 100) : 0;
-      const row = document.createElement('div');
-      row.className = 'bg-stone-50 border border-stone-200/60 p-2 rounded-xl space-y-1';
-      row.innerHTML = `
+    catListEl.innerHTML = '<p class="text-[11px] text-stone-300 italic text-center py-4 border border-stone-100 rounded-xl bg-stone-50">지출 내역이 없습니다.</p>';
+    return;
+  }
+
+  catListEl.innerHTML = cats.map(cat => {
+    const amt = monthData.catTotals[cat];
+    const pct = monthData.monthTotal > 0 ? Math.round((amt / monthData.monthTotal) * 100) : 0;
+    return `
+      <div class="bg-stone-50 border border-stone-200/60 p-2.5 rounded-xl space-y-1.5">
         <div class="flex justify-between items-center text-xs">
-          <span class="font-medium text-stone-700">${cat}</span>
-          <span class="font-mono font-bold text-stone-800">${amt.toLocaleString()}원 (${pct}%)</span>
+          <span class="font-bold text-stone-700">${cat}</span>
+          <span class="font-mono font-bold text-stone-800">${amt.toLocaleString()}원 <span class="text-[10px] text-stone-400 font-normal">(${pct}%)</span></span>
         </div>
         <div class="w-full bg-stone-200 rounded-full h-1.5 overflow-hidden">
           <div class="bg-amber-500 h-1.5 rounded-full" style="width: ${pct}%"></div>
         </div>
-      `;
-      catListEl.appendChild(row);
-    });
-  }
+      </div>
+    `;
+  }).join('');
 }
 
 function openSetTotalBudgetModal() {
   const current = localStorage.getItem('mingle_monthly_budget_target') || '1000000';
   const val = prompt('이번 달 총 목표 예산 금액을 입력하세요 (숫자만):', current);
-  if (val !== null) {
+  if (val) {
     const num = parseInt(val.replace(/[^0-9]/g, ''), 10);
     if (!isNaN(num) && num >= 0) {
       localStorage.setItem('mingle_monthly_budget_target', num);
       renderAccountBookBudget();
-      if (typeof db !== 'undefined' && db) {
-        db.collection('account_book_settings').doc('master').set({
-          monthlyBudgetTarget: num
-        }, { merge: true }).catch(console.error);
-      }
+      if (db) db.collection('account_book_settings').doc('master').set({ monthlyBudgetTarget: num }, { merge: true }).catch(console.error);
     }
   }
 }
 
-// 3. 고정지출 렌더링 & 모달 제어
-function getStoredFixedExpenses() {
+// ⚙️ [신규] 대분류 추가/삭제 완벽 지원 가계부 설정 모달
+function getStoredCategories() {
   try {
-    return JSON.parse(localStorage.getItem('mingle_fixed_expenses') || '[]');
-  } catch(e) {
-    return [];
-  }
+    const saved = localStorage.getItem('mingle_expense_custom_cats');
+    return saved ? JSON.parse(saved) : (window.DEFAULT_EXPENSE_CATS || {});
+  } catch(e) { return window.DEFAULT_EXPENSE_CATS || {}; }
 }
 
-function saveStoredFixedExpenses(list) {
-  localStorage.setItem('mingle_fixed_expenses', JSON.stringify(list));
-  renderAccountBookFixed();
-  checkFixedExpenseAlerts();
-  if (typeof db !== 'undefined' && db) {
-    db.collection('account_book_settings').doc('master').set({
-      fixedExpenses: list
-    }, { merge: true }).catch(console.error);
-  }
+function saveStoredCategories(cats) {
+  localStorage.setItem('mingle_expense_custom_cats', JSON.stringify(cats));
+  if (typeof onExpenseMainCatChange === 'function') onExpenseMainCatChange();
+  if (db) db.collection('account_book_settings').doc('master').set({ categories: cats }, { merge: true }).catch(console.error);
 }
 
-// ☁️ 가계부 설정 실시간 양방향 동기화 구독기
-let unsubscribeAccountSettings = null;
-function subscribeAccountBookSettings() {
-  if (typeof renderAccountBookFixed === 'function') renderAccountBookFixed();
-  if (typeof renderAccountBookBudget === 'function') renderAccountBookBudget();
-
-  if (!db) return;
-  if (unsubscribeAccountSettings) unsubscribeAccountSettings();
-  unsubscribeAccountSettings = db.collection('account_book_settings').doc('master')
-    .onSnapshot(doc => {
-      if (doc.exists) {
-        const d = doc.data() || {};
-        if (Array.isArray(d.fixedExpenses)) {
-          localStorage.setItem('mingle_fixed_expenses', JSON.stringify(d.fixedExpenses));
-          if (typeof renderAccountBookFixed === 'function') renderAccountBookFixed();
-          if (typeof checkFixedExpenseAlerts === 'function') checkFixedExpenseAlerts();
-        }
-        if (d.monthlyBudgetTarget !== undefined) {
-          localStorage.setItem('mingle_monthly_budget_target', d.monthlyBudgetTarget);
-          if (typeof renderAccountBookBudget === 'function') renderAccountBookBudget();
-        }
-        if (Array.isArray(d.payMethods)) {
-          localStorage.setItem('mingle_expense_pay_methods', JSON.stringify(d.payMethods));
-          if (typeof refreshPayMethodSelects === 'function') refreshPayMethodSelects();
-          if (typeof renderPayMethodSettings === 'function') renderPayMethodSettings();
-        }
-        if (d.subCategories) {
-          localStorage.setItem('mingle_expense_sub_categories', JSON.stringify(d.subCategories));
-          if (typeof renderCategorySettings === 'function') renderCategorySettings();
-        }
-        if (Array.isArray(d.mainCatKeys)) {
-          localStorage.setItem('mingle_expense_main_cat_keys', JSON.stringify(d.mainCatKeys));
-          if (typeof renderAccountBookCategoryList === 'function') renderAccountBookCategoryList();
-        }
-      }
-    }, err => console.error(err));
-}
-
-function renderAccountBookFixed() {
-  const listEl = document.getElementById('abFixedExpenseList');
-  if (!listEl) return;
-  const list = getStoredFixedExpenses();
-  listEl.innerHTML = '';
-
-  if (list.length === 0) {
-    listEl.innerHTML = '<p class="text-[11px] text-stone-300 italic text-center py-4">등록된 고정지출(구독료, 공과금 등)이 없습니다 ✨</p>';
-    return;
-  }
-
-  list.forEach((item, idx) => {
-    const row = document.createElement('div');
-    row.className = 'flex items-center justify-between bg-stone-50 border border-stone-200/70 p-2.5 rounded-xl';
-    row.innerHTML = `
-      <div>
-        <div class="flex items-center gap-1.5">
-          <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px]">매월 ${item.day === 'last' ? '말일' : item.day + '일'}</span>
-          <span class="font-bold text-stone-800 text-xs">${item.title}</span>
-        </div>
-        ${item.memo ? `<p class="text-[10px] text-stone-400 mt-0.5">${item.memo}</p>` : ''}
-      </div>
-      <div class="flex items-center gap-2">
-        <span class="font-mono font-bold text-stone-900 text-xs">${Number(item.amount).toLocaleString()}원</span>
-        <button onclick="deleteFixedExpenseItem(${idx})" class="text-stone-300 hover:text-red-500 font-bold text-sm px-1">×</button>
-      </div>
-    `;
-    listEl.appendChild(row);
-  });
-}
-
-function openAddFixedExpenseModal() {
-  const sel = document.getElementById('fixedExpenseDaySelect');
-  if (sel && sel.options.length === 0) {
-    sel.innerHTML = '';
-    for (let i = 1; i <= 31; i++) {
-      const opt = document.createElement('option');
-      opt.value = i;
-      opt.textContent = `${i}일`;
-      sel.appendChild(opt);
-    }
-    const lastOpt = document.createElement('option');
-    lastOpt.value = 'last';
-    lastOpt.textContent = '말일 (월말 자동)';
-    sel.appendChild(lastOpt);
-  }
-  document.getElementById('modalAddFixedExpense')?.classList.remove('hidden');
-}
-
-function closeAddFixedExpenseModal() {
-  document.getElementById('modalAddFixedExpense')?.classList.add('hidden');
-}
-
-function saveFixedExpenseItem() {
-  const title = document.getElementById('fixedExpenseTitleInput')?.value.trim();
-  const day = document.getElementById('fixedExpenseDaySelect')?.value;
-  const amount = parseInt(document.getElementById('fixedExpenseAmountInput')?.value, 10);
-  const memo = document.getElementById('fixedExpenseMemoInput')?.value.trim();
-
-  if (!title) {
-    alert('항목 이름을 입력해 주세요!');
-    return;
-  }
-  if (isNaN(amount) || amount <= 0) {
-    alert('금액을 올바르게 입력해 주세요!');
-    return;
-  }
-
-  const list = getStoredFixedExpenses();
-  list.push({ title, day, amount, memo });
-  saveStoredFixedExpenses(list);
-
-  document.getElementById('fixedExpenseTitleInput').value = '';
-  document.getElementById('fixedExpenseAmountInput').value = '';
-  document.getElementById('fixedExpenseMemoInput').value = '';
-  closeAddFixedExpenseModal();
-}
-
-function deleteFixedExpenseItem(idx) {
-  if (confirm('이 고정지출 항목을 삭제할까요?')) {
-    const list = getStoredFixedExpenses();
-    list.splice(idx, 1);
-    saveStoredFixedExpenses(list);
-  }
-}
-
-// 4. 카테고리 & 결제수단 설정 모달 제어
 function openExpenseCategorySettingModal() {
-  const modal = document.getElementById('modalExpenseCategorySetting');
-  if (!modal) return;
-  modal.classList.remove('hidden');
-
-  renderSettingPayMethods();
+  document.getElementById('modalExpenseCategorySetting').classList.remove('hidden');
+  renderSettingMainCatTagList();
   renderSettingMainCatSelect();
-  renderSettingSubCats();
 }
 
 function closeExpenseCategorySettingModal() {
-  document.getElementById('modalExpenseCategorySetting')?.classList.add('hidden');
+  document.getElementById('modalExpenseCategorySetting').classList.add('hidden');
 }
 
-// ✏️ 단정한 회색 미니 연필 아이콘 SVG
-const MINGLE_EDIT_ICON = `<svg class="w-3 h-3 text-stone-400 hover:text-stone-700 transition inline-block align-middle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>`;
-
-function renderSettingPayMethods() {
-  const container = document.getElementById('settingPayMethodTagList');
+function renderSettingMainCatTagList() {
+  const container = document.getElementById('settingMainCatTagList');
   if (!container) return;
-  const list = getStoredPayMethods();
-  container.innerHTML = '';
-  list.forEach((m, idx) => {
-    const tag = document.createElement('span');
-    tag.className = 'inline-flex items-center gap-1.5 bg-white border border-stone-200 px-2 py-1 rounded-lg text-xs font-medium text-stone-700 shadow-2xs';
-    tag.innerHTML = `<span>${m}</span>
-      <button type="button" onclick="editPayMethod(${idx})" class="p-0.5 hover:bg-stone-100 rounded inline-flex items-center" title="수정">${MINGLE_EDIT_ICON}</button>
-      <button type="button" onclick="deletePayMethod(${idx})" class="text-stone-300 hover:text-rose-500 font-bold ml-0.5 text-xs" title="삭제">&times;</button>`;
-    container.appendChild(tag);
-  });
+  const cats = getStoredCategories();
+  container.innerHTML = Object.keys(cats).map(m => `
+    <span class="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-2 py-1 rounded-lg text-[10px] font-bold shadow-2xs">
+      ${m}
+      <button onclick="deleteMainCategory('${m}')" class="text-amber-600 hover:text-rose-600 font-bold ml-1 text-xs">✕</button>
+    </span>
+  `).join('');
 }
 
-function editPayMethod(idx) {
-  const list = getStoredPayMethods();
-  if (idx < 0 || idx >= list.length) return;
-  const oldName = list[idx];
-  const newName = prompt('결제수단 이름을 수정해주세요:', oldName);
-  if (!newName || !newName.trim() || newName.trim() === oldName) return;
-
-  list[idx] = newName.trim();
-  saveStoredPayMethods(list);
-  renderSettingPayMethods();
-}
-
-
-function addNewPayMethod() {
-  const input = document.getElementById('settingNewPayMethodInput');
-  const val = input?.value.trim();
+function addNewMainCategory() {
+  const input = document.getElementById('settingNewMainCatInput');
+  const val = input.value.trim();
   if (!val) return;
-  const list = getStoredPayMethods();
-  if (!list.includes(val)) {
-    list.push(val);
-    saveStoredPayMethods(list);
+  const cats = getStoredCategories();
+  if (!cats[val]) {
+    cats[val] = ['기타']; // 대분류 생성 시 기본 소분류 1개 주입
+    saveStoredCategories(cats);
+    renderSettingMainCatTagList();
+    renderSettingMainCatSelect();
   }
   input.value = '';
-  renderSettingPayMethods();
 }
 
-function deletePayMethod(idx) {
-  const list = getStoredPayMethods();
-  list.splice(idx, 1);
-  saveStoredPayMethods(list);
-  renderSettingPayMethods();
+function deleteMainCategory(m) {
+  if (!confirm(`대분류 [${m}]을(를) 정말 삭제할까요?\n(기존 지출 내역의 데이터는 유지됩니다)`)) return;
+  const cats = getStoredCategories();
+  delete cats[m];
+  saveStoredCategories(cats);
+  renderSettingMainCatTagList();
+  renderSettingMainCatSelect();
 }
 
 function renderSettingMainCatSelect() {
   const sel = document.getElementById('settingMainCatSelect');
   if (!sel) return;
   const cats = getStoredCategories();
-  sel.innerHTML = '';
-  Object.keys(cats).forEach(main => {
-    const opt = document.createElement('option');
-    opt.value = main;
-    opt.textContent = main;
-    sel.appendChild(opt);
-  });
+  sel.innerHTML = Object.keys(cats).map(m => `<option value="${m}">${m}</option>`).join('');
+  renderSettingSubCats();
 }
 
 function renderSettingSubCats() {
   const sel = document.getElementById('settingMainCatSelect');
   const container = document.getElementById('settingSubCatTagList');
   if (!sel || !container) return;
-  const cats = getStoredCategories();
-  const subList = cats[sel.value] || [];
+  const subList = getStoredCategories()[sel.value] || [];
 
-  container.innerHTML = '';
-  subList.forEach((sub, idx) => {
-    const tag = document.createElement('span');
-    tag.className = 'inline-flex items-center gap-1.5 bg-amber-50 text-amber-900 border border-amber-200/60 px-2.5 py-1 rounded-lg text-xs font-medium shadow-2xs';
-    tag.innerHTML = `<span>${sub}</span>
-      <button type="button" onclick="editSettingSubCat('${sel.value}', ${idx})" class="p-0.5 hover:bg-amber-100/60 rounded inline-flex items-center" title="수정">${MINGLE_EDIT_ICON}</button>
-      <button type="button" onclick="deleteSubCat('${sel.value}', ${idx})" class="text-amber-400 hover:text-rose-500 font-bold ml-0.5 text-xs" title="삭제">&times;</button>`;
-    container.appendChild(tag);
-  });
-}
-
-function editSettingSubCat(mainKey, idx) {
-  let cats = getStoredCategories();
-  let list = cats[mainKey] || [];
-  if (idx < 0 || idx >= list.length) return;
-  const oldName = list[idx];
-  const newName = prompt('카테고리 이름을 수정해주세요:', oldName);
-  if (!newName || !newName.trim() || newName.trim() === oldName) return;
-
-  list[idx] = newName.trim();
-  cats[mainKey] = list;
-  saveStoredCategories(cats);
-  renderSettingSubCats();
-  if (typeof onExpenseMainCatChange === 'function') onExpenseMainCatChange();
+  container.innerHTML = subList.map((sub, idx) => `
+    <span class="inline-flex items-center gap-1 bg-stone-100 text-stone-700 border border-stone-200 px-2 py-1 rounded-lg text-xs font-medium shadow-2xs">
+      ${sub}
+      <button onclick="deleteSubCat('${sel.value}', ${idx})" class="text-stone-400 hover:text-rose-500 font-bold ml-1 text-xs">✕</button>
+    </span>
+  `).join('');
 }
 
 function addNewSubCategory() {
@@ -6250,168 +2346,328 @@ function deleteSubCat(main, idx) {
   }
 }
 
-// 5. 오늘 날짜 고정지출 알림 체크 (메인 상단 연동)
-function checkFixedExpenseAlerts() {
-  // 오늘 날짜 기준 출금일 계산
-  const today = new Date();
-  const dayNum = today.getDate();
-  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+// ==========================================
+// 🧶 [15] 뜨개 쇼룸 (Knitting Showroom) - 수정/삭제/게이지 추가!
+// ==========================================
+function getKnitMaster() {
+  return JSON.parse(localStorage.getItem('mingle_knitting_showroom') || '[]');
+}
 
-  const list = getStoredFixedExpenses();
-  const todayDueList = list.filter(item => {
-    if (item.day === 'last' && dayNum === lastDayOfMonth) return true;
-    return parseInt(item.day, 10) === dayNum;
-  });
+function saveKnitsToLocal(knits) {
+  localStorage.setItem('mingle_knitting_showroom', JSON.stringify(knits));
+  renderKnittingShowroom();
+  if (db) db.collection('knitting_showroom').doc('master').set({ knits }, { merge: true }).catch(console.error);
+}
 
-  const banner = document.getElementById('todayFixedExpenseAlertBanner');
-  if (!banner) return;
+function openKnitModal(id = null) {
+  const modal = document.getElementById('knitModal');
+  const titleInp = document.getElementById('knitInputTitle');
+  const yarnInp = document.getElementById('knitInputYarn');
+  const startInp = document.getElementById('knitInputStart');
+  const endInp = document.getElementById('knitInputEnd');
+  const progInp = document.getElementById('knitInputProgress');
+  const idInp = document.getElementById('knitEditId');
+  const delBtn = document.getElementById('knitDeleteBtn');
 
-  if (todayDueList.length > 0) {
-    const totalDue = todayDueList.reduce((acc, cur) => acc + Number(cur.amount), 0);
-    const names = todayDueList.map(i => `${i.title}(${Number(i.amount).toLocaleString()}원)`).join(', ');
-    banner.classList.remove('hidden');
-    banner.innerHTML = `
-      <div class="bg-rose-50 border border-rose-200 text-rose-800 px-3.5 py-2.5 rounded-2xl flex items-center justify-between text-xs shadow-xs">
-        <div class="flex items-center gap-2">
-          <span class="text-base">🔔</span>
+  if (id) {
+    const item = getKnitMaster().find(k => String(k.id) === String(id));
+    if (item) {
+      titleInp.value = item.title || '';
+      yarnInp.value = item.yarn || '';
+      startInp.value = item.startDate || '';
+      endInp.value = item.endDate || '';
+      progInp.value = item.progress || '';
+      idInp.value = id;
+      delBtn.classList.remove('hidden');
+    }
+  } else {
+    titleInp.value = '';
+    yarnInp.value = '';
+    startInp.value = typeof currentDate !== 'undefined' ? currentDate : '';
+    endInp.value = '';
+    progInp.value = '';
+    idInp.value = '';
+    delBtn.classList.add('hidden');
+  }
+  modal.classList.remove('hidden');
+}
+
+function closeKnitModal() {
+  document.getElementById('knitModal').classList.add('hidden');
+}
+
+function saveKnitMaster() {
+  const idInp = document.getElementById('knitEditId').value;
+  const title = document.getElementById('knitInputTitle').value.trim();
+  if (!title) return alert("작품명을 입력해주세요!");
+
+  const yarnStr = document.getElementById('knitInputYarn').value.trim();
+  const start = document.getElementById('knitInputStart').value;
+  const end = document.getElementById('knitInputEnd').value;
+  const prog = document.getElementById('knitInputProgress').value;
+
+  let knits = getKnitMaster();
+  const newData = {
+    title,
+    yarn: yarnStr,
+    startDate: start,
+    endDate: end,
+    progress: prog,
+    status: end ? '완성(FO) 🥳' : '뜨는 중 ⏳',
+    updatedAt: Date.now()
+  };
+
+  if (idInp) {
+    const idx = knits.findIndex(k => String(k.id) === String(idInp));
+    if (idx > -1) knits[idx] = { ...knits[idx], ...newData };
+  } else {
+    knits.unshift({ id: Date.now(), ...newData, createdAt: Date.now() });
+  }
+
+  saveKnitsToLocal(knits);
+  closeKnitModal();
+}
+
+function deleteKnitMaster() {
+  if (!confirm("이 뜨개 작품을 삭제할까요?")) return;
+  const idInp = document.getElementById('knitEditId').value;
+  let knits = getKnitMaster();
+  knits = knits.filter(k => String(k.id) !== String(idInp));
+  saveKnitsToLocal(knits);
+  closeKnitModal();
+}
+
+function renderKnittingShowroom() {
+  const list = document.getElementById('knittingShowroomList');
+  if (!list) return;
+  const items = getKnitMaster();
+  
+  if (items.length === 0) {
+    list.innerHTML = '<p class="text-xs text-rose-300 py-8 bg-rose-50/30 rounded-xl text-center border border-rose-100">등록된 뜨개 작품이 없어요 🧶</p>';
+    return;
+  }
+
+  list.innerHTML = items.map(item => `
+    <div onclick="openKnitModal('${item.id}')" class="p-3.5 rounded-xl bg-white border border-stone-200 text-xs space-y-2 cursor-pointer hover:shadow-md transition-shadow">
+      <div class="flex items-center justify-between">
+        <span class="font-bold text-stone-800 text-sm">🧶 ${item.title}</span>
+        <span class="text-[10px] bg-rose-50 border border-rose-200 text-rose-800 px-2 py-0.5 rounded font-bold">${item.status}</span>
+      </div>
+      <div class="text-[11px] text-stone-600 flex items-center gap-1 bg-stone-50 p-1.5 rounded-lg border border-stone-100">
+        <span class="font-semibold text-stone-500">스펙</span> | <span>${item.yarn || '기록 없음'}</span>
+      </div>
+      <div class="flex justify-between items-end pt-1">
+        <div class="text-[10px] text-stone-400 font-mono">📅 ${item.startDate || ''} ~ ${item.endDate || '진행중'}</div>
+        ${!item.endDate && item.progress ? `<div class="text-[10px] font-mono text-rose-600 font-bold">${item.progress}%</div>` : ''}
+      </div>
+      ${!item.endDate && item.progress ? `
+        <div class="w-full bg-rose-100 h-1.5 rounded-full mt-1.5 overflow-hidden">
+          <div class="bg-rose-500 h-full transition-all" style="width: ${item.progress}%"></div>
+        </div>
+      ` : ''}
+    </div>
+  `).join('');
+}
+
+// ==========================================
+// 📚 [16] 독서 책장 모듈 (Google Books API & History)
+// ==========================================
+function getBooksMaster() {
+  return JSON.parse(localStorage.getItem('mingle_books_data') || '[]');
+}
+
+function saveBooksMaster(data) {
+  localStorage.setItem('mingle_books_data', JSON.stringify(data));
+  if (typeof renderBookShelf === 'function') renderBookShelf();
+  if (db) db.collection('drawer_book').doc('master').set({ books: data }).catch(console.error);
+}
+
+function openBookDetailModal() {
+  const modal = document.getElementById('bookDetailModal');
+  if (!modal) return;
+  document.getElementById('bookEditId').value = '';
+  document.getElementById('bookInputTitle').value = '';
+  document.getElementById('bookInputAuthor').value = '';
+  document.getElementById('bookInputTotalPage').value = '';
+  document.getElementById('bookCoverUrl').value = '';
+  
+  if(document.getElementById('bookInputStartDate')) document.getElementById('bookInputStartDate').value = currentDate;
+  if(document.getElementById('bookInputEndDate')) document.getElementById('bookInputEndDate').value = '';
+  if(document.getElementById('bookInputReview')) document.getElementById('bookInputReview').value = '';
+
+  const coverImg = document.getElementById('bookPreviewCover');
+  if (coverImg) { coverImg.src = ''; coverImg.classList.add('hidden'); }
+  document.getElementById('bookPreviewIcon')?.classList.remove('hidden');
+  document.getElementById('bookPreviewText')?.classList.remove('hidden');
+  
+  modal.classList.remove('hidden');
+}
+
+function closeBookDetailModal() { document.getElementById('bookDetailModal').classList.add('hidden'); }
+
+async function searchGoogleBooks() {
+  const inputEl = document.getElementById('bookSearchKeyword');
+  const query = inputEl ? inputEl.value.trim() : '';
+  const container = document.getElementById('bookSearchResults');
+  if (!container || !query) return;
+
+  container.classList.remove('hidden');
+  container.innerHTML = '<div class="p-2 text-center text-xs text-stone-400">도서 검색 중... 🔍</div>';
+
+  try {
+    let res = await fetch('https://www.googleapis.com/books/v1/volumes?q=' + encodeURIComponent(query) + '&maxResults=5');
+    let data = await res.json();
+
+    if (!data.items || data.items.length === 0) {
+      container.innerHTML = `<div class="p-2 text-center text-xs text-stone-500">결과가 없어요.<br><button onclick="applyDirectBookTitle('${query}')" class="mt-1 text-amber-600 font-bold underline">이름 직접 쓰기</button></div>`;
+      return;
+    }
+
+    container.innerHTML = data.items.map(item => {
+      const info = item.volumeInfo || {};
+      const title = (info.title || '제목 없음').replace(/'/g, "\\'");
+      const author = ((info.authors || []).join(', ') || '저자 미상').replace(/'/g, "\\'");
+      const cover = info.imageLinks?.thumbnail ? info.imageLinks.thumbnail.replace('http:', 'https:') : '';
+      return `
+        <div onclick="selectGoogleBook('${title}', '${author}', '${cover}', ${info.pageCount || 0})" class="p-2 bg-white rounded flex items-center gap-2 cursor-pointer hover:bg-stone-50 border border-stone-200 mb-1">
+          ${cover ? `<img src="${cover}" class="w-8 h-11 object-cover shadow-2xs">` : '<div class="w-8 h-11 bg-stone-100 flex items-center justify-center text-[10px] text-stone-400">No Img</div>'}
+          <div class="min-w-0">
+            <p class="font-bold text-xs truncate">${info.title}</p>
+            <p class="text-[10px] text-stone-500 truncate">${author}</p>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (err) {
+    container.innerHTML = '<div class="p-2 text-center text-xs text-rose-500">검색 에러 😢</div>';
+  }
+}
+
+function applyDirectBookTitle(title) {
+  document.getElementById('bookInputTitle').value = title;
+  document.getElementById('bookSearchResults')?.classList.add('hidden');
+}
+
+function selectGoogleBook(title, author, cover, pageCount) {
+  document.getElementById('bookInputTitle').value = title;
+  document.getElementById('bookInputAuthor').value = author;
+  document.getElementById('bookInputTotalPage').value = pageCount || '';
+  document.getElementById('bookCoverUrl').value = cover;
+
+  const coverImg = document.getElementById('bookPreviewCover');
+  if (cover && coverImg) {
+    coverImg.src = cover;
+    coverImg.classList.remove('hidden');
+    document.getElementById('bookPreviewIcon')?.classList.add('hidden');
+    document.getElementById('bookPreviewText')?.classList.add('hidden');
+  }
+  document.getElementById('bookSearchResults')?.classList.add('hidden');
+}
+
+function saveBookMaster() {
+  const title = document.getElementById('bookInputTitle')?.value.trim();
+  if (!title) return alert('도서명을 입력해주세요!');
+
+  const books = getBooksMaster();
+  const bookData = {
+    title,
+    author: document.getElementById('bookInputAuthor')?.value.trim() || '',
+    totalPage: parseInt(document.getElementById('bookInputTotalPage')?.value, 10) || 0,
+    cover: document.getElementById('bookCoverUrl')?.value || '',
+    status: document.getElementById('bookInputStatus')?.value || 'reading',
+    startDate: document.getElementById('bookInputStartDate')?.value || '',
+    endDate: document.getElementById('bookInputEndDate')?.value || '',
+    rating: document.getElementById('bookInputRating')?.value || '5',
+    review: document.getElementById('bookInputReview')?.value.trim() || ''
+  };
+
+  const editId = document.getElementById('bookEditId')?.value;
+  if (editId) {
+    const idx = books.findIndex(b => String(b.id) === String(editId));
+    if (idx !== -1) books[idx] = { ...books[idx], ...bookData };
+  } else {
+    books.unshift({ id: Date.now(), currentPage: 0, ...bookData });
+  }
+
+  saveBooksMaster(books);
+  closeBookDetailModal();
+}
+
+function openBookEditModal(id) {
+  const book = getBooksMaster().find(b => String(b.id) === String(id));
+  if (!book) return;
+  openBookDetailModal();
+  document.getElementById('bookEditId').value = id;
+  document.getElementById('bookInputTitle').value = book.title || '';
+  document.getElementById('bookInputAuthor').value = book.author || '';
+  document.getElementById('bookInputTotalPage').value = book.totalPage || '';
+  document.getElementById('bookCoverUrl').value = book.cover || '';
+  document.getElementById('bookInputStatus').value = book.status || 'reading';
+  document.getElementById('bookInputStartDate').value = book.startDate || '';
+  document.getElementById('bookInputEndDate').value = book.endDate || '';
+  document.getElementById('bookInputRating').value = book.rating || '5';
+  document.getElementById('bookInputReview').value = book.review || '';
+
+  const coverImg = document.getElementById('bookPreviewCover');
+  if (book.cover && coverImg) {
+    coverImg.src = book.cover;
+    coverImg.classList.remove('hidden');
+    document.getElementById('bookPreviewIcon')?.classList.add('hidden');
+    document.getElementById('bookPreviewText')?.classList.add('hidden');
+  }
+}
+
+function deleteCurrentBook() {
+  const id = document.getElementById('bookEditId')?.value;
+  if (!id || !confirm('책장에서 완전히 삭제할까요?')) return;
+  let books = getBooksMaster();
+  books = books.filter(b => String(b.id) !== String(id));
+  saveBooksMaster(books);
+  closeBookDetailModal();
+}
+
+// ⭐ 쩜오(0.5) 별점 계산 헬퍼 함수
+function getRatingStars(rating) {
+  const score = parseFloat(rating) || 5;
+  const fullStars = Math.floor(score);
+  const hasHalf = score % 1 !== 0;
+  return '⭐'.repeat(fullStars) + (hasHalf ? '✨' : '');
+}
+
+function renderBookShelf(filter = 'all') {
+  const list = document.getElementById('bookshelfList');
+  if (!list) return;
+  const books = getBooksMaster();
+  
+  if (books.length === 0) {
+    list.innerHTML = '<div class="p-6 text-center bg-stone-50 rounded-xl border border-stone-100 text-xs text-stone-400">등록된 도서가 없어요 📚</div>';
+    return;
+  }
+
+  const badges = {
+    reading: '<span class="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9px] px-1.5 py-0.5 rounded font-bold">읽는 중</span>',
+    completed: '<span class="bg-amber-50 text-amber-900 border border-amber-200 text-[9px] px-1.5 py-0.5 rounded font-bold">완독 🏆</span>',
+    wish: '<span class="bg-stone-100 text-stone-600 border border-stone-200 text-[9px] px-1.5 py-0.5 rounded font-bold">위시 🔖</span>',
+    stopped: '<span class="bg-rose-50 text-rose-800 border border-rose-200 text-[9px] px-1.5 py-0.5 rounded font-bold">중단</span>'
+  };
+
+  list.innerHTML = books.map(b => {
+    return `
+      <div onclick="openBookEditModal(${b.id})" class="p-3 bg-white rounded-xl border border-stone-200 shadow-2xs hover:shadow-md transition-shadow cursor-pointer flex gap-3 mb-2">
+        <img src="${b.cover || 'https://via.placeholder.com/60x85?text=Cover'}" class="w-12 h-16 object-cover rounded shadow-xs border border-stone-200 shrink-0">
+        <div class="flex-1 min-w-0 flex flex-col justify-between py-0.5">
           <div>
-            <span class="font-bold">오늘 고정지출 출금일!</span>
-            <span class="text-[11px] text-rose-600 block sm:inline sm:ml-1">${names} (총 ${totalDue.toLocaleString()}원)</span>
+            <div class="flex items-center justify-between gap-1 mb-1">
+              <h4 class="font-bold text-xs text-stone-800 truncate">${b.title}</h4>
+              ${badges[b.status] || ''}
+            </div>
+            <p class="text-[10px] text-stone-500 truncate">${b.author || '저자 미상'}</p>
+          </div>
+          <div class="text-[10px] text-amber-500 mt-1.5 flex items-center justify-between">
+            <span>${getRatingStars(b.rating)}</span>
+            <span class="text-stone-400 font-mono">${b.startDate || ''} ~ ${b.endDate || ''}</span>
           </div>
         </div>
-        <span class="text-[10px] font-semibold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full shrink-0">잔고 확인</span>
       </div>
     `;
-  } else {
-    banner.classList.add('hidden');
-  }
-}
-
-// 서랍 열릴 때 가계부 자동 초기화 훅
-document.addEventListener('DOMContentLoaded', () => {
-  refreshPayMethodSelects();
-  checkFixedExpenseAlerts();
-});
-
-// 🔄 서랍 상세 모듈(가계부 등) 새로고침 복원
-window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    try {
-      const activeTab = localStorage.getItem('mingle_active_tab') || 'today';
-      const drawerSub = sessionStorage.getItem('mingle_drawer_subtab');
-      if (activeTab === 'drawer' && drawerSub === 'budget') {
-        const hub = document.getElementById('drawerHubGrid');
-        const bMod = document.getElementById('drawerBudgetModule');
-        if (hub && bMod) {
-          hub.classList.add('hidden');
-          bMod.classList.remove('hidden');
-          bMod.style.display = 'block';
-          if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
-          if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
-        }
-      }
-    } catch(e) {}
-  }, 150);
-});
-
-// 가계부 모듈 열 때 서브탭 기억
-const origOpenDrawerBudget = typeof openDrawerBudget === 'function' ? openDrawerBudget : null;
-if (origOpenDrawerBudget) {
-  openDrawerBudget = function() {
-    try { sessionStorage.setItem('mingle_drawer_subtab', 'budget'); } catch(e) {}
-    origOpenDrawerBudget();
-  };
-}
-
-// ⚡ 하단 오늘 탭 누르면 진짜 오늘로 바로 점프!
-const origSwitchTabForToday = window.switchTab;
-window.switchTab = function(tab, subAction) {
-  if (tab === 'day') {
-    if (typeof jumpToRealToday === 'function') jumpToRealToday();
-  }
-  if (origSwitchTabForToday) origSwitchTabForToday(tab, subAction);
-};
-
-// ⚡ 도서 등록 시 완독일도 오늘 날짜 기본 세팅
-const origOpenBookModalForDates = window.openBookModal;
-window.openBookModal = function() {
-  if (origOpenBookModalForDates) origOpenBookModalForDates();
-  const endInp = document.getElementById('bookInputEndDate');
-  if (endInp && !endInp.value) {
-    endInp.value = typeof currentDate !== 'undefined' ? currentDate : '';
-  }
-};
-
-// ⚡ 하단 탭 전환 시: 오늘 일일페이지 & 서랍 4칸 로비 완벽 복귀
-(function() {
-  const origSwitchTab = window.switchTab;
-  window.switchTab = function(tab, subAction) {
-    // 1. '오늘' 탭 누르면 진짜 오늘 날짜로 점프
-    if (tab === 'day') {
-      if (typeof jumpToRealToday === 'function') jumpToRealToday();
-    }
-
-    // 기존 탭 전환 실행
-    if (origSwitchTab) origSwitchTab(tab, subAction);
-
-    // 2. '서랍' 탭 누르면 서브 화면 전부 강제 종료하고 로비 허브만 노출!
-    if (tab === 'drawer') {
-      // (1) 뒤로가기 함수가 있다면 강제 실행
-      if (typeof exitDrawerSub === 'function') exitDrawerSub();
-      if (typeof backToDrawerHub === 'function') backToDrawerHub();
-      if (typeof closeDrawerSub === 'function') closeDrawerSub();
-
-      // (2) 4개 서랍 서브 화면 ID 강제 숨김
-      ['budget', 'book', 'knit', 'note'].forEach(subKey => {
-        const el1 = document.getElementById('drawerSub-' + subKey);
-        const el2 = document.getElementById('drawer-' + subKey);
-        const el3 = document.getElementById('drawerSubView-' + subKey);
-        const el4 = document.getElementById('drawerDetail-' + subKey);
-        if (el1) el1.classList.add('hidden');
-        if (el2) el2.classList.add('hidden');
-        if (el3) el3.classList.add('hidden');
-        if (el4) el4.classList.add('hidden');
-      });
-
-      // (3) view-drawer 안쪽에서 drawerHubGrid가 아닌 모든 자식 숨기기
-      const viewDrawer = document.getElementById('view-drawer');
-      if (viewDrawer) {
-        Array.from(viewDrawer.children).forEach(child => {
-          if (child.id !== 'drawerHubGrid') {
-            child.classList.add('hidden');
-          }
-        });
-      }
-
-      // (4) 4칸 로비 허브 격자 뷰만 시원하게 노출
-      const hubGrid = document.getElementById('drawerHubGrid');
-      if (hubGrid) hubGrid.classList.remove('hidden');
-    }
-  };
-})();
-
-// ⚡ [2] 도서 등록 시 완독일도 현재 날짜 자동 세팅
-(function() {
-  const origOpenBook = window.openBookModal;
-  window.openBookModal = function() {
-    if (origOpenBook) origOpenBook();
-    const endInp = document.getElementById('bookInputEndDate');
-    const startInp = document.getElementById('bookInputStartDate');
-    const todayStr = typeof currentDate !== 'undefined' ? currentDate : '';
-    if (startInp && !startInp.value) startInp.value = todayStr;
-    if (endInp && !endInp.value) endInp.value = todayStr;
-  };
-})();
-
-// ⚡ [3] 무드트래커 '신남' 매핑 보정
-(function() {
-  if (typeof MOOD_META !== 'undefined') {
-    if (!MOOD_META['신남']) {
-      MOOD_META['신남'] = { icon: '😆', label: '신남', color: 'text-amber-500' };
-    }
-    if (!MOOD_META['excited']) {
-      MOOD_META['excited'] = { icon: '😆', label: '신남', color: 'text-amber-500' };
-    }
-  }
-})();
+  }).join('');
 }
