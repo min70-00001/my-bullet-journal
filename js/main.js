@@ -6384,25 +6384,45 @@ window.openBookModal = function() {
   }
 };
 
-// ⚡ [1] 하단 '서랍' 탭 누르면 무조건 '서랍 로비(4칸)'로 바로 이동 & 오늘 점프
-(function() {
-  const origTab = window.switchTab;
-  window.switchTab = function(tab, subAction) {
-    if (tab === 'drawer') {
-      if (typeof closeDrawerSubView === 'function') {
-        closeDrawerSubView();
-      }
-      document.querySelectorAll('[id$="DetailView"], [id$="SubView"], #accountBookView, #bookShelfView, #knittingView').forEach(el => {
-        el.classList.add('hidden');
-      });
-      const lobby = document.getElementById('drawerLobbyView') || document.getElementById('drawersLobby');
-      if (lobby) lobby.classList.remove('hidden');
-    } else if (tab === 'day') {
-      if (typeof jumpToRealToday === 'function') jumpToRealToday();
+// ⚡ [1] 하단 '서랍' 탭 누르면 무조건 4칸 로비로 강제 복귀!
+document.addEventListener('DOMContentLoaded', () => {
+  setupDrawerTabShortcut();
+});
+// 혹시 이미 로드된 후라도 즉시 실행
+setTimeout(setupDrawerTabShortcut, 500);
+
+function setupDrawerTabShortcut() {
+  // 하단 탭 바에서 '서랍' 글자나 아이콘이 있는 버튼 찾기
+  const navBtns = document.querySelectorAll('nav button, footer button, .bottom-nav button, button');
+  navBtns.forEach(btn => {
+    if (btn.innerText && btn.innerText.includes('서랍')) {
+      btn.addEventListener('click', (e) => {
+        // 1. 기존에 등록된 모든 서랍 뒤로가기 함수들 일괄 실행
+        if (typeof backToDrawerLobby === 'function') backToDrawerLobby();
+        if (typeof closeDrawerDetail === 'function') closeDrawerDetail();
+        if (typeof closeDrawerSubView === 'function') closeDrawerSubView();
+        if (typeof renderDrawerLobby === 'function') renderDrawerLobby();
+
+        // 2. 가계부, 책장, 뜨개 등 열려있는 모든 상세 뷰 무조건 숨기기
+        const viewIds = [
+          'accountBookView', 'bookShelfView', 'knittingView', 'memoView',
+          'drawerDetailView', 'accountBookDetailView', 'bookshelfDetailView'
+        ];
+        viewIds.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.classList.add('hidden');
+        });
+
+        // 3. 서랍 메인 4칸 로비 화면 무조건 활성화
+        const lobby = document.getElementById('drawerLobbyView') || 
+                      document.getElementById('drawersLobby') || 
+                      document.getElementById('drawerMainView') ||
+                      document.querySelector('[id*="drawer"][id*="Lobby"]');
+        if (lobby) lobby.classList.remove('hidden');
+      }, true); // 캡처링 모드로 최우선 가로채기
     }
-    if (origTab) origTab(tab, subAction);
-  };
-})();
+  });
+}
 
 // ⚡ [2] 도서 등록 시 완독일도 현재 날짜 자동 세팅
 (function() {
@@ -6417,7 +6437,7 @@ window.openBookModal = function() {
   };
 })();
 
-// ⚡ [5] 무드트래커 '신남' 매핑 보정
+// ⚡ [3] 무드트래커 '신남' 매핑 보정
 (function() {
   if (typeof MOOD_META !== 'undefined') {
     if (!MOOD_META['신남']) {
