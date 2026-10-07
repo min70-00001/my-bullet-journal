@@ -288,6 +288,8 @@
                 <option value="heavy">🪨 더부룩/소화불량</option>
               </select>
             </div>
+            <!-- 💊 아침 영양제 슬롯 추가 -->
+            <div id="supplementsList_1" class="pt-1.5 border-t border-stone-200/50 space-y-1 mt-1 empty:hidden"></div>
           </div>
 
         <!-- 슬림 오전간식 -->
@@ -325,6 +327,8 @@
                 <option value="heavy">🪨 더부룩/소화불량</option>
               </select>
             </div>
+            <!-- 💊 점심 영양제 슬롯 추가 -->
+            <div id="supplementsList_2" class="pt-1.5 border-t border-stone-200/50 space-y-1 mt-1 empty:hidden"></div>
           </div>
 
         <!-- 슬림 오후간식 -->
@@ -362,6 +366,8 @@
                 <option value="heavy">🪨 더부룩/소화불량</option>
               </select>
             </div>
+            <!-- 💊 저녁 영양제 슬롯 추가 -->
+            <div id="supplementsList_3" class="pt-1.5 border-t border-stone-200/50 space-y-1 mt-1 empty:hidden"></div>
           </div>
 
             <!-- 슬림 밤간식 -->
@@ -946,16 +952,16 @@
       </button>
     </div>
 
-    <!-- 가계부 내부 3단 탭 네비게이션 -->
-    <div class="grid grid-cols-3 gap-1 bg-stone-100 p-1 rounded-xl text-xs font-medium text-stone-500 text-center">
-      <button id="abTabBtnCalendar" onclick="switchAccountBookTab('calendar')" class="py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-semibold transition">📅 지출 달력</button>
-      <button id="abTabBtnBudget" onclick="switchAccountBookTab('budget')" class="py-1.5 rounded-lg hover:text-stone-700 transition">📊 월간 예산</button>
-      <button id="abTabBtnFixed" onclick="switchAccountBookTab('fixed')" class="py-1.5 rounded-lg hover:text-stone-700 transition">🔔 고정지출</button>
+    <!-- 가계부 내부 4단 탭 네비게이션 (전체 탭 추가) -->
+    <div class="grid grid-cols-4 gap-1 bg-stone-100 p-1 rounded-xl text-xs font-medium text-stone-500 text-center">
+      <button id="abTabBtnCalendar" onclick="switchAccountBookTab('calendar')" class="py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-semibold transition">📅 달력</button>
+      <button id="abTabBtnAll" onclick="switchAccountBookTab('all')" class="py-1.5 rounded-lg hover:text-stone-700 transition">📋 전체</button>
+      <button id="abTabBtnBudget" onclick="switchAccountBookTab('budget')" class="py-1.5 rounded-lg hover:text-stone-700 transition">📊 예산</button>
+      <button id="abTabBtnFixed" onclick="switchAccountBookTab('fixed')" class="py-1.5 rounded-lg hover:text-stone-700 transition">🔔 고정</button>
     </div>
 
     <!-- 1. 지출 달력 뷰 -->
     <div id="abViewCalendar" class="space-y-3">
-      <!-- 이번 달 총 지출 요약 배너 -->
       <div class="bg-amber-50/70 border border-amber-200/60 rounded-xl p-3 flex justify-between items-center text-xs">
         <div>
           <span class="text-stone-500 text-[11px]">이번 달 누적 지출</span>
@@ -966,23 +972,17 @@
           <p id="abMonthCountBadge" class="text-[11px] font-medium text-stone-600">총 0건 기록</p>
         </div>
       </div>
-
-      <!-- 월간 미니 달력 그리드 -->
       <div class="bg-stone-50/60 rounded-xl p-3 border border-stone-200/60">
         <div class="flex items-center justify-between mb-2">
           <button onclick="changeAccountBookMonth(-1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">〈</button>
           <span id="abCalendarMonthTitle" class="text-xs font-bold text-stone-700 font-mono">2026.10</span>
           <button onclick="changeAccountBookMonth(1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">〉</button>
         </div>
-        <!-- 요일 헤더 -->
         <div class="grid grid-cols-7 text-center text-[10px] text-stone-400 pb-1 mb-1 border-b border-stone-200/50">
           <span class="text-red-400">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="text-blue-400">토</span>
         </div>
-        <!-- 날짜 셀 컨테이너 (JS 렌더링) -->
         <div id="abCalendarGrid" class="grid grid-cols-7 gap-1 text-center"></div>
       </div>
-
-      <!-- 선택된 날짜 지출 목록 -->
       <div class="space-y-2 pt-1">
         <div class="flex items-center justify-between text-xs">
           <span class="font-bold text-stone-700 flex items-center gap-1.5">
@@ -994,7 +994,15 @@
       </div>
     </div>
 
-    <!-- 2. 월간 예산 뷰 -->
+    <!-- 1-2. 전체 내역 뷰 (새로 추가) -->
+    <div id="abViewAll" class="space-y-3 hidden">
+      <div class="flex justify-between items-center text-xs">
+        <span class="font-bold text-stone-700">이번 달 전체 지출 내역</span>
+      </div>
+      <div id="abAllExpenseList" class="space-y-1.5 max-h-[60vh] overflow-y-auto pr-1"></div>
+    </div>
+
+    <!-- 2. 월간 예산 뷰 (세부 예산 UI 슬롯 확보) -->
     <div id="abViewBudget" class="space-y-3 hidden">
       <div class="bg-stone-50 p-3 rounded-xl border border-stone-200/60 space-y-2">
         <div class="flex justify-between items-center text-xs">
@@ -1009,9 +1017,8 @@
           <div id="abBudgetProgressBar" class="bg-amber-500 h-2 rounded-full transition-all duration-300" style="width: 0%;"></div>
         </div>
       </div>
-      <!-- 카테고리별 지출 현황 리스트 -->
       <div class="space-y-2">
-        <span class="text-xs font-bold text-stone-700">카테고리별 지출</span>
+        <span class="text-xs font-bold text-stone-700">카테고리별 세부 예산 & 지출</span>
         <div id="abCategoryBudgetList" class="space-y-1.5 text-xs"></div>
       </div>
     </div>
@@ -1020,7 +1027,7 @@
     <div id="abViewFixed" class="space-y-3 hidden">
       <div class="flex justify-between items-center">
         <span class="text-xs text-stone-500">매월 정기적으로 나가는 구독료 & 공과금</span>
-        <button onclick="openAddFixedExpenseModal()" class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 font-medium px-2.5 py-1 rounded-lg transition">
+        <button onclick="openAddFixedExpenseModal()" class="text-[11px] bg-amber-100 hover:bg-amber-200 text-amber-900 font-medium px-2 py-1 rounded-lg transition">
           + 고정지출 추가
         </button>
       </div>
@@ -1563,60 +1570,35 @@
     </div>
   </div>
 
-  <!-- ⚙️ 가계부 설정 (카테고리 및 결제수단 관리) 모달 -->
+  <!-- ⚙️ 가계부 설정 (대분류 포함) 모달 -->
   <div id="modalExpenseCategorySetting" class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4 hidden">
     <div class="bg-white w-full max-w-sm rounded-2xl p-4 shadow-xl space-y-4 max-h-[85vh] flex flex-col">
       <div class="flex items-center justify-between border-b border-stone-150 pb-2.5">
-        <h3 class="font-bold text-sm text-stone-800">⚙️ 가계부 설정 & 분류 관리</h3>
+        <h3 class="font-bold text-sm text-stone-800">⚙️ 가계부 설정 관리</h3>
         <button onclick="closeExpenseCategorySettingModal()" class="text-stone-400 hover:text-stone-700 text-lg font-bold">×</button>
       </div>
-
       <div class="space-y-4 overflow-y-auto pr-1 text-xs">
-        <!-- 1. 결제수단 관리 -->
-        <div class="space-y-2 bg-stone-50 p-2.5 rounded-xl border border-stone-200/60">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-stone-700">💳 결제수단 목록</span>
-            <span class="text-[10px] text-stone-400">자주 쓰는 카드/계좌</span>
-          </div>
-          <div id="settingPayMethodTagList" class="flex flex-wrap gap-1.5 pt-1">
-            <!-- JS 렌더링 -->
-          </div>
-          <div class="flex gap-1 pt-1">
-            <input type="text" id="settingNewPayMethodInput" placeholder="새 결제수단 (예: 현대카드)" 
-                   class="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-[11px] text-stone-700 focus:outline-none">
-            <button onclick="addNewPayMethod()" class="bg-stone-800 text-white px-2.5 py-1 rounded-lg text-[11px] shrink-0 font-medium">추가</button>
-          </div>
-        </div>
-
-        <!-- 2. 지출 카테고리 관리 (대분류/소분류) -->
-        <div class="space-y-2 bg-stone-50 p-2.5 rounded-xl border border-stone-200/60">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-stone-700">📂 지출 카테고리 관리</span>
-          </div>
-          <div>
-            <label class="block text-[10px] text-stone-400 mb-1">대분류 선택</label>
-            <select id="settingMainCatSelect" onchange="renderSettingSubCats()" 
-                    class="w-full bg-white border border-stone-200 rounded-lg px-2 py-1.5 text-[11px] text-stone-700 focus:outline-none">
-            </select>
-          </div>
-          <div class="pt-1">
-            <label class="block text-[10px] text-stone-400 mb-1">소분류 항목들 (클릭 시 삭제)</label>
-            <div id="settingSubCatTagList" class="flex flex-wrap gap-1.5">
-              <!-- JS 렌더링 -->
-            </div>
-          </div>
+        
+        <!-- 대분류 추가 영역 -->
+        <div class="space-y-2 bg-amber-50/50 p-2.5 rounded-xl border border-amber-100">
+          <span class="font-bold text-stone-700 block">📁 대분류 관리 (폴더)</span>
+          <div id="settingMainCatTagList" class="flex flex-wrap gap-1.5 pt-1"></div>
           <div class="flex gap-1 pt-1.5">
-            <input type="text" id="settingNewSubCatInput" placeholder="선택한 대분류에 새 소분류 추가" 
-                   class="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-[11px] text-stone-700 focus:outline-none">
-            <button onclick="addNewSubCategory()" class="bg-stone-800 text-white px-2.5 py-1 rounded-lg text-[11px] shrink-0 font-medium">추가</button>
+            <input type="text" id="settingNewMainCatInput" placeholder="새 대분류 추가" class="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-[11px] focus:outline-none">
+            <button onclick="addNewMainCategory()" class="bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold transition">추가</button>
           </div>
         </div>
-      </div>
 
-      <div class="pt-1">
-        <button onclick="closeExpenseCategorySettingModal()" class="w-full py-2 bg-stone-150 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-semibold transition">
-          닫기
-        </button>
+        <!-- 소분류 관리 영역 -->
+        <div class="space-y-2 bg-stone-50 p-2.5 rounded-xl border border-stone-200/60">
+          <label class="font-bold text-stone-700 block mb-1">📂 소분류 관리</label>
+          <select id="settingMainCatSelect" onchange="renderSettingSubCats()" class="w-full bg-white border border-stone-200 rounded-lg px-2 py-1.5 focus:outline-none cursor-pointer"></select>
+          <div id="settingSubCatTagList" class="flex flex-wrap gap-1.5 pt-1.5"></div>
+          <div class="flex gap-1 pt-1.5">
+            <input type="text" id="settingNewSubCatInput" placeholder="새 소분류 추가" class="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-[11px] focus:outline-none">
+            <button onclick="addNewSubCategory()" class="bg-stone-800 hover:bg-stone-900 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold transition">추가</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1657,6 +1639,97 @@
         <button onclick="closeAddFixedExpenseModal()" class="flex-1 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-xl font-medium">취소</button>
         <button onclick="saveFixedExpenseItem()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold shadow-xs">저장</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- 🚀 밍글로그 V2 신규 모달 업데이트 영역 (1탄) -->
+  <!-- ============================================== -->
+
+  <!-- 📝 1. 데일리 투두 전체 관리 모달 -->
+  <div id="routineTodoManageModal" class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full h-[70vh] flex flex-col shadow-xl">
+      <div class="flex justify-between items-center border-b border-stone-100 pb-2 mb-2">
+        <h3 class="text-xs font-bold text-stone-800">⚙️ 반복 투두 전체 관리</h3>
+        <button onclick="closeRoutineTodoManageModal()" class="text-stone-400 font-bold text-lg">✕</button>
+      </div>
+      <div id="routineTodoManageList" class="flex-1 overflow-y-auto space-y-2 text-xs pr-1"></div>
+    </div>
+  </div>
+
+  <!-- ⭐ 2. 오늘의 할 일(단건) 수정 모달 -->
+  <div id="todayTaskEditModal" class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-xl space-y-3">
+      <h3 class="text-xs font-bold text-stone-800">할 일 수정</h3>
+      <input type="hidden" id="todayTaskEditId">
+      <input type="text" id="todayTaskEditTitle" class="w-full border border-stone-200 rounded-xl p-2 text-xs focus:outline-amber-400">
+      <label class="flex items-center gap-1.5 text-xs text-stone-600 font-bold mt-2 cursor-pointer">
+        <input type="checkbox" id="todayTaskEditImportant" class="accent-amber-500 w-4 h-4"> ⭐ 중요 표시 (최상단 고정)
+      </label>
+      <div class="flex gap-2 mt-3">
+        <button onclick="saveTodayTaskEdit()" class="flex-1 bg-amber-400 font-bold text-xs py-2 rounded-xl">확인</button>
+        <button onclick="deleteTodayTaskEdit()" class="flex-1 bg-stone-100 text-rose-500 font-bold text-xs py-2 rounded-xl">삭제</button>
+        <button onclick="closeTodayTaskEditModal()" class="px-3 bg-stone-100 text-stone-500 font-bold text-xs py-2 rounded-xl">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🧶 3. 뜨개 작품 등록/수정 모달 -->
+  <div id="knitModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl max-h-[90vh] overflow-y-auto text-xs">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="font-bold text-stone-800 flex items-center gap-1.5">🧶 뜨개 작품 상세</h3>
+        <button onclick="closeKnitModal()" class="text-stone-400 font-bold text-lg">✕</button>
+      </div>
+      <div class="space-y-2.5 pt-1">
+        <input type="hidden" id="knitEditId">
+        <div>
+          <label class="block text-[10px] text-stone-500 mb-1">작품명</label>
+          <input type="text" id="knitInputTitle" placeholder="예: 바닐라 모헤어 조끼" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-[10px] text-stone-500 mb-1">사용 실 & 바늘</label>
+          <input type="text" id="knitInputYarn" placeholder="예: 램스울 2합, 4.5mm 대바늘" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 focus:outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block text-[10px] text-stone-500 mb-1">시작일</label><input type="date" id="knitInputStart" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2 py-1 text-[11px]"></div>
+          <div><label class="block text-[10px] text-stone-500 mb-1">완성일</label><input type="date" id="knitInputEnd" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2 py-1 text-[11px]"></div>
+        </div>
+        <div>
+          <label class="block text-[10px] text-stone-500 mb-1">진행 상태 게이지 (%)</label>
+          <input type="number" id="knitInputProgress" placeholder="진행률 (0~100)" min="0" max="100" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 font-mono">
+        </div>
+      </div>
+      <div class="flex gap-2 pt-3">
+        <button onclick="saveKnitMaster()" class="flex-1 py-2 bg-rose-500 text-white font-bold rounded-xl shadow-xs">저장</button>
+        <button onclick="deleteKnitMaster()" id="knitDeleteBtn" class="hidden py-2 px-3 bg-stone-100 text-rose-600 font-bold rounded-xl">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📝 4. 삼성노트 감성 메모 리치 에디터 모달 -->
+  <div id="noteEditorModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md h-[80vh] flex flex-col shadow-xl">
+      <div class="flex items-center justify-between p-3 border-b border-stone-100">
+        <div class="flex items-center gap-2">
+          <select id="noteEditorFolder" class="bg-stone-50 border border-stone-200 rounded-lg px-2 py-1 text-xs text-stone-700 font-bold focus:outline-none"></select>
+        </div>
+        <div class="flex gap-1.5">
+          <button onclick="saveNoteEditor()" class="bg-amber-400 text-stone-900 px-3 py-1 rounded-lg text-xs font-bold shadow-xs">저장</button>
+          <button onclick="closeNoteEditorModal()" class="text-stone-400 font-bold text-lg px-1">✕</button>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-1.5 bg-stone-50 border-b border-stone-200 text-stone-600 text-xs overflow-x-auto hide-scrollbar">
+        <button type="button" onclick="document.execCommand('bold',false,null)" class="p-1.5 hover:bg-stone-200 rounded font-bold">B</button>
+        <button type="button" onclick="document.execCommand('underline',false,null)" class="p-1.5 hover:bg-stone-200 rounded underline">U</button>
+        <button type="button" onclick="document.execCommand('strikeThrough',false,null)" class="p-1.5 hover:bg-stone-200 rounded line-through">S</button>
+        <div class="w-px h-4 bg-stone-300 mx-1"></div>
+        <button type="button" onclick="document.execCommand('insertUnorderedList',false,null)" class="p-1.5 hover:bg-stone-200 rounded flex items-center gap-1">📋 리스트</button>
+      </div>
+      <div class="p-3">
+        <input type="text" id="noteEditorTitle" placeholder="메모 제목" class="w-full font-bold text-lg text-stone-800 placeholder-stone-300 border-none outline-none bg-transparent mb-2">
+      </div>
+      <div id="noteEditorContent" contenteditable="true" class="flex-1 p-3 overflow-y-auto text-sm text-stone-700 outline-none leading-relaxed empty:before:content-['자유롭게_기록을_남겨보세요...'] empty:before:text-stone-400"></div>
     </div>
   </div>
 
