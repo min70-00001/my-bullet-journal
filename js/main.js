@@ -5527,7 +5527,7 @@ function renderAccountBookCalendar() {
 
       cell.innerHTML = `
         <span class="text-[10px] text-stone-600 leading-none pl-0.5">${d}</span>
-        ${dayTotal > 0 ? `<span class="text-[9px] font-mono font-semibold text-rose-600 truncate text-right pr-0.5">-${dayTotal.toLocaleString()}</span>` : ''}
+        ${dayTotal > 0 ? `<span class="text-[8px] sm:text-[9px] font-mono font-bold text-rose-500 whitespace-nowrap text-right pr-0.5 tracking-tighter leading-none">${dayTotal.toLocaleString()}</span>` : ''}
       `;
     grid.appendChild(cell);
   }
@@ -6384,17 +6384,19 @@ window.openBookModal = function() {
   }
 };
 
-// ⚡ [1] 하단 '서랍' 탭 누르면 무조건 '서랍 로비(4칸)'로 바로 이동
-// ⚡ [2] 하단 '오늘' 탭 누르면 무조건 '진짜 오늘'로 이동
+// ⚡ [1] 하단 '서랍' 탭 누르면 무조건 '서랍 로비(4칸)'로 바로 이동 & 오늘 점프
 (function() {
   const origTab = window.switchTab;
   window.switchTab = function(tab, subAction) {
     if (tab === 'drawer') {
-      if (typeof closeDrawerSubView === 'function') closeDrawerSubView();
-      const lobby = document.getElementById('drawerLobbyView');
-      const sub = document.getElementById('drawerDetailView');
+      if (typeof closeDrawerSubView === 'function') {
+        closeDrawerSubView();
+      }
+      document.querySelectorAll('[id$="DetailView"], [id$="SubView"], #accountBookView, #bookShelfView, #knittingView').forEach(el => {
+        el.classList.add('hidden');
+      });
+      const lobby = document.getElementById('drawerLobbyView') || document.getElementById('drawersLobby');
       if (lobby) lobby.classList.remove('hidden');
-      if (sub) sub.classList.add('hidden');
     } else if (tab === 'day') {
       if (typeof jumpToRealToday === 'function') jumpToRealToday();
     }
@@ -6402,7 +6404,7 @@ window.openBookModal = function() {
   };
 })();
 
-// ⚡ [3] 도서 등록 시 완독일도 현재 날짜 자동 세팅
+// ⚡ [2] 도서 등록 시 완독일도 현재 날짜 자동 세팅
 (function() {
   const origOpenBook = window.openBookModal;
   window.openBookModal = function() {
@@ -6415,7 +6417,7 @@ window.openBookModal = function() {
   };
 })();
 
-// ⚡ [4] 무드트래커 '신남' 매핑 보정
+// ⚡ [5] 무드트래커 '신남' 매핑 보정
 (function() {
   if (typeof MOOD_META !== 'undefined') {
     if (!MOOD_META['신남']) {
