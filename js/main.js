@@ -5525,10 +5525,10 @@ function renderAccountBookCalendar() {
     let borderClass = isSelected ? 'border-amber-500 bg-amber-50/50 font-bold' : 'border-stone-100 hover:border-stone-300 bg-white';
     cell.className = `h-12 border rounded-lg p-0.5 flex flex-col justify-between cursor-pointer transition text-left ${borderClass}`;
 
-    cell.innerHTML = `
-      <span class="text-[10px] text-stone-600 leading-none pl-0.5">${d}</span>
-      ${dayTotal > 0 ? `<span class="text-[9px] font-mono font-semibold text-rose-600 truncate text-right pr-0.5 leading-none">-${dayTotal >= 10000 ? Math.round(dayTotal/10000)+'만' : dayTotal.toLocaleString()}</span>` : '<span class="h-2"></span>'}
-    `;
+      cell.innerHTML = `
+        <span class="text-[10px] text-stone-600 leading-none pl-0.5">${d}</span>
+        ${dayTotal > 0 ? `<span class="text-[9px] font-mono font-semibold text-rose-600 truncate text-right pr-0.5">-${dayTotal.toLocaleString()}</span>` : ''}
+      `;
     grid.appendChild(cell);
   }
 
@@ -6383,3 +6383,46 @@ window.openBookModal = function() {
     endInp.value = typeof currentDate !== 'undefined' ? currentDate : '';
   }
 };
+
+// ⚡ [1] 하단 '서랍' 탭 누르면 무조건 '서랍 로비(4칸)'로 바로 이동
+// ⚡ [2] 하단 '오늘' 탭 누르면 무조건 '진짜 오늘'로 이동
+(function() {
+  const origTab = window.switchTab;
+  window.switchTab = function(tab, subAction) {
+    if (tab === 'drawer') {
+      if (typeof closeDrawerSubView === 'function') closeDrawerSubView();
+      const lobby = document.getElementById('drawerLobbyView');
+      const sub = document.getElementById('drawerDetailView');
+      if (lobby) lobby.classList.remove('hidden');
+      if (sub) sub.classList.add('hidden');
+    } else if (tab === 'day') {
+      if (typeof jumpToRealToday === 'function') jumpToRealToday();
+    }
+    if (origTab) origTab(tab, subAction);
+  };
+})();
+
+// ⚡ [3] 도서 등록 시 완독일도 현재 날짜 자동 세팅
+(function() {
+  const origOpenBook = window.openBookModal;
+  window.openBookModal = function() {
+    if (origOpenBook) origOpenBook();
+    const endInp = document.getElementById('bookInputEndDate');
+    const startInp = document.getElementById('bookInputStartDate');
+    const todayStr = typeof currentDate !== 'undefined' ? currentDate : '';
+    if (startInp && !startInp.value) startInp.value = todayStr;
+    if (endInp && !endInp.value) endInp.value = todayStr;
+  };
+})();
+
+// ⚡ [4] 무드트래커 '신남' 매핑 보정
+(function() {
+  if (typeof MOOD_META !== 'undefined') {
+    if (!MOOD_META['신남']) {
+      MOOD_META['신남'] = { icon: '😆', label: '신남', color: 'text-amber-500' };
+    }
+    if (!MOOD_META['excited']) {
+      MOOD_META['excited'] = { icon: '😆', label: '신남', color: 'text-amber-500' };
+    }
+  }
+})();
