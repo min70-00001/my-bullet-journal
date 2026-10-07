@@ -6384,31 +6384,37 @@ window.openBookModal = function() {
   }
 };
 
-// ⚡ 하단 탭 전환 시: 오늘 일일페이지 & 서랍 4칸 로비 무조건 강제 이동
+// ⚡ 하단 탭 전환 시: 오늘 일일페이지 & 서랍 4칸 로비만 단독 노출!
 (function() {
   const origSwitchTab = window.switchTab;
   window.switchTab = function(tab, subAction) {
-    // 1. '오늘' 탭 누르면 진짜 오늘 날짜로 점프
     if (tab === 'day') {
       if (typeof jumpToRealToday === 'function') jumpToRealToday();
     }
 
-    // 기존 탭 전환 실행
     if (origSwitchTab) origSwitchTab(tab, subAction);
 
-    // 2. '서랍' 탭 누르면 무조건 4칸 로비(drawerHubGrid) 표시 & 안쪽 서랍 화면 숨김
     if (tab === 'drawer') {
-      // 4칸 로비 허브 나타나게 하기
+      // 1. 기존 '서랍장으로 돌아가기' 버튼이 있으면 강제 클릭
+      const backBtn = document.querySelector('#view-drawer button[onclick*="Lobby"], #view-drawer button[onclick*="exit"], #view-drawer button[onclick*="close"], #view-drawer button[onclick*="drawerHub"]');
+      if (backBtn) {
+        backBtn.click();
+      }
+
+      // 2. 4칸 로비만 보이고 나머지 직계 자식(div, section 등) 전부 숨기기
+      const viewDrawer = document.getElementById('view-drawer');
+      if (viewDrawer) {
+        Array.from(viewDrawer.children).forEach(child => {
+          if (child.id === 'drawerHubGrid') {
+            child.classList.remove('hidden');
+          } else {
+            child.classList.add('hidden');
+          }
+        });
+      }
+
       const hubGrid = document.getElementById('drawerHubGrid');
       if (hubGrid) hubGrid.classList.remove('hidden');
-
-      // 들어가 있던 안쪽 서브 뷰들 싹 숨기기
-      const subContainers = document.querySelectorAll('#view-drawer > div:not(#drawerHubGrid)');
-      subContainers.forEach(el => el.classList.add('hidden'));
-
-      // 혹시 서랍 뒤로가기 함수가 있다면 안전하게 호출
-      if (typeof exitDrawerSub === 'function') exitDrawerSub();
-      if (typeof closeDrawerSubView === 'function') closeDrawerSubView();
     }
   };
 })();
