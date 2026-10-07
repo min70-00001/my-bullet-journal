@@ -5686,7 +5686,7 @@ function openAddAccountBookExpenseModal(defaultDate) {
   `;
 }
 
-// ⚡ 숫자 입력 시 00:00 자동 포맷팅
+// ⚡ 숫자 입력 시 00:00 스마트 자동완성
 function handleTimeAutoFormat(el) {
   let val = el.value.replace(/[^0-9]/g, '');
   if (val.length > 4) val = val.slice(0, 4);
@@ -5697,7 +5697,16 @@ function handleTimeAutoFormat(el) {
   }
 }
 
-// ⚡ [가계부 지출 저장] 날짜 정규화 + 모든 저장소 및 전역 데이터 즉시 반영
+// 🔄 가계부 추가 모달 대분류 변경 시 소분류 셀렉트 갱신
+function onAbAddMainCatChange() {
+  const mainVal = document.getElementById('addAbExpMainCat').value;
+  const subSelect = document.getElementById('addAbExpSubCat');
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
+  const subs = cats[mainVal] || ['기타'];
+  subSelect.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
+}
+
+// 💾 [가계부 서랍] 신규 지출 저장 (파이어베이스 & 로컬 스토리지 완벽 직통 동기화)
 function saveNewAccountBookExpense() {
   const dateInp = document.getElementById('addAbExpDate');
   const timeInp = document.getElementById('addAbExpTime');
@@ -5707,12 +5716,14 @@ function saveNewAccountBookExpense() {
   const subCatInp = document.getElementById('addAbExpSubCat');
   const payInp = document.getElementById('addAbExpPay');
 
-  if (!amtInp || !amtInp.value || Number(amtInp.value) <= 0) {
+  const amtVal = parseFloat(amtInp ? amtInp.value : 0) || 0;
+  if (amtVal <= 0) {
     alert('금액을 올바르게 입력해 주세요!');
+    if (amtInp) amtInp.focus();
     return;
   }
 
-  // 날짜 형식 통일 (YYYY-MM-DD)
+  // 날짜 정규화 (YYYY-MM-DD)
   let rawDate = dateInp && dateInp.value ? dateInp.value : (window.abSelectedDate || currentDate);
   let expDate = rawDate.replace(/\./g, '-').replace(/\s+/g, '').replace(/-$/, '');
   if (expDate.split('-').length === 3) {
@@ -5725,63 +5736,66 @@ function saveNewAccountBookExpense() {
   let expTime = timeInp && timeInp.value.trim() ? timeInp.value.trim() : defaultTime;
   if (/^\d{4}$/.test(expTime)) expTime = expTime.slice(0, 2) + ':' + expTime.slice(2);
 
-  const expTitle = titleInp && titleInp.value.trim() ? titleInp.value.trim() : '미기재 지출';
-  const expAmt = Number(amtInp.value);
-  const expMainCat = mainCatInp ? mainCatInp.value : '식비';
-  const expSubCat = subCatInp ? subCatInp.value : '식재료';
-  const expPay = payInp ? payInp.value : '카드';
+  const mainCat = mainCatInp ? mainCatInp.value : '식비';
+  const subCat = subCatInp ? subCatInp.value : '식재료';
+  const fullCategory = `${mainCat}/${subCat}`;
+  const titleVal = (titleInp && titleInp.value.trim()) ? titleInp.value.trim() : subCat;
+  const payVal = payInp ? payInp.value : '카드';
 
-  const newExpense = {
+  // 새 지출 데이터 객체
+  const newEntry = {
     id: 'exp_' + Date.now(),
     date: expDate,
     time: expTime,
-    memo: expTitle,
-    title: expTitle,
-    amount: expAmt,
-    mainCategory: expMainCat,
-    subCategory: expSubCat,
-    category: expSubCat,
-    paymentMethod: expPay,
-    payMethod: expPay
+    mainCat: mainCat,
+    category: fullCategory,
+    subCategory: subCat,
+    title: titleVal,
+    memo: titleVal,
+    payMethod: payVal,
+    payment: payVal,
+    amount: amtVal
   };
 
-  // 1. 전역 배열 동기화
-  if (!window.accountExpenses) window.accountExpenses = [];
-  window.accountExpenses.unshift(newExpense);
-  if (Array.isArray(window.abExpenses)) window.abExpenses.unshift(newExpense);
-  if (Array.isArray(window.expenses)) window.expenses.unshift(newExpense);
-
-  // 2. 날짜별 객체 구조(expenses[date]) 지원
-  if (typeof expenses === 'object' && !Array.isArray(expenses) && expenses !== null) {
-    if (!expenses[expDate]) expenses[expDate] = [];
-    expenses[expDate].unshift(newExpense);
-  }
-
-  // 3. 로컬스토리지 저장
+  // 1. 해당 날짜 로컬스토리지(mingle_day_YYYY-MM-DD)에 반영
+  const dayKey = 'mingle_day_' + expDate;
+  let dayData = {};
   try {
-    localStorage.setItem('accountExpenses', JSON.stringify(window.accountExpenses));
-    if (window.abExpenses) localStorage.setItem('abExpenses', JSON.stringify(window.abExpenses));
-    if (window.expenses) localStorage.setItem('expenses', JSON.stringify(window.expenses));
-  } catch (e) {
-    console.error(e);
+    dayData = JSON.parse(localStorage.getItem(dayKey) || '{}');
+  } catch(e) {
+    dayData = {};
+  }
+  if (!Array.isArray(dayData.expenses)) dayData.expenses = [];
+  dayData.expenses.push(newEntry);
+  dayData.expenses.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+  localStorage.setItem(dayKey, JSON.stringify(dayData));
+  if (typeof saveDayDataLocal === 'function') {
+    try { saveDayDataLocal(expDate, dayData); } catch(e) {}
   }
 
-  // 4. 클라우드 자동 저장 트리거
-  if (typeof autoSaveToCloud === 'function') autoSaveToCloud();
-  if (typeof saveExpensesToFirebase === 'function') saveExpensesToFirebase();
-  if (typeof syncDataToFirebase === 'function') syncDataToFirebase();
+  // 2. 현재 열려있는 날짜 데이터 전역 변수 갱신
+  if (window.currentDayData && window.currentDayData.date === expDate) {
+    window.currentDayData.expenses = dayData.expenses;
+  }
 
-  // 5. 모달 닫기
+  // 3. ☁️ 파이어베이스 즉시 클라우드 동기화 (기존 데이터 보존)
+  if (typeof db !== 'undefined' && db) {
+    db.collection('diary_days').doc(expDate).set({
+      expenses: dayData.expenses
+    }, { merge: true }).catch(err => console.error("가계부 클라우드 동기화 에러:", err));
+  }
+
+  // 4. 모달 닫기
   const modal = document.getElementById('modalAbExpenseAdd');
   if (modal) modal.remove();
 
-  // 6. 화면 갱신
-  if (typeof renderAccountCalendar === 'function') renderAccountCalendar();
+  // 5. 가계부 달력 및 일일 지출 목록 화면 새로고침
+  window.abSelectedDate = expDate;
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
   if (typeof renderSelectedDayExpenses === 'function') renderSelectedDayExpenses();
-  if (typeof renderBudgetStatus === 'function') renderBudgetStatus();
-  if (typeof renderDrawerLobby === 'function') renderDrawerLobby();
-  if (typeof renderExpenses === 'function') renderExpenses();
-  if (typeof renderAccountBookView === 'function') renderAccountBookView();
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+  if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
 }
 
 // 🔄 가계부 추가 모달 대분류 변경 시 소분류 셀렉트 갱신
