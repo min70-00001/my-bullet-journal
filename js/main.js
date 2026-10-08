@@ -3537,6 +3537,14 @@ function renderAnniversaries() {
       `).join('');
     }
 
+// ⭐ 쩜오(0.5) 별점 계산 헬퍼 함수
+function getRatingStars(rating) {
+  const score = parseFloat(rating) || 5;
+  const fullStars = Math.floor(score);
+  const hasHalf = score % 1 !== 0;
+  return '⭐'.repeat(fullStars) + (hasHalf ? '✨' : '');
+}
+
     function openBookModal() {
       const modal = document.getElementById('bookDetailModal');
       if (!modal) return;
@@ -4822,14 +4830,6 @@ function renderBookShelf() {
       </div>
     `;
   }).join('');
-}
-
-// ⭐ 쩜오(0.5) 별점 계산 헬퍼 함수
-function getRatingStars(rating) {
-  const score = parseFloat(rating) || 5;
-  const fullStars = Math.floor(score);
-  const hasHalf = score % 1 !== 0;
-  return '⭐'.repeat(fullStars) + (hasHalf ? '✨' : '');
 }
 
 // 시간 입력창에 숫자만 치면 자동으로 HH:mm 형식 포맷팅해주는 스마트 함수
@@ -6414,4 +6414,37 @@ window.openBookModal = function() {
     }
   }
 })();
+}
+
+// ☁️ 가계부 설정 실시간 양방향 동기화 구독기
+let unsubscribeAccountSettings = null;
+function subscribeAccountBookSettings() {
+  if (typeof renderAccountBookFixed === 'function') renderAccountBookFixed();
+  if (typeof renderAccountBookBudget === 'function') renderAccountBookBudget();
+
+  if (!db) return;
+  if (unsubscribeAccountSettings) unsubscribeAccountSettings();
+  unsubscribeAccountSettings = db.collection('account_book_settings').doc('master')
+    .onSnapshot(doc => {
+      if (doc.exists) {
+        const d = doc.data() || {};
+        if (Array.isArray(d.fixedExpenses)) {
+          localStorage.setItem('mingle_fixed_expenses', JSON.stringify(d.fixedExpenses));
+          if (typeof renderAccountBookFixed === 'function') renderAccountBookFixed();
+          if (typeof checkFixedExpenseAlerts === 'function') checkFixedExpenseAlerts();
+        }
+        if (d.monthlyBudgetTarget !== undefined) {
+          localStorage.setItem('mingle_monthly_budget_target', d.monthlyBudgetTarget);
+          if (typeof renderAccountBookBudget === 'function') renderAccountBookBudget();
+        }
+        if (Array.isArray(d.payMethods)) {
+          localStorage.setItem('mingle_expense_pay_methods', JSON.stringify(d.payMethods));
+          if (typeof refreshPayMethodSelects === 'function') refreshPayMethodSelects();
+          if (typeof renderPayMethodSettings === 'function') renderPayMethodSettings();
+        }
+        if (d.subCategories) {
+          localStorage.setItem('mingle_expense_sub_categories', JSON.stringify(d.subCategories));
+        }
+      }
+    }, err => console.error(err));
 }
