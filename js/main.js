@@ -190,7 +190,23 @@ const SUB_CATEGORIES = {
       renderRoutineProgressTracker();
       renderHealthTracker();
       calculateDDays();
-      // 이전 접속 날짜 및 활성 탭 복원
+
+// 스마트 시간 포맷터 (숫자만 치면 00:00 자동 변환)
+function formatSmartTimeInput(el) {
+  if (!el) return;
+  let val = el.value.replace(/[^0-9]/g, '');
+  if (val.length >= 4) {
+    let hh = parseInt(val.slice(0, 2), 10);
+    let mm = parseInt(val.slice(2, 4), 10);
+    if (isNaN(hh) || hh > 23) hh = 23;
+    if (isNaN(mm) || mm > 59) mm = 59;
+    el.value = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+  } else {
+    el.value = val;
+  }
+}
+          
+  // 이전 접속 날짜 및 활성 탭 복원
   const savedDate = localStorage.getItem('mingle_active_date');
   if (savedDate && typeof loadDayData === 'function') {
     currentDate = savedDate;
@@ -4855,21 +4871,6 @@ window.DEFAULT_EXPENSE_CATS = {
   '의료/건강': ['병원/약국', '영양제/건강식'],
   '기타': ['경조사/선물', '기타지출']
 };
-
-// 스마트 시간 포맷터 (숫자만 치면 00:00 자동 변환)
-function formatSmartTimeInput(el) {
-  if (!el) return;
-  let val = el.value.replace(/[^0-9]/g, '');
-  if (val.length >= 4) {
-    let hh = parseInt(val.slice(0, 2), 10);
-    let mm = parseInt(val.slice(2, 4), 10);
-    if (isNaN(hh) || hh > 23) hh = 23;
-    if (isNaN(mm) || mm > 59) mm = 59;
-    el.value = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
-  } else {
-    el.value = val;
-  }
-}
 
 // 현재 시간 기본 세팅 함수 (HH:mm)
 function setExpenseNowTime() {
