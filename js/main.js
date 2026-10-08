@@ -5581,17 +5581,6 @@ window.openBudgetModal = function() {
   openAddAccountBookExpenseModal(typeof currentDate !== 'undefined' ? currentDate : '');
 };
 
-// 2. 시간 4자리 자동 포맷터 (숫자 치면 00:00)
-function handleTimeAutoFormat(el) {
-  let val = el.value.replace(/[^0-9]/g, '');
-  if (val.length > 4) val = val.slice(0, 4);
-  if (val.length >= 3) {
-    el.value = val.slice(0, 2) + ':' + val.slice(2);
-  } else {
-    el.value = val;
-  }
-}
-
 // 3. 대분류 변경 시 소분류 셀렉트 갱신
 function onAbAddMainCatChange() {
   const mainVal = document.getElementById('addAbExpMainCat').value;
