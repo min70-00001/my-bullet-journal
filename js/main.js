@@ -183,6 +183,7 @@ const SUB_CATEGORIES = {
       subscribeAnniversaries();
       subscribeClosetData();
 
+      renderMealSection();
       renderCalendar();
       renderAnniversaries();
       renderUpcomingEvents();
@@ -190,6 +191,7 @@ const SUB_CATEGORIES = {
       renderRoutineProgressTracker();
       renderHealthTracker();
       calculateDDays();
+
       // 이전 접속 날짜 및 활성 탭 복원
   const savedDate = localStorage.getItem('mingle_active_date');
   if (savedDate && typeof loadDayData === 'function') {
@@ -1198,6 +1200,119 @@ function setHobbySubTab(type) {
       saveRoutineDefs(defs);
       renderRoutineModalItems();
     }
+
+// 1. 공통 식후 컨디션 옵션 목록
+const MEAL_CONDITIONS = [
+  { value: "", text: "식후 컨디션" },
+  { value: "good", text: "🌿 속편함" },
+  { value: "satisfied", text: "😋 기분좋은 포만감" },
+  { value: "full", text: "🤰 과식/배부름" },
+  { value: "hungry", text: "🥣 허기짐/부족" },
+  { value: "tired", text: "🥱 식곤증" },
+  { value: "heavy", text: "🪨 더부룩/소화불량" }
+];
+
+// 식단 및 간식 섹션 구조 정의
+const MEAL_SECTIONS = [
+  {
+    type: 'meal',
+    id: 1,
+    title: '☀️ 아침',
+    hasFastSugar: true,
+    checkboxes: [{ id: 'mealVege_1', label: '🥗채단탄', fn: 'saveDayData()' }]
+  },
+  {
+    type: 'snack',
+    key: 'am',
+    title: '🥐 오전간식',
+    placeholder: '간식 메뉴 및 메모를 자유롭게 적어보세요...'
+  },
+  {
+    type: 'meal',
+    id: 2,
+    title: '🍚 점심',
+    hasFastSugar: false,
+    checkboxes: [
+      { id: 'mealAcv_2', label: '🍏애사비', fn: 'onMealAcvChange()' },
+      { id: 'mealVege_2', label: '🥗채단탄', fn: 'saveDayData()' },
+      { id: 'mealWalk_2', label: '🏃운동', fn: 'saveDayData()' }
+    ]
+  },
+  {
+    type: 'snack',
+    key: 'pm',
+    title: '🍪 오후간식',
+    placeholder: '오후 간식 메뉴 및 음료 메모...'
+  },
+  {
+    type: 'meal',
+    id: 3,
+    title: '🍲 저녁',
+    hasFastSugar: false,
+    checkboxes: [
+      { id: 'mealAcv_3', label: '🍏애사비', fn: 'onMealAcvChange()' },
+      { id: 'mealVege_3', label: '🥗채단탄', fn: 'saveDayData()' },
+      { id: 'mealWalk_3', label: '🏃운동', fn: 'saveDayData()' }
+    ]
+  },
+  {
+    type: 'snack',
+    key: 'night',
+    title: '🌙 밤간식',
+    placeholder: '밤간식 메뉴 및 메모를 자유롭게 적어보세요...'
+  }
+];
+
+// 3. 식단 & 간식 동적 렌더링 함수
+function renderMealSection() {
+  const container = document.getElementById('mealScheduleContainer');
+  if (!container) return;
+
+  const condOptionsHtml = MEAL_CONDITIONS
+    .map(c => `<option value="${c.value}">${c.text}</option>`)
+    .join('');
+
+  container.innerHTML = MEAL_SECTIONS.map(item => {
+    if (item.type === 'meal') {
+      const chkHtml = item.checkboxes.map(chk => 
+        `<label class="flex items-center gap-0.5 whitespace-nowrap cursor-pointer">
+          <input type="checkbox" id="${chk.id}" onchange="${chk.fn}">${chk.label}
+        </label>`
+      ).join('');
+
+      return `
+        <div class="p-2.5 rounded-xl bg-warm-50 border border-stone-200 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-stone-700">${item.title}</span>
+            <div class="flex items-center gap-1">
+              <input type="text" id="mealTime_${item.id}" placeholder="00:00" maxlength="5" onkeyup="formatTimeInput(this)" onchange="saveDayData()" class="w-14 text-center text-[10px] bg-white border border-stone-200 rounded px-1 py-0.5 focus:outline-none">
+              ${item.hasFastSugar ? `<input type="number" id="sugarFast" placeholder="공복" onchange="saveDayData()" class="w-12 text-[10px] bg-white border border-stone-200 rounded px-1 text-center">` : ''}
+              <input type="number" id="sugarPost_${item.id}" placeholder="식후" onchange="saveDayData()" class="w-12 text-[10px] bg-white border border-stone-200 rounded px-1 text-center">
+            </div>
+          </div>
+          <input type="text" id="mealMenu_${item.id}" placeholder="식단 메뉴..." onchange="saveDayData()" class="w-full bg-white border border-stone-200 rounded-lg p-1.5 text-xs">
+          <div class="flex items-center justify-between text-[11px]">
+            <div class="flex items-center gap-1.5">${chkHtml}</div>
+            <select id="mealCond_${item.id}" onchange="saveDayData()" class="bg-white border border-stone-200 rounded text-[10px] px-1 py-0.5 text-stone-600 focus:outline-none">
+              ${condOptionsHtml}
+            </select>
+          </div>
+          <div id="supplementsList_${item.id}" class="pt-1.5 border-t border-stone-200/50 space-y-1 mt-1 empty:hidden"></div>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="p-2.5 rounded-xl bg-[#faf7f2] border border-[#ebe4da] space-y-1.5 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-amber-900 text-[11px] flex items-center gap-1">${item.title}</span>
+            <input type="text" id="snackTime_${item.key}" placeholder="00:00" maxlength="5" onkeyup="formatTimeInput(this)" onchange="saveDayData()" class="w-14 text-center text-[10px] bg-white border border-stone-200 rounded px-1 py-0.5 focus:outline-none">
+          </div>
+          <input type="text" id="snackMenu_${item.key}" placeholder="${item.placeholder}" onchange="saveDayData()" class="w-full bg-white border border-stone-200 rounded px-2.5 py-1.5 text-[11px] placeholder:text-stone-300 focus:outline-none">
+        </div>
+      `;
+    }
+  }).join('');
+}
 
     // 식단 🍏 애사비 ↔ 상단 드링크 트래커 스마트 자동연동
     function onMealAcvChange() {
