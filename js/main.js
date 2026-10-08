@@ -4507,6 +4507,38 @@ function openBudgetSettingModal() {
   `;
 }
 
+// 📁 가계부 대분류(폴더) 추가 함수
+function addNewMainCategory() {
+  const input = document.getElementById('settingNewMainCatInput');
+  const val = input ? input.value.trim() : '';
+  if (!val) {
+    alert('추가할 대분류 이름을 입력해 주세요!');
+    return;
+  }
+
+  let cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
+  if (cats[val]) {
+    alert('이미 존재하는 대분류 이름이에요.');
+    return;
+  }
+
+  // 새로운 대분류 키에 빈 소분류 배열 생성
+  cats[val] = [];
+  if (typeof saveStoredCategories === 'function') {
+    saveStoredCategories(cats);
+  } else {
+    localStorage.setItem('mingle_expense_custom_cats', JSON.stringify(cats));
+  }
+
+  input.value = '';
+  
+  // 설정 모달 안의 대분류 태그 리스트와 셀렉트박스 즉시 갱신
+  if (typeof renderSettingMainCatSelect === 'function') renderSettingMainCatSelect();
+  if (typeof renderAccountBookCategoryList === 'function') renderAccountBookCategoryList();
+  
+  alert(`✨ '${val}' 대분류가 추가되었어요!`);
+}
+
 function confirmSaveBudgetSetting() {
   const val = document.getElementById('settingTotalBudget').value;
   if (!val) return;
