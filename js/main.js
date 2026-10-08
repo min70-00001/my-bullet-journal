@@ -6628,3 +6628,14 @@ function renderDailySupplements() {
     `;
   });
 }
+
+// ⚖️ 체중 자동 포맷터 (예: 525 입력 시 52.5로 자동 변환)
+function formatWeightInput(input) {
+  let val = input.value.replace(/[^0-9.]/g, ''); // 숫자와 점만 남김
+  
+  // 점이 없고 숫자만 3자리 이상 연속으로 입력되었을 때 (예: 525 -> 52.5)
+  if (!val.includes('.') && val.length >= 3) {
+    val = (parseFloat(val) / 10).toFixed(1);
+    input.value = val;
+  }
+}
