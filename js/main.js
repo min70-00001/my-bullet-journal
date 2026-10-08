@@ -184,6 +184,7 @@ const SUB_CATEGORIES = {
       subscribeClosetData();
 
       renderMealSection();
+      renderDailySupplements();
       renderCalendar();
       renderAnniversaries();
       renderUpcomingEvents();
@@ -6510,4 +6511,120 @@ if (origOpenDrawerBudget) {
     try { sessionStorage.setItem('mingle_drawer_subtab', 'budget'); } catch(e) {}
     origOpenDrawerBudget();
   };
+}
+
+// ==========================================
+// 💊 영양제 루틴 관리 로직
+// ==========================================
+
+// 1. 등록된 영양제 기본 목록 가져오기 / 저장하기
+function getMasterSupplements() {
+  const data = localStorage.getItem('mingle_master_supplements');
+  return data ? JSON.parse(data) : { 1: [], 2: [], 3: [] }; // 1: 아침, 2: 점심, 3: 저녁
+}
+
+function saveMasterSupplements(supps) {
+  localStorage.setItem('mingle_master_supplements', JSON.stringify(supps));
+  renderDailySupplements(); // 식단 카드 안의 체크박스 갱신
+}
+
+// 2. 모달 열기 / 닫기
+function openSupplementsModal() {
+  renderMasterSupplementsList();
+  const modal = document.getElementById('supplementsModal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeSupplementsModal() {
+  const modal = document.getElementById('supplementsModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+// 3. 모달 안에서 영양제 추가하기
+function addMasterSupplement() {
+  const mealTime = document.getElementById('newSuppMealTime').value;
+  const input = document.getElementById('newSuppName');
+  const name = input.value.trim();
+
+  if (!name) return;
+
+  const supps = getMasterSupplements();
+  if (!supps[mealTime]) supps[mealTime] = [];
+  
+  supps[mealTime].push(name);
+  saveMasterSupplements(supps);
+
+  input.value = '';
+  renderMasterSupplementsList();
+}
+
+// 4. 모달 안에서 영양제 삭제하기
+function removeMasterSupplement(mealTime, index) {
+  const supps = getMasterSupplements();
+  if (supps[mealTime]) {
+    supps[mealTime].splice(index, 1);
+    saveMasterSupplements(supps);
+    renderMasterSupplementsList();
+  }
+}
+
+// 5. 모달 안의 목록 렌더링
+function renderMasterSupplementsList() {
+  const container = document.getElementById('masterSupplementsList');
+  if (!container) return;
+
+  const supps = getMasterSupplements();
+  const mealTitles = { 1: '☀️ 아침', 2: '🍚 점심', 3: '🍲 저녁' };
+
+  let html = '';
+  [1, 2, 3].forEach(id => {
+    const list = supps[id] || [];
+    html += `
+      <div class="bg-stone-50 p-2 rounded-xl border border-stone-200/60">
+        <div class="font-bold text-stone-600 mb-1.5 flex items-center justify-between text-[11px]">
+          <span>${mealTitles[id]}</span>
+          <span class="text-stone-400 font-normal">${list.length}개</span>
+        </div>
+        ${list.length === 0 ? '<p class="text-[11px] text-stone-300 py-0.5">등록된 영양제가 없어요</p>' : ''}
+        <div class="flex flex-wrap gap-1">
+          ${list.map((name, idx) => `
+            <span class="inline-flex items-center gap-1 bg-white border border-stone-200 px-2 py-0.5 rounded-md text-[11px] text-stone-700">
+              ${name}
+              <button type="button" onclick="removeMasterSupplement('${id}',${idx})" class="text-stone-300 hover:text-rose-500 font-bold ml-0.5">×</button>
+            </span>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+// 6. 식단 카드 안(`supplementsList_1, 2, 3`)에 체크박스 그려주기
+function renderDailySupplements() {
+  const supps = getMasterSupplements();
+
+  [1, 2, 3].forEach(id => {
+    const container = document.getElementById(`supplementsList_${id}`);
+    if (!container) return;
+
+    const list = supps[id] || [];
+    if (list.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="flex flex-wrap items-center gap-2 pt-0.5">
+        <span class="text-[10px] text-stone-400 font-medium">💊 복용:</span>
+        ${list.map((name, idx) => `
+          <label class="flex items-center gap-1 text-[11px] text-stone-600 cursor-pointer">
+            <input type="checkbox" id="suppChk_${id}_${idx}" onchange="saveDayData()" class="rounded border-stone-300 text-stone-700 focus:ring-0">
+            <span>${name}</span>
+          </label>
+        `).join('')}
+      </div>
+    `;
+  });
 }
