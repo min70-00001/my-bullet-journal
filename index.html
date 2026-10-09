@@ -297,11 +297,11 @@
           <div>
             <div class="flex items-center justify-between mb-1">
               <span class="text-xs font-bold text-rose-700 flex items-center gap-1">🧶 오늘의 뜨개</span>
-              <button onclick="switchTab('hobby', 'knit')" title="쇼룸 바로가기" class="text-[10px] text-stone-400 hover:text-stone-700 font-bold">쇼룸 ↗</button>
+              <button onclick="switchTab('hobby', 'knit')" title="쇼룸 바로가기" class="text-[10px] text-stone-400 hover:text-stone-700 font-bold"> ↗</button>
             </div>
             <div class="space-y-1 mb-1.5">
               <select id="knitProjectSelect" onchange="onSelectKnitProjectFromWidget(this.value)" class="w-full bg-white border border-rose-200/80 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none">
-                <option value="">🧶 쇼룸 작품 불러오기...</option>
+                <option value="">🧶  작품 불러오기...</option>
               </select>
               <input type="text" id="knitCurrentProject" placeholder="진행 중 작품명..." onchange="saveDayData()" class="w-full bg-white border border-stone-200 rounded-lg p-1.5 text-xs">
             </div>
@@ -799,7 +799,7 @@
         <div class="flex items-center gap-3">
           <span class="text-2xl p-1.5 bg-stone-50 rounded-xl">🧶</span>
           <div>
-            <div class="font-bold text-stone-800 text-sm">뜨개 쇼룸</div>
+            <div class="font-bold text-stone-800 text-sm">뜨개 </div>
             <div class="text-[11px] text-stone-400">뜨개 작품 & 프로젝트</div>
           </div>
         </div>
@@ -964,8 +964,8 @@
         <div id="bookshelfList" class="space-y-2 max-h-96 overflow-y-auto pr-1"></div>
       </div>
 
-      <!-- 🧶 뜨개 쇼룸 상세 화면 (평소엔 hidden으로 숨겨져서 로비에 안 뜸!) -->
-      <div id="drawerSub_knit" class="hidden space-y-3">
+      <!-- 🧶 뜨개 쇼룸 서브 모듈 (id: drawerKnitModule) -->
+      <div id="drawerKnitModule" class="hidden space-y-3">
         
         <!-- 뜨개 쇼룸 & 아카이브 카드 본체 -->
         <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
@@ -989,7 +989,7 @@
             <button type="button" onclick="setKnitFilter('pause')" data-filter="pause" class="knit-tab-btn px-2.5 py-1 rounded-lg text-stone-500 hover:bg-stone-100 transition-colors">보관/중단 📦</button>
           </div>
 
-          <!-- 작품 목록 -->
+          <!-- 작품 목록 컨테이너 -->
           <div id="knittingShowroomList" class="space-y-2.5"></div>
         </div>
 
@@ -1761,6 +1761,6 @@
 </div>
 
 <!-- 📁 거대한 통합 두뇌 파일 1개만 연결 -->
-<script src="js/main.js?v=20261009_v2"></script>
+<script src="js/main.js?v=20261009_v3"></script>
 </body>
 </html>
