@@ -3687,44 +3687,245 @@ function renderAnniversaries() {
       modal.classList.remove('hidden');
     }
 
-    function renderKnittingShowroom() {
-      const list = document.getElementById('knittingShowroomList');
-      if (!list) return;
-      const items = JSON.parse(localStorage.getItem('mingle_knitting_showroom') || '[]');
-      if (items.length === 0) {
-        list.innerHTML = `<p class="text-xs text-rose-300 py-6 text-center">등록된 뜨개 작품이 없어요 🧶</p>`;
-        return;
-      }
-      list.innerHTML = items.map((item) => `
-        <div class="p-3 rounded-xl bg-rose-50/40 border border-rose-100 text-xs space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-stone-800 text-xs">🧶 ${item.title}</span>
-            <span class="text-[10px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-bold">${item.status || '진행중'}</span>
-          </div>
-          <div class="text-[11px] text-stone-600">실: <b>${item.yarn || '-'}</b> | 바늘: <b>${item.needle || '-'}</b></div>
-          <div class="text-[10px] text-stone-400">기간: ${item.startDate || ''} ~ ${item.endDate || '진행중'}</div>
-          ${item.memo ? `<p class="text-[11px] text-stone-700 bg-white p-2 rounded-lg border border-rose-50">${item.memo}</p>` : ''}
-        </div>
-      `).join('');
+// ==========================================
+// 🧶 뜨개 쇼룸 & 아카이브 (파이어베이스 + 모달 + 위젯 연동)
+// ==========================================
+
+let currentKnitFilter = 'all';
+
+// 1. 필터 탭 전환
+function setKnitFilter(filter) {
+  currentKnitFilter = filter;
+  document.querySelectorAll('.knit-tab-btn').forEach(btn => {
+    if (btn.dataset.filter === filter) {
+      btn.className = 'knit-tab-btn px-2.5 py-1 rounded-lg font-bold bg-stone-800 text-white transition-colors';
+    } else {
+      btn.className = 'knit-tab-btn px-2.5 py-1 rounded-lg text-stone-500 hover:bg-stone-100 transition-colors';
     }
+  });
+  renderKnittingShowroom();
+}
 
-    function openKnitModal() {
-      const title = prompt("작품 이름 (예: 미피 네트백):");
-      if (!title) return;
-      const yarn = prompt("사용한 실 (예: 오메가 베리, 모헤어):");
-      const needle = prompt("사용한 바늘 (예: 모사용 6호):");
-      const startDate = prompt("시작일 (YYYY-MM-DD):", currentDate);
-      const endDate = prompt("완성일 (진행 중이면 엔터):", "");
-      const status = endDate ? "완성(FO) 🥳" : "뜨는 중 ⏳";
-      const memo = prompt("도안 링크나 작업 팁 메모:");
+// 2. 모달 열기 (등록 / 수정 모드)
+function openKnitModal(editId = null) {
+  const modal = document.getElementById('knitCustomModal');
+  const titleEl = document.getElementById('knitModalTitle');
+  const editDocIdEl = document.getElementById('knitEditDocId');
 
-      const newKnit = { title, yarn, needle, startDate, endDate, status, memo, createdAt: Date.now() };
-      const items = JSON.parse(localStorage.getItem('mingle_knitting_showroom') || '[]');
-      items.unshift(newKnit);
+  // 폼 초기화
+  editDocIdEl.value = editId || '';
+  document.getElementById('modalKnitTitle').value = '';
+  document.getElementById('modalKnitToolType').value = 'crochet';
+  document.getElementById('modalKnitStatus').value = '뜨는 중 ⏳';
+  document.getElementById('modalKnitNeedle').value = '';
+  document.getElementById('modalKnitYarn').value = '';
+  document.getElementById('modalKnitStartDate').value = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().slice(0, 10);
+  document.getElementById('modalKnitEndDate').value = '';
+  document.getElementById('modalKnitMemo').value = '';
+
+  if (editId) {
+    titleEl.innerHTML = '<span>🧶</span> 뜨개 작품 수정';
+    const items = JSON.parse(localStorage.getItem('mingle_knitting_showroom') || '[]');
+    const target = items.find(item => item.id === editId);
+    if (target) {
+      document.getElementById('modalKnitTitle').value = target.title || '';
+      document.getElementById('modalKnitToolType').value = target.toolType || 'crochet';
+      document.getElementById('modalKnitStatus').value = target.status || '뜨는 중 ⏳';
+      document.getElementById('modalKnitNeedle').value = target.needle || '';
+      document.getElementById('modalKnitYarn').value = target.yarn || '';
+      document.getElementById('modalKnitStartDate').value = target.startDate || '';
+      document.getElementById('modalKnitEndDate').value = target.endDate || '';
+      document.getElementById('modalKnitMemo').value = target.memo || '';
+    }
+  } else {
+    titleEl.innerHTML = '<span>🧶</span> 뜨개 작품 등록';
+  }
+
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeKnitModal() {
+  const modal = document.getElementById('knitCustomModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+// 3. 작품 저장 (파이어베이스 실시간 저장 지원)
+function saveKnitModalProject() {
+  const editId = document.getElementById('knitEditDocId').value;
+  const title = document.getElementById('modalKnitTitle').value.trim();
+  if (!title) {
+    alert('작품 이름을 입력해주세요!');
+    return;
+  }
+
+  const projectData = {
+    title: title,
+    toolType: document.getElementById('modalKnitToolType').value,
+    status: document.getElementById('modalKnitStatus').value,
+    needle: document.getElementById('modalKnitNeedle').value.trim(),
+    yarn: document.getElementById('modalKnitYarn').value.trim(),
+    startDate: document.getElementById('modalKnitStartDate').value,
+    endDate: document.getElementById('modalKnitEndDate').value,
+    memo: document.getElementById('modalKnitMemo').value.trim()
+  };
+
+  let items = JSON.parse(localStorage.getItem('mingle_knitting_showroom') || '[]');
+
+  if (editId) {
+    // 수정
+    items = items.map(item => item.id === editId ? { ...item, ...projectData } : item);
+    localStorage.setItem('mingle_knitting_showroom', JSON.stringify(items));
+    renderKnittingShowroom();
+
+    if (typeof db !== 'undefined' && db) {
+      db.collection('knitting_showroom').doc(editId).set(projectData, { merge: true }).catch(console.error);
+    }
+  } else {
+    // 신규 등록
+    projectData.createdAt = Date.now();
+    if (typeof db !== 'undefined' && db) {
+      db.collection('knitting_showroom').add(projectData).then(docRef => {
+        projectData.id = docRef.id;
+        items.unshift(projectData);
+        localStorage.setItem('mingle_knitting_showroom', JSON.stringify(items));
+        renderKnittingShowroom();
+      }).catch(err => {
+        console.error(err);
+        projectData.id = 'local_' + Date.now();
+        items.unshift(projectData);
+        localStorage.setItem('mingle_knitting_showroom', JSON.stringify(items));
+        renderKnittingShowroom();
+      });
+    } else {
+      projectData.id = 'local_' + Date.now();
+      items.unshift(projectData);
       localStorage.setItem('mingle_knitting_showroom', JSON.stringify(items));
       renderKnittingShowroom();
-      if (db) db.collection('knitting_showroom').add(newKnit).catch(console.error);
     }
+  }
+
+  closeKnitModal();
+}
+
+// 4. 작품 삭제 (파이어베이스 실시간 삭제 지원)
+function deleteKnitProject(id) {
+  if (!confirm('이 뜨개 작품 기록을 삭제할까요?')) return;
+
+  let items = JSON.parse(localStorage.getItem('mingle_knitting_showroom') || '[]');
+  items = items.filter(item => item.id !== id);
+  localStorage.setItem('mingle_knitting_showroom', JSON.stringify(items));
+  renderKnittingShowroom();
+
+  if (typeof db !== 'undefined' && db) {
+    db.collection('knitting_showroom').doc(id).delete().catch(console.error);
+  }
+}
+
+// 5. 쇼룸 목록 렌더링 & 일일 위젯 연동 옵션 갱신
+function renderKnittingShowroom() {
+  const list = document.getElementById('knittingShowroomList');
+  const items = JSON.parse(localStorage.getItem('mingle_knitting_showroom') || '[]');
+
+  // 일일 위젯 선택 셀렉트박스 동기화
+  updateKnitWidgetSelect(items);
+
+  if (!list) return;
+
+  // 필터링 적용
+  const filtered = items.filter(item => {
+    if (currentKnitFilter === 'all') return true;
+    if (currentKnitFilter === 'progress') return (item.status || '').includes('뜨는 중');
+    if (currentKnitFilter === 'done') return (item.status || '').includes('완성');
+    if (currentKnitFilter === 'pause') return (item.status || '').includes('보관');
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<p class="text-xs text-rose-300 py-6 text-center">등록된 뜨개 작품이 없어요 🧶</p>`;
+    return;
+  }
+
+  const toolBadges = {
+    crochet: '<span class="text-[9px] font-medium text-amber-700 bg-amber-50 border border-amber-200/70 px-1.5 py-0.5 rounded">🪡 코바늘</span>',
+    knitting: '<span class="text-[9px] font-medium text-indigo-700 bg-indigo-50 border border-indigo-200/70 px-1.5 py-0.5 rounded">🥢 대바늘</span>',
+    etc: '<span class="text-[9px] font-medium text-stone-600 bg-stone-100 border border-stone-200 px-1.5 py-0.5 rounded">기타</span>'
+  };
+
+  list.innerHTML = filtered.map(item => {
+    const isDone = (item.status || '').includes('완성');
+    const isPause = (item.status || '').includes('보관');
+    const statusClass = isDone 
+      ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60' 
+      : (isPause ? 'bg-stone-100 text-stone-500 border border-stone-200' : 'bg-rose-100 text-rose-700');
+    
+    const toolBadge = toolBadges[item.toolType] || toolBadges.crochet;
+    const periodText = item.startDate ? `${item.startDate} ~ ${item.endDate || (isDone ? '완성' : '진행중')}` : '기간 미지정';
+
+    return `
+      <div class="p-3 rounded-xl bg-rose-50/40 border border-rose-100 text-xs space-y-1.5 relative group">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <span class="font-bold text-stone-800 text-xs flex items-center gap-1">🧶 ${item.title}</span>
+            ${toolBadge}
+            <span class="text-[10px] ${statusClass} px-1.5 py-0.5 rounded font-bold">${item.status || '뜨는 중 ⏳'}</span>
+          </div>
+          <div class="flex items-center gap-1 text-[11px]">
+            <button type="button" onclick="openKnitModal('${item.id}')" class="text-stone-400 hover:text-stone-700 px-1 py-0.5 rounded transition-colors">수정</button>
+            <span class="text-stone-200">|</span>
+            <button type="button" onclick="deleteKnitProject('${item.id}')" class="text-stone-300 hover:text-rose-500 px-1 py-0.5 rounded transition-colors">삭제</button>
+          </div>
+        </div>
+
+        <div class="text-[11px] text-stone-600 space-y-0.5">
+          <div>실: <b>${item.yarn || '-'}</b> <span class="text-stone-300">|</span> 바늘: <b>${item.needle || '-'}</b></div>
+          <div class="text-[10px] text-stone-400">기간: ${periodText}</div>
+        </div>
+
+        ${item.memo ? `<div class="text-[11px] text-stone-700 bg-white p-2 rounded-lg border border-rose-50 whitespace-pre-wrap">${item.memo}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// 6. 일일 위젯의 드롭다운 목록 자동 채우기 & 선택 시 연동
+function updateKnitWidgetSelect(items) {
+  const select = document.getElementById('knitProjectSelect');
+  if (!select) return;
+
+  const currentVal = select.value;
+  // '뜨는 중' 상태인 작품 우선 표시
+  const activeItems = items.filter(i => (i.status || '').includes('뜨는 중'));
+
+  let optionsHtml = '<option value="">🧶 쇼룸 작품 불러오기...</option>';
+  activeItems.forEach(item => {
+    optionsHtml += `<option value="${item.id}">${item.title} (${item.needle || '바늘 미지정'})</option>`;
+  });
+
+  select.innerHTML = optionsHtml;
+  if (currentVal) select.value = currentVal;
+}
+
+// 위젯에서 작품 선택 시 인풋 및 메모 자동 완성
+function onSelectKnitProjectFromWidget(selectedId) {
+  if (!selectedId) return;
+  const items = JSON.parse(localStorage.getItem('mingle_knitting_showroom') || '[]');
+  const target = items.find(i => i.id === selectedId);
+  if (!target) return;
+
+  const projectInput = document.getElementById('knitCurrentProject');
+  const tipInput = document.getElementById('knitSectionTip');
+
+  if (projectInput) {
+    projectInput.value = target.title;
+  }
+  if (tipInput && !tipInput.value) {
+    tipInput.value = `[${target.needle || ''}] ${target.yarn || ''}`.trim();
+  }
+
+  if (typeof saveDayData === 'function') {
+    saveDayData();
+  }
+}
 
     // 건강 관리 달력 & 추이 트래커
     function changeHealthMonth(delta) {
