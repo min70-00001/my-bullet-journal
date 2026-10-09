@@ -299,7 +299,12 @@
               <span class="text-xs font-bold text-rose-700 flex items-center gap-1">🧶 오늘의 뜨개</span>
               <button onclick="switchTab('hobby', 'knit')" title="쇼룸 바로가기" class="text-[10px] text-stone-400 hover:text-stone-700 font-bold">쇼룸 ↗</button>
             </div>
-            <input type="text" id="knitCurrentProject" placeholder="진행 중 작품명..." onchange="saveDayData()" class="w-full bg-stone-50 border border-stone-100 rounded px-1.5 py-1 text-xs mb-1.5">
+            <div class="space-y-1 mb-1.5">
+              <select id="knitProjectSelect" onchange="onSelectKnitProjectFromWidget(this.value)" class="w-full bg-white border border-rose-200/80 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none">
+                <option value="">🧶 쇼룸 작품 불러오기...</option>
+              </select>
+              <input type="text" id="knitCurrentProject" placeholder="진행 중 작품명..." onchange="saveDayData()" class="w-full bg-white border border-stone-200 rounded-lg p-1.5 text-xs">
+            </div>
             <div class="flex items-center justify-between bg-rose-50/50 p-1.5 rounded-xl border border-rose-100">
               <button onclick="updateKnitRow(-1)" class="w-6 h-6 rounded-lg bg-white border border-rose-200 font-bold text-rose-800 text-xs">-</button>
               <div class="text-center">
@@ -959,21 +964,31 @@
         <div id="bookshelfList" class="space-y-2 max-h-96 overflow-y-auto pr-1"></div>
       </div>
 
-      <!-- C. 뜨개 쇼룸 모듈 -->
-      <div id="drawerKnitModule" class="hidden bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
-        <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-          <div>
-            <h3 class="font-bold text-stone-800 text-xs flex items-center gap-1.5">
-              <span>🧶</span> 뜨개 쇼룸 & 아카이브
-            </h3>
-            <p class="text-[10px] text-stone-400 mt-0.5">편물 스펙, 사용 실, 바늘, 시작~완성일 기록</p>
-          </div>
-          <button onclick="openKnitModal()" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg font-bold border border-rose-200">
-            + 작품 등록
-          </button>
-        </div>
-        <div id="knittingShowroomList" class="space-y-2 max-h-96 overflow-y-auto pr-1"></div>
-      </div>
+<!-- 🧶 뜨개 쇼룸 & 아카이브 -->
+<div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
+  <div class="flex items-center justify-between">
+    <div>
+      <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+        <span>🧶</span> 뜨개 쇼룸 & 아카이브
+      </h3>
+      <p class="text-[10px] text-stone-400 mt-0.5">편물 스펙, 사용 실, 바늘, 시작~완성일 기록</p>
+    </div>
+    <button type="button" onclick="openKnitModal()" class="text-xs font-medium bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200/60 px-2.5 py-1 rounded-xl transition-colors">
+      + 작품 등록
+    </button>
+  </div>
+
+  <!-- 진행상황 필터 탭 -->
+  <div class="flex items-center gap-1 border-b border-stone-100 pb-2 text-[11px]" id="knitFilterTabs">
+    <button type="button" onclick="setKnitFilter('all')" data-filter="all" class="knit-tab-btn px-2.5 py-1 rounded-lg font-bold bg-stone-800 text-white transition-colors">전체</button>
+    <button type="button" onclick="setKnitFilter('progress')" data-filter="progress" class="knit-tab-btn px-2.5 py-1 rounded-lg text-stone-500 hover:bg-stone-100 transition-colors">뜨는 중 ⏳</button>
+    <button type="button" onclick="setKnitFilter('done')" data-filter="done" class="knit-tab-btn px-2.5 py-1 rounded-lg text-stone-500 hover:bg-stone-100 transition-colors">완성 ✨</button>
+    <button type="button" onclick="setKnitFilter('pause')" data-filter="pause" class="knit-tab-btn px-2.5 py-1 rounded-lg text-stone-500 hover:bg-stone-100 transition-colors">보관/중단 📦</button>
+  </div>
+
+  <!-- 기존 id인 knittingShowroomList 유지 -->
+  <div id="knittingShowroomList" class="space-y-2.5"></div>
+</div>
 
     </section>
 
@@ -1660,6 +1675,82 @@
 
     <div class="pt-2 border-t border-stone-100 flex justify-end">
       <button type="button" onclick="closeSupplementsModal()" class="bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg text-xs font-medium">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 🧶 뜨개 작품 등록/수정 모달 (파이어베이스 연동 & 코바늘/대바늘 분류) -->
+<div id="knitCustomModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-2xl w-full max-w-sm p-4 space-y-3.5 shadow-xl border border-stone-100">
+    <div class="flex items-center justify-between pb-2 border-b border-stone-100">
+      <h3 id="knitModalTitle" class="font-bold text-stone-800 text-sm flex items-center gap-1.5">
+        <span>🧶</span> 뜨개 작품 등록
+      </h3>
+      <button type="button" onclick="closeKnitModal()" class="text-stone-400 hover:text-stone-600 text-sm">✕</button>
+    </div>
+
+    <!-- 수정 대상 ID -->
+    <input type="hidden" id="knitEditDocId" value="">
+
+    <div class="space-y-2.5 text-xs">
+      <div>
+        <label class="block text-[10px] text-stone-500 mb-1">작품명 *</label>
+        <input type="text" id="modalKnitTitle" placeholder="예: 별이 조끼, 아기 담요" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
+      </div>
+
+      <!-- 도구 분류 & 진행 상태 -->
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-[10px] text-stone-500 mb-1">도구 종류</label>
+          <select id="modalKnitToolType" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 text-stone-700 focus:outline-none">
+            <option value="crochet">🪡 코바늘</option>
+            <option value="knitting">🥢 대바늘</option>
+            <option value="etc">기타</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] text-stone-500 mb-1">진행 상태</label>
+          <select id="modalKnitStatus" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 text-stone-700 focus:outline-none">
+            <option value="뜨는 중 ⏳">뜨는 중 ⏳</option>
+            <option value="완성 ✨">완성 ✨</option>
+            <option value="보관 📦">보관/중단 📦</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 바늘 호수 & 사용 실 -->
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-[10px] text-stone-500 mb-1">바늘 스펙</label>
+          <input type="text" id="modalKnitNeedle" placeholder="예: 모사용 7호, 4.5mm" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-[10px] text-stone-500 mb-1">사용 실</label>
+          <input type="text" id="modalKnitYarn" placeholder="예: 극세사실 초록 2볼" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
+        </div>
+      </div>
+
+      <!-- 시작일 & 완성일 -->
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-[10px] text-stone-500 mb-1">시작일</label>
+          <input type="date" id="modalKnitStartDate" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-[10px] text-stone-500 mb-1">완성일</label>
+          <input type="date" id="modalKnitEndDate" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 focus:outline-none">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-[10px] text-stone-500 mb-1">메모 / 도안 팁</label>
+        <textarea id="modalKnitMemo" rows="2" placeholder="게이지, 단수 메모, 도안 링크 등..." class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 focus:outline-none resize-none"></textarea>
+      </div>
+    </div>
+
+    <div class="pt-2 border-t border-stone-100 flex items-center justify-end gap-1.5">
+      <button type="button" onclick="closeKnitModal()" class="bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-1.5 rounded-lg text-xs font-medium">취소</button>
+      <button type="button" onclick="saveKnitModalProject()" class="bg-rose-500 hover:bg-rose-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-medium">저장</button>
     </div>
   </div>
 </div>
