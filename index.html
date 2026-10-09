@@ -964,31 +964,36 @@
         <div id="bookshelfList" class="space-y-2 max-h-96 overflow-y-auto pr-1"></div>
       </div>
 
-<!-- 🧶 뜨개 쇼룸 & 아카이브 -->
-<div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
-  <div class="flex items-center justify-between">
-    <div>
-      <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-        <span>🧶</span> 뜨개 쇼룸 & 아카이브
-      </h3>
-      <p class="text-[10px] text-stone-400 mt-0.5">편물 스펙, 사용 실, 바늘, 시작~완성일 기록</p>
-    </div>
-    <button type="button" onclick="openKnitModal()" class="text-xs font-medium bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200/60 px-2.5 py-1 rounded-xl transition-colors">
-      + 작품 등록
-    </button>
-  </div>
+      <!-- 🧶 뜨개 쇼룸 상세 화면 (평소엔 hidden으로 숨겨져서 로비에 안 뜸!) -->
+      <div id="drawerSub_knit" class="hidden space-y-3">
+        
+        <!-- 뜨개 쇼룸 & 아카이브 카드 본체 -->
+        <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                <span>🧶</span> 뜨개 쇼룸 & 아카이브
+              </h3>
+              <p class="text-[10px] text-stone-400 mt-0.5">편물 스펙, 사용 실, 바늘, 시작~완성일 기록</p>
+            </div>
+            <button type="button" onclick="openKnitModal()" class="text-xs font-medium bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200/60 px-2.5 py-1 rounded-xl transition-colors">
+              + 작품 등록
+            </button>
+          </div>
 
-  <!-- 진행상황 필터 탭 -->
-  <div class="flex items-center gap-1 border-b border-stone-100 pb-2 text-[11px]" id="knitFilterTabs">
-    <button type="button" onclick="setKnitFilter('all')" data-filter="all" class="knit-tab-btn px-2.5 py-1 rounded-lg font-bold bg-stone-800 text-white transition-colors">전체</button>
-    <button type="button" onclick="setKnitFilter('progress')" data-filter="progress" class="knit-tab-btn px-2.5 py-1 rounded-lg text-stone-500 hover:bg-stone-100 transition-colors">뜨는 중 ⏳</button>
-    <button type="button" onclick="setKnitFilter('done')" data-filter="done" class="knit-tab-btn px-2.5 py-1 rounded-lg text-stone-500 hover:bg-stone-100 transition-colors">완성 ✨</button>
-    <button type="button" onclick="setKnitFilter('pause')" data-filter="pause" class="knit-tab-btn px-2.5 py-1 rounded-lg text-stone-500 hover:bg-stone-100 transition-colors">보관/중단 📦</button>
-  </div>
+          <!-- 진행상황 필터 탭 -->
+          <div class="flex items-center gap-1 border-b border-stone-100 pb-2 text-[11px]" id="knitFilterTabs">
+            <button type="button" onclick="setKnitFilter('all')" data-filter="all" class="knit-tab-btn px-2.5 py-1 rounded-lg font-bold bg-stone-800 text-white transition-colors">전체</button>
+            <button type="button" onclick="setKnitFilter('progress')" data-filter="progress" class="knit-tab-btn px-2.5 py-1 rounded-lg text-stone-500 hover:bg-stone-100 transition-colors">뜨는 중 ⏳</button>
+            <button type="button" onclick="setKnitFilter('done')" data-filter="done" class="knit-tab-btn px-2.5 py-1 rounded-lg text-stone-500 hover:bg-stone-100 transition-colors">완성 ✨</button>
+            <button type="button" onclick="setKnitFilter('pause')" data-filter="pause" class="knit-tab-btn px-2.5 py-1 rounded-lg text-stone-500 hover:bg-stone-100 transition-colors">보관/중단 📦</button>
+          </div>
 
-  <!-- 기존 id인 knittingShowroomList 유지 -->
-  <div id="knittingShowroomList" class="space-y-2.5"></div>
-</div>
+          <!-- 작품 목록 -->
+          <div id="knittingShowroomList" class="space-y-2.5"></div>
+        </div>
+
+      </div>
 
     </section>
 
@@ -1756,6 +1761,6 @@
 </div>
 
 <!-- 📁 거대한 통합 두뇌 파일 1개만 연결 -->
-<script src="js/main.js?v=20261008_v5"></script>
+<script src="js/main.js?v=20261009_v2"></script>
 </body>
 </html>
