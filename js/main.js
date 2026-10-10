@@ -6999,14 +6999,14 @@ function moveNoteFolder(idx, delta) {
   renderNoteFolderManageList();
 }
 
-// 에디터 툴바 명령 & 상태 감지 (볼드, 형광펜 순환 등)
+// ✍️ 에디터 툴바 명령 (볼드, 밑줄, 리스트, 체크박스 등)
 function execNoteCommand(command, value = null) {
   document.getElementById('noteContentEditor').focus();
   document.execCommand(command, false, value);
   updateNoteToolbarState();
 }
 
-// 🎯 타이핑이나 클릭 시 버튼 눌림 상태(회색 배경) 실시간 반영
+// 🎯 확실하게 보이는 버튼 선택 상태 (노란색으로 강조)
 function updateNoteToolbarState() {
   const isBold = document.queryCommandState('bold');
   const isUnderline = document.queryCommandState('underline');
@@ -7016,13 +7016,13 @@ function updateNoteToolbarState() {
   const btnUnderline = document.getElementById('btnNoteUnderline');
   const btnStrike = document.getElementById('btnNoteStrike');
 
-  if (btnBold) btnBold.className = `p-1.5 rounded transition font-serif ${isBold ? 'bg-stone-300 text-stone-900 shadow-inner' : 'text-stone-600 hover:bg-stone-200'}`;
-  if (btnUnderline) btnUnderline.className = `p-1.5 rounded transition font-serif ${isUnderline ? 'bg-stone-300 text-stone-900 shadow-inner' : 'text-stone-600 hover:bg-stone-200'}`;
-  if (btnStrike) btnStrike.className = `p-1.5 rounded transition font-serif ${isStrike ? 'bg-stone-300 text-stone-900 shadow-inner' : 'text-stone-600 hover:bg-stone-200'}`;
+  if (btnBold) btnBold.className = `p-1.5 rounded transition font-serif ${isBold ? 'bg-amber-200 text-amber-900 shadow-inner' : 'text-stone-600 hover:bg-stone-200'}`;
+  if (btnUnderline) btnUnderline.className = `p-1.5 rounded transition font-serif ${isUnderline ? 'bg-amber-200 text-amber-900 shadow-inner' : 'text-stone-600 hover:bg-stone-200'}`;
+  if (btnStrike) btnStrike.className = `p-1.5 rounded transition font-serif ${isStrike ? 'bg-amber-200 text-amber-900 shadow-inner' : 'text-stone-600 hover:bg-stone-200'}`;
 }
 
-// 🎨 형광펜 다중 컬러 순환 & 해제 로직
-const highlightColors = ['#FEF08A', '#bbf7d0', '#fbcfe8', 'transparent']; // 노랑, 초록, 핑크, 투명(해제)
+// 🎨 형광펜 다중 컬러 순환 & 해제 로직 (모바일 호환성 강화)
+const highlightColors = ['#FEF08A', '#bbf7d0', '#fbcfe8', 'transparent']; 
 let currentHighlightIdx = 0;
 
 function cycleNoteHighlight() {
@@ -7031,17 +7031,18 @@ function cycleNoteHighlight() {
   const indicator = document.getElementById('noteHighlightIndicator');
   
   if (color === 'transparent') {
-    document.execCommand('backColor', false, 'rgba(0,0,0,0)'); // 배경 투명화로 해제
+    document.execCommand('backColor', false, 'rgba(0,0,0,0)');
+    // 일부 모바일 브라우저 대비 2중 처리
+    document.execCommand('hiliteColor', false, 'transparent'); 
     if (indicator) {
       indicator.style.backgroundColor = 'transparent';
-      // 투명일 때는 빗금(/) 표시
-      indicator.className = 'w-3 h-3 rounded-full bg-white inline-block border border-stone-300 relative after:content-["/"] after:absolute after:text-[9px] after:text-rose-400 after:-top-0.5 after:left-0.5 font-sans';
+      indicator.className = 'w-3 h-3 rounded-full bg-white inline-block border border-stone-300 relative after:content-["/"] after:absolute after:text-[10px] after:text-rose-400 after:-top-0.5 after:left-0.5 font-sans font-bold';
     }
   } else {
     document.execCommand('backColor', false, color);
     if (indicator) {
       indicator.style.backgroundColor = color;
-      indicator.className = 'w-3 h-3 rounded-full inline-block border border-stone-300'; // 빗금 제거
+      indicator.className = 'w-3 h-3 rounded-full inline-block border border-stone-300';
     }
   }
   
@@ -7049,7 +7050,7 @@ function cycleNoteHighlight() {
   updateNoteToolbarState();
 }
 
-// 🎯 커서 움직임, 타이핑 시 툴바 버튼 상태 동기화 이벤트
+// 🎯 커서 움직임이나 클릭 시 툴바 상태 자동 새로고침
 document.addEventListener('DOMContentLoaded', () => {
   const editor = document.getElementById('noteContentEditor');
   if (editor) {
@@ -7059,7 +7060,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// 구분점(•) 텍스트 강제 삽입 (CSS 충돌 무시)
 function insertNoteBullet() {
   document.getElementById('noteContentEditor').focus();
   document.execCommand('insertText', false, '• ');
