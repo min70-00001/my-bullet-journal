@@ -7189,3 +7189,328 @@ function renderNoteCards() {
     `;
   }).join('');
 }
+
+// ==========================================
+// 💸 가계부 스마트 업그레이드 (타임라인, 동기화, 세부예산, 배너 연동)
+// ==========================================
+
+// ---------------------------------------------------
+// 1. 오늘 배너에 "고정지출" 알림 추가 덮어쓰기
+// ---------------------------------------------------
+function updateTodaySpecialBanner() {
+  const banner = document.getElementById('todaySpecialEventBanner');
+  const textEl = document.getElementById('todaySpecialEventText');
+  if (!banner || !textEl) return;
+
+  const events = typeof getCalendarEvents === 'function' ? getCalendarEvents() : [];
+  const d = new Date(currentDate);
+  const dayOfWeek = d.getDay();
+  const dayNum = d.getDate();
+  const lastDayOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+
+  const hitEvents = events.filter(e => {
+    if (e.skippedDates && e.skippedDates.includes(currentDate)) return false;
+    if (e.isRepeat) return e.repeatDays && e.repeatDays.includes(dayOfWeek);
+    return currentDate >= e.start && currentDate <= e.end;
+  });
+
+  const tickets = (typeof getTicketsLocal === 'function' ? getTicketsLocal() : []).filter(t => t.date === currentDate);
+  const anniversaries = JSON.parse(localStorage.getItem('mingle_anniversaries') || '[]');
+  const parts = currentDate.split('-');
+  const m = parseInt(parts[1], 10);
+  const dStr = dayNum < 10 ? `0${dayNum}` : `${dayNum}`;
+  const mStr = m < 10 ? `0${m}` : `${m}`;
+
+  const hitAnniv = anniversaries.filter(a => {
+    if (!a.date) return false;
+    const aParts = a.date.replace(/\./g, '-').split('-');
+    return parseInt(aParts[aParts.length - 2], 10) === m && parseInt(aParts[aParts.length - 1], 10) === dayNum;
+  });
+
+  let holidayName = (typeof KR_HOLIDAYS !== 'undefined') ? (KR_HOLIDAYS[`${mStr}-${dStr}`] || KR_HOLIDAYS[currentDate] || '') : '';
+  const completedTickets = JSON.parse(localStorage.getItem('mingle_completed_tickets') || '[]').map(String);
+  const fixedExpenses = JSON.parse(localStorage.getItem('mingle_fixed_expenses') || '[]');
+
+  const blocks = [];
+
+  // A. 공휴일 & 기념일
+  if (holidayName) blocks.push(`<div class="flex items-center gap-1.5 bg-rose-50/80 border border-rose-200/80 px-2.5 py-1 rounded-xl text-[11px] text-rose-800 font-bold shadow-2xs"><span>🇰🇷</span><span>${holidayName}</span></div>`);
+  hitAnniv.forEach(a => {
+    const catIcon = a.category === '기념일' ? '💖' : (a.category === '이벤트' ? '🎉' : '🎂');
+    blocks.push(`<div class="flex items-center gap-1.5 bg-pink-50/80 border border-pink-200 px-2.5 py-1 rounded-xl text-[11px] text-pink-900 font-bold shadow-2xs"><span>${catIcon}</span><span class="truncate">${a.name}</span></div>`);
+  });
+
+  // B. 일반 일정
+  hitEvents.forEach(e => {
+    const catMeta = (typeof EVENT_CATEGORIES !== 'undefined' ? EVENT_CATEGORIES.find(c => c.key === e.category) : null) || { icon: '🗓️' };
+    const timeStr = e.startTime ? ` · ${e.startTime}${e.endTime ? '~' + e.endTime : ''}` : '';
+    blocks.push(`<div class="flex items-center gap-1.5 bg-stone-50 border border-stone-200 px-2.5 py-1 rounded-xl text-[11px] text-stone-700 font-bold shadow-2xs"><span>${catMeta.icon}</span><span class="truncate">${e.title}${timeStr}</span></div>`);
+  });
+
+  // C. 승차권/예매
+  const pureIcons = { bus: '🚌', train: '🚆', flight: '✈️' };
+  tickets.forEach(t => {
+    const isDone = completedTickets.includes(String(t.id));
+    const icon = pureIcons[t.type] || '🎫';
+    const cardStyle = isDone ? 'bg-stone-100/80 border-stone-200 text-stone-400 opacity-60' : 'bg-sky-50/70 border-sky-200 text-stone-700';
+    blocks.push(`
+      <div class="flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${cardStyle}">
+        <div class="flex items-center gap-1.5 min-w-0 flex-1"><span class="shrink-0">${icon}</span><span class="font-bold truncate ${isDone ? 'line-through text-stone-400' : ''}">${t.time ? t.time+' ' : ''}${t.depart||''} → ${t.arrive||''}</span></div>
+        <button onclick="toggleTicketComplete('${t.id}'); event.stopPropagation();" class="shrink-0 text-[10px] px-2 py-0.5 rounded-full font-bold ${isDone ? 'bg-stone-200 text-stone-500' : 'bg-sky-500 text-white'}">${isDone ? '완료됨 ↩' : '탑승완료 ✓'}</button>
+      </div>
+    `);
+  });
+
+  // 🔔 D. 고정지출 당일 알림 (신규 추가!)
+  fixedExpenses.forEach(f => {
+    if ((f.day === 'last' && dayNum === lastDayOfMonth) || parseInt(f.day, 10) === dayNum) {
+      blocks.push(`
+        <div class="flex items-center justify-between gap-2 bg-rose-50 border border-rose-200 px-2.5 py-1.5 rounded-xl text-[11px] text-rose-800 transition-all shadow-2xs">
+          <div class="flex items-center gap-1.5 min-w-0 flex-1">
+            <span class="shrink-0">💸</span>
+            <span class="font-bold truncate">고정지출: ${f.title}</span>
+          </div>
+          <span class="font-mono font-bold shrink-0">${Number(f.amount).toLocaleString()}원</span>
+        </div>
+      `);
+    }
+  });
+
+  if (blocks.length === 0) {
+    banner.classList.add('hidden');
+    return;
+  }
+  banner.classList.remove('hidden');
+  banner.className = 'w-full space-y-1.5 mb-2';
+  textEl.className = 'flex flex-col gap-1.5 w-full';
+  textEl.innerHTML = blocks.join('');
+}
+
+
+// ---------------------------------------------------
+// 2. 월간 타임라인 뷰 & 파이어베이스 전체 동기화 로직
+// ---------------------------------------------------
+let budgetListYear = new Date().getFullYear();
+let budgetListMonth = new Date().getMonth() + 1;
+
+function changeBudgetListMonth(delta) {
+  budgetListMonth += delta;
+  if (budgetListMonth < 1) { budgetListMonth = 12; budgetListYear--; } 
+  else if (budgetListMonth > 12) { budgetListMonth = 1; budgetListYear++; }
+  renderBudgetDashboard();
+  syncMonthlyExpensesFromFirebase(budgetListYear, budgetListMonth); // ☁️ 이동할 때마다 과거 데이터 싹 긁어오기
+}
+
+function syncMonthlyExpensesFromFirebase(year, month) {
+  if (!db) return;
+  const prefix = `${year}-${String(month).padStart(2, '0')}`;
+  const start = `${prefix}-01`;
+  const end = `${prefix}-31`;
+  
+  db.collection('diary_days')
+    .where(firebase.firestore.FieldPath.documentId(), '>=', start)
+    .where(firebase.firestore.FieldPath.documentId(), '<=', end)
+    .get().then(snapshot => {
+      let updated = false;
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.expenses && data.expenses.length > 0) {
+          const localKey = 'mingle_day_' + doc.id;
+          const localData = JSON.parse(localStorage.getItem(localKey) || '{}');
+          localData.expenses = data.expenses;
+          localStorage.setItem(localKey, JSON.stringify(localData));
+          updated = true;
+        }
+      });
+      if (updated) {
+        renderBudgetDashboard();
+        if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+        if (typeof renderAccountBookBudget === 'function') renderAccountBookBudget();
+      }
+    }).catch(console.error);
+}
+
+// 🗓️ 타임라인으로 전체 목록 렌더링
+function renderBudgetDashboard() {
+  const container = document.getElementById('budgetList');
+  if (!container) return;
+
+  const y = budgetListYear;
+  const m = budgetListMonth;
+  const prefix = `mingle_day_${y}-${String(m).padStart(2, '0')}`;
+  
+  let allItems = [];
+  let monthTotalSum = 0;
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(prefix)) {
+      const dayData = JSON.parse(localStorage.getItem(key) || '{}');
+      if (dayData.expenses) {
+        dayData.expenses.forEach(e => {
+          allItems.push({ ...e, _date: key.replace('mingle_day_', '') });
+          monthTotalSum += Number(e.amount) || 0;
+        });
+      }
+    }
+  }
+  
+  // 최신 날짜, 시간 순 정렬
+  allItems.sort((a, b) => {
+    const dateA = a.date || a._date;
+    const dateB = b.date || b._date;
+    if (dateB !== dateA) return dateB.localeCompare(dateA);
+    return (b.time || '').localeCompare(a.time || '');
+  });
+
+  // 네비게이션 헤더 및 총 지출 요약
+  let html = `
+    <div class="flex items-center justify-between bg-white border border-stone-200 rounded-xl p-2.5 mb-2 shadow-2xs">
+      <button onclick="changeBudgetListMonth(-1)" class="p-1 px-3 text-stone-400 hover:text-stone-700 font-bold bg-stone-50 rounded-lg">◀</button>
+      <div class="text-center">
+        <div class="font-bold text-stone-800 text-sm">${y}년 ${m}월</div>
+        <div class="text-[11px] text-rose-600 font-bold font-mono">총 -${monthTotalSum.toLocaleString()}원</div>
+      </div>
+      <button onclick="changeBudgetListMonth(1)" class="p-1 px-3 text-stone-400 hover:text-stone-700 font-bold bg-stone-50 rounded-lg">▶</button>
+    </div>
+  `;
+
+  if (allItems.length === 0) {
+    html += `<div class="bg-stone-50 rounded-xl p-6 text-center text-stone-400 text-xs border border-stone-200 mt-2"><p>${m}월 지출 내역이 없어요 🌿</p></div>`;
+  } else {
+    html += `<div class="space-y-2 mt-2">`;
+    let lastDate = '';
+    allItems.forEach(item => {
+      const itemDate = item.date || item._date;
+      if (lastDate !== itemDate) {
+        const parts = itemDate.split('-');
+        html += `<div class="text-[10px] font-bold text-stone-500 mt-4 mb-1 pl-1">${parseInt(parts[1])}월 ${parseInt(parts[2])}일</div>`;
+        lastDate = itemDate;
+      }
+      
+      const rawCat = item.category || item.subCategory || '';
+      const displaySubCat = rawCat.includes('/') ? rawCat.split('/').pop().trim() : (rawCat || '기타');
+      const itemIdx = getExpenseIndexForEdit(itemDate, item.id);
+
+      html += `
+        <div onclick="openEditAccountBookExpenseModal('${itemDate}', ${itemIdx})" class="p-3 rounded-xl bg-white border border-stone-200 flex items-center justify-between text-xs cursor-pointer hover:border-amber-300 transition shadow-2xs">
+          <div class="min-w-0 pr-2 flex-1">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="font-bold text-stone-800">${item.memo || item.title || '지출'}</span>
+              <span class="text-[9px] bg-amber-50 text-amber-800 px-1.5 py-0.2 rounded font-semibold border border-amber-200/50">${displaySubCat}</span>
+              <span class="text-[9px] text-stone-400 border border-stone-200 px-1 rounded">${item.payMethod || item.payment || ''}</span>
+            </div>
+            <div class="text-[10px] text-stone-400 mt-0.5 font-mono">${item.time || ''}</div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="font-bold font-mono text-rose-700">-${parseFloat(item.amount || 0).toLocaleString()}원</span>
+            <button type="button" onclick="event.stopPropagation(); deleteAccountBookExpenseEntry('${itemDate}', ${itemIdx})" class="text-stone-300 hover:text-rose-500 text-sm px-1 font-bold">✕</button>
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+  container.innerHTML = html;
+}
+
+function getExpenseIndexForEdit(dateStr, expId) {
+  const dayData = JSON.parse(localStorage.getItem('mingle_day_' + dateStr) || '{}');
+  if (!dayData.expenses) return -1;
+  return dayData.expenses.findIndex(e => String(e.id) === String(expId));
+}
+
+// ---------------------------------------------------
+// 3. 세부 예산 그룹 관리 (생활비, 가족비 등) 
+// ---------------------------------------------------
+function getBudgetGroups() {
+  const defaultGroups = [
+    { id: 'g1', name: '생활비 (식비/생활)', amount: 500000, mainCats: ['식비', '생활비'] },
+    { id: 'g2', name: '취미/여가 (쇼핑/문화)', amount: 200000, mainCats: ['쇼핑', '문화/여가'] }
+  ];
+  return JSON.parse(localStorage.getItem('mingle_budget_groups') || JSON.stringify(defaultGroups));
+}
+
+function saveBudgetGroups(groups) {
+  localStorage.setItem('mingle_budget_groups', JSON.stringify(groups));
+  renderAccountBookBudget();
+  if (db) db.collection('account_book_settings').doc('master').set({ budgetGroups: groups }, { merge: true }).catch(console.error);
+}
+
+function renderAccountBookBudget() {
+  const y = window.abCurrentYear;
+  const m = window.abCurrentMonth;
+  const monthData = getMonthExpensesData(y, m); // 7.js에 있는 월 총합 데이터 긁어오는 함수
+
+  const budgetTotal = parseInt(localStorage.getItem('mingle_monthly_budget_target') || '1000000', 10);
+  const totalAmtEl = document.getElementById('abTotalBudgetAmount');
+  const remainEl = document.getElementById('abRemainingBudgetLabel');
+  const barEl = document.getElementById('abBudgetProgressBar');
+
+  if (totalAmtEl) totalAmtEl.innerText = `${budgetTotal.toLocaleString()}원`;
+  const remain = budgetTotal - monthData.monthTotal;
+  
+  if (remainEl) {
+    if (remain >= 0) {
+      remainEl.className = 'text-xs font-semibold text-emerald-700';
+      remainEl.innerText = `총 잔여: ${remain.toLocaleString()}원`;
+    } else {
+      remainEl.className = 'text-xs font-semibold text-rose-600';
+      remainEl.innerText = `총 초과: ${Math.abs(remain).toLocaleString()}원!`;
+    }
+  }
+
+  if (barEl) {
+    const pct = Math.min(100, Math.round((monthData.monthTotal / budgetTotal) * 100));
+    barEl.style.width = `${pct}%`;
+    barEl.className = pct > 90 ? 'bg-rose-500 h-2 rounded-full transition-all duration-300' : 'bg-amber-500 h-2 rounded-full transition-all duration-300';
+  }
+
+  // 세부 예산 렌더링
+  const catListEl = document.getElementById('abCategoryBudgetList');
+  if (!catListEl) return;
+  
+  const groups = getBudgetGroups();
+  let html = `<div class="flex justify-between items-end mb-2"><span class="text-xs font-bold text-stone-600">세부 예산 그룹</span> <button onclick="alert('세부 예산 관리는 곧 HTML 업데이트 시 추가될 예정이에요! 조금만 기다려줘 칭구야!')" class="text-[10px] text-stone-400 border border-stone-200 px-2 py-0.5 rounded-lg hover:bg-stone-50">⚙️ 그룹 관리</button></div>`;
+
+  groups.forEach(g => {
+    // 해당 그룹에 속한 대분류들의 지출 합산
+    let spent = 0;
+    g.mainCats.forEach(cat => {
+      spent += (monthData.catTotals[cat] || 0);
+    });
+    
+    const pct = g.amount > 0 ? Math.round((spent / g.amount) * 100) : 0;
+    const isOver = spent > g.amount;
+    const barColor = isOver ? 'bg-rose-500' : (pct > 80 ? 'bg-orange-400' : 'bg-emerald-400');
+
+    html += `
+      <div class="bg-stone-50 border border-stone-200/60 p-2.5 rounded-xl space-y-1.5 mb-2 shadow-2xs">
+        <div class="flex justify-between items-center text-xs">
+          <span class="font-bold text-stone-700 flex items-center gap-1">🎯 ${g.name} <span class="text-[9px] font-normal text-stone-400">(${g.mainCats.join(', ')})</span></span>
+        </div>
+        <div class="flex justify-between items-center text-[10px]">
+          <span class="text-stone-500">예산: ${g.amount.toLocaleString()}원</span>
+          <span class="font-mono font-bold ${isOver ? 'text-rose-600' : 'text-stone-800'}">${spent.toLocaleString()}원 (${pct}%)</span>
+        </div>
+        <div class="w-full bg-stone-200 rounded-full h-1.5 overflow-hidden">
+          <div class="${barColor} h-1.5 rounded-full transition-all" style="width: ${Math.min(100, pct)}%"></div>
+        </div>
+      </div>
+    `;
+  });
+  
+  catListEl.innerHTML = html;
+}
+
+// ---------------------------------------------------
+// 4. 서랍 탭 열릴 때 동기화 훅 추가
+// ---------------------------------------------------
+const originalSetDrawerSubTab = typeof setDrawerSubTab === 'function' ? setDrawerSubTab : function(){};
+setDrawerSubTab = function(type) {
+  originalSetDrawerSubTab(type);
+  if (type === 'budget') {
+    // 가계부 열 때 현재 월 최신화
+    syncMonthlyExpensesFromFirebase(budgetListYear, budgetListMonth);
+  }
+};
