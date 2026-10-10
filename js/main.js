@@ -7021,8 +7021,8 @@ function updateNoteToolbarState() {
   if (btnStrike) btnStrike.className = `p-1.5 rounded transition font-serif ${isStrike ? 'bg-amber-200 text-amber-900 shadow-inner' : 'text-stone-600 hover:bg-stone-200'}`;
 }
 
-// 🎨 형광펜 다중 컬러 순환 & 해제 로직 (모바일 호환성 강화)
-const highlightColors = ['#FEF08A', '#bbf7d0', '#fbcfe8', 'transparent']; 
+// 🎨 형광펜 다중 컬러 순환 & 해제 로직 (모바일 호환성 강력 대응)
+const highlightColors = ['#FEF08A', '#bbf7d0', '#fbcfe8', 'clear']; // 노랑, 초록, 핑크, 해제(clear)
 let currentHighlightIdx = 0;
 
 function cycleNoteHighlight() {
@@ -7030,10 +7030,9 @@ function cycleNoteHighlight() {
   const color = highlightColors[currentHighlightIdx];
   const indicator = document.getElementById('noteHighlightIndicator');
   
-  if (color === 'transparent') {
-    document.execCommand('backColor', false, 'rgba(0,0,0,0)');
-    // 일부 모바일 브라우저 대비 2중 처리
-    document.execCommand('hiliteColor', false, 'transparent'); 
+  if (color === 'clear') {
+    // 💡 투명(transparent) 대신 흰색(#FFFFFF)으로 덮어서 확실하게 지우기 (모바일 100% 호환)
+    document.execCommand('backColor', false, '#FFFFFF');
     if (indicator) {
       indicator.style.backgroundColor = 'transparent';
       indicator.className = 'w-3 h-3 rounded-full bg-white inline-block border border-stone-300 relative after:content-["/"] after:absolute after:text-[10px] after:text-rose-400 after:-top-0.5 after:left-0.5 font-sans font-bold';
