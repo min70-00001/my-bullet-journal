@@ -5762,37 +5762,6 @@ function refreshPayMethodSelects() {
   });
 }
 
-// 탭 전환 (달력 / 예산 / 고정지출)
-function switchAccountBookTab(tab) {
-  const vCal = document.getElementById('abViewCalendar');
-  const vBud = document.getElementById('abViewBudget');
-  const vFix = document.getElementById('abViewFixed');
-  const bCal = document.getElementById('abTabBtnCalendar');
-  const bBud = document.getElementById('abTabBtnBudget');
-  const bFix = document.getElementById('abTabBtnFixed');
-
-  [vCal, vBud, vFix].forEach(el => el && el.classList.add('hidden'));
-  [bCal, bBud, bFix].forEach(el => {
-    if (el) {
-      el.className = 'py-1.5 rounded-lg hover:text-stone-700 transition';
-    }
-  });
-
-  if (tab === 'calendar') {
-    if (vCal) vCal.classList.remove('hidden');
-    if (bCal) bCal.className = 'py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-semibold transition';
-    renderAccountBookCalendar();
-  } else if (tab === 'budget') {
-    if (vBud) vBud.classList.remove('hidden');
-    if (bBud) bBud.className = 'py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-semibold transition';
-    renderAccountBookBudget();
-  } else if (tab === 'fixed') {
-    if (vFix) vFix.classList.remove('hidden');
-    if (bFix) bFix.className = 'py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-semibold transition';
-    renderAccountBookFixed();
-  }
-}
-
 // 가계부 달력 월 변경 (< > 버튼)
 function changeAccountBookMonth(delta) {
   window.abCurrentMonth += delta;
@@ -7195,7 +7164,7 @@ function renderNoteCards() {
 // ==========================================
 
 // ---------------------------------------------------
-// 1. 오늘 배너에 "고정지출" 알림 추가 덮어쓰기
+// 1. 배너 색상 업데이트 (고정지출 = 에메랄드 초록)
 // ---------------------------------------------------
 function updateTodaySpecialBanner() {
   const banner = document.getElementById('todaySpecialEventBanner');
@@ -7233,21 +7202,18 @@ function updateTodaySpecialBanner() {
 
   const blocks = [];
 
-  // A. 공휴일 & 기념일
   if (holidayName) blocks.push(`<div class="flex items-center gap-1.5 bg-rose-50/80 border border-rose-200/80 px-2.5 py-1 rounded-xl text-[11px] text-rose-800 font-bold shadow-2xs"><span>🇰🇷</span><span>${holidayName}</span></div>`);
   hitAnniv.forEach(a => {
     const catIcon = a.category === '기념일' ? '💖' : (a.category === '이벤트' ? '🎉' : '🎂');
     blocks.push(`<div class="flex items-center gap-1.5 bg-pink-50/80 border border-pink-200 px-2.5 py-1 rounded-xl text-[11px] text-pink-900 font-bold shadow-2xs"><span>${catIcon}</span><span class="truncate">${a.name}</span></div>`);
   });
 
-  // B. 일반 일정
   hitEvents.forEach(e => {
     const catMeta = (typeof EVENT_CATEGORIES !== 'undefined' ? EVENT_CATEGORIES.find(c => c.key === e.category) : null) || { icon: '🗓️' };
     const timeStr = e.startTime ? ` · ${e.startTime}${e.endTime ? '~' + e.endTime : ''}` : '';
     blocks.push(`<div class="flex items-center gap-1.5 bg-stone-50 border border-stone-200 px-2.5 py-1 rounded-xl text-[11px] text-stone-700 font-bold shadow-2xs"><span>${catMeta.icon}</span><span class="truncate">${e.title}${timeStr}</span></div>`);
   });
 
-  // C. 승차권/예매
   const pureIcons = { bus: '🚌', train: '🚆', flight: '✈️' };
   tickets.forEach(t => {
     const isDone = completedTickets.includes(String(t.id));
@@ -7261,11 +7227,11 @@ function updateTodaySpecialBanner() {
     `);
   });
 
-  // 🔔 D. 고정지출 당일 알림 (신규 추가!)
+  // 🔔 고정지출 당일 알림 (에메랄드 초록색 테마로 완벽 분리!)
   fixedExpenses.forEach(f => {
     if ((f.day === 'last' && dayNum === lastDayOfMonth) || parseInt(f.day, 10) === dayNum) {
       blocks.push(`
-        <div class="flex items-center justify-between gap-2 bg-rose-50 border border-rose-200 px-2.5 py-1.5 rounded-xl text-[11px] text-rose-800 transition-all shadow-2xs">
+        <div class="flex items-center justify-between gap-2 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl text-[11px] text-emerald-800 transition-all shadow-2xs">
           <div class="flex items-center gap-1.5 min-w-0 flex-1">
             <span class="shrink-0">💸</span>
             <span class="font-bold truncate">고정지출: ${f.title}</span>
@@ -7286,6 +7252,47 @@ function updateTodaySpecialBanner() {
   textEl.innerHTML = blocks.join('');
 }
 
+// ---------------------------------------------------
+// 2. 가계부 탭 4개 전환 (전체 리스트 탭 연결!)
+// ---------------------------------------------------
+function switchAccountBookTab(tab) {
+  const vCal = document.getElementById('abViewCalendar');
+  const vList = document.getElementById('abViewList'); // 전체 타임라인 뷰
+  const vBud = document.getElementById('abViewBudget');
+  const vFix = document.getElementById('abViewFixed');
+  
+  const bCal = document.getElementById('abTabBtnCalendar');
+  const bList = document.getElementById('abTabBtnList');
+  const bBud = document.getElementById('abTabBtnBudget');
+  const bFix = document.getElementById('abTabBtnFixed');
+
+  // 모든 화면 숨기고 탭 스타일 초기화
+  [vCal, vList, vBud, vFix].forEach(el => el && el.classList.add('hidden'));
+  [bCal, bList, bBud, bFix].forEach(el => {
+    if (el) el.className = 'flex-1 py-1.5 rounded-lg text-stone-500 hover:text-stone-700 font-medium transition flex items-center justify-center gap-1 text-[11px]';
+  });
+
+  const activeBtnClass = 'flex-1 py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-bold transition flex items-center justify-center gap-1 text-[11px]';
+
+  // 누른 탭만 켜기
+  if (tab === 'calendar') {
+    if (vCal) vCal.classList.remove('hidden');
+    if (bCal) bCal.className = activeBtnClass;
+    renderAccountBookCalendar();
+  } else if (tab === 'list') {
+    if (vList) vList.classList.remove('hidden');
+    if (bList) bList.className = activeBtnClass;
+    renderBudgetDashboard(); // 타임라인 리스트 불러오기!
+  } else if (tab === 'budget') {
+    if (vBud) vBud.classList.remove('hidden');
+    if (bBud) bBud.className = activeBtnClass;
+    renderAccountBookBudget();
+  } else if (tab === 'fixed') {
+    if (vFix) vFix.classList.remove('hidden');
+    if (bFix) bFix.className = activeBtnClass;
+    renderAccountBookFixed();
+  }
+}
 
 // ---------------------------------------------------
 // 2. 월간 타임라인 뷰 & 파이어베이스 전체 동기화 로직
