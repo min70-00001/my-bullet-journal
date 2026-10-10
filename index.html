@@ -1794,9 +1794,11 @@
   </div>
 </div>
 
-<!-- 📝 메모장 에디터 모달 (리치 텍스트 에디터 포함) -->
+<!-- 📝 메모 에디터 모달 (리치 텍스트 에디터) -->
 <div id="noteEditorModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 hidden">
-  <div class="bg-white rounded-2xl w-full max-w-lg h-[80vh] flex flex-col shadow-xl overflow-hidden">
+  <!-- 모바일 키보드 대응을 위해 h-[85dvh] 적용 -->
+  <div class="bg-white rounded-2xl w-full max-w-lg h-[85dvh] sm:h-[80vh] flex flex-col shadow-xl overflow-hidden mt-auto sm:mt-0 mb-auto sm:mb-0">
+    
     <!-- 모달 헤더 -->
     <div class="flex items-center justify-between p-3 border-b border-stone-100 shrink-0">
       <div class="flex items-center gap-2 flex-1">
@@ -1820,52 +1822,35 @@
         <span id="noteHighlightIndicator" class="w-3 h-3 rounded-full bg-[#FEF08A] inline-block border border-stone-300"></span>
       </button>
 
-      <div class="w-px h-4 bg-stone-300 mx-1"></div>
+      <div class="w-px h-4 bg-stone-300 mx-1 shrink-0"></div>
 
       <!-- 구분점 & 체크박스 -->
       <button type="button" onclick="insertNoteBullet()" class="p-1.5 text-stone-600 hover:bg-stone-200 rounded transition text-xs font-bold" title="글머리 기호">•</button>
       <button type="button" onclick="insertNoteCheckbox()" class="p-1.5 text-stone-600 hover:bg-stone-200 rounded transition text-[10px]" title="체크박스">☑</button>
 
-      <div class="w-px h-4 bg-stone-300 mx-1"></div>
+      <div class="w-px h-4 bg-stone-300 mx-1 shrink-0"></div>
 
       <!-- 퀵 삽입 -->
       <button type="button" onclick="insertNoteQuickData('date')" class="px-2 py-1 bg-white border border-stone-200 text-stone-600 hover:bg-stone-100 rounded text-[10px] whitespace-nowrap transition shadow-2xs">오늘 날짜</button>
       <button type="button" onclick="insertNoteQuickData('time')" class="px-2 py-1 bg-white border border-stone-200 text-stone-600 hover:bg-stone-100 rounded text-[10px] whitespace-nowrap transition shadow-2xs">현재 시간</button>
     </div>
 
-    <!-- 에디터 본문 (contenteditable) -->
-    <div id="noteContentEditor" contenteditable="true" class="flex-1 p-4 overflow-y-auto outline-none text-xs text-stone-700 space-y-1 prose prose-sm max-w-none" placeholder="여기에 내용을 작성하세요...">
-    </div>
+    <!-- 에디터 본문 (flex-1과 overflow-y-auto로 본문만 스크롤되도록 고정) -->
+    <div id="noteContentEditor" contenteditable="true" class="flex-1 p-4 overflow-y-auto outline-none text-xs text-stone-700 space-y-1 prose prose-sm max-w-none" placeholder="여기에 내용을 작성하세요..."></div>
 
-    <!-- 모달 하단 버튼 & 정보 -->
+    <!-- 모달 하단 버튼 -->
     <div class="p-3 border-t border-stone-100 flex justify-between items-center bg-stone-50 shrink-0">
-      <div class="text-[10px] text-stone-400">
-        최종 수정: <span id="noteLastModifiedLabel">-</span>
-      </div>
+      <div class="text-[10px] text-stone-400">최종 수정: <span id="noteLastModifiedLabel">-</span></div>
       <div class="flex gap-2">
         <button type="button" id="noteDeleteBtn" onclick="deleteCurrentNote()" class="hidden px-3 py-1.5 text-xs text-rose-500 hover:bg-rose-50 rounded-lg font-bold transition">삭제</button>
         <button type="button" onclick="saveNote()" class="px-4 py-1.5 text-xs bg-amber-400 hover:bg-amber-500 text-amber-950 rounded-lg font-bold shadow-xs transition">저장</button>
       </div>
     </div>
-    
-    <!-- 수정 중인 메모 ID 저장용 -->
     <input type="hidden" id="editingNoteId" value="">
-  </div>
-</div>
-
-<!-- 📂 새 폴더 만들기 모달 -->
-<div id="newFolderModal" class="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4 hidden">
-  <div class="bg-white rounded-2xl w-full max-w-xs p-5 shadow-xl">
-    <h3 class="text-sm font-bold text-stone-800 mb-3">새 폴더 만들기</h3>
-    <input type="text" id="newFolderNameInput" placeholder="폴더 이름 입력..." class="w-full border border-stone-200 rounded-lg p-2 text-xs mb-4 focus:outline-stone-400">
-    <div class="flex gap-2">
-      <button type="button" onclick="closeNewFolderModal()" class="flex-1 py-1.5 bg-stone-100 text-stone-600 rounded-xl text-xs font-medium hover:bg-stone-200">취소</button>
-      <button type="button" onclick="createNewFolder()" class="flex-1 py-1.5 bg-stone-800 text-white rounded-xl text-xs font-bold hover:bg-stone-900 shadow-sm">만들기</button>
-    </div>
   </div>
 </div>
     
 <!-- 📁 거대한 통합 두뇌 파일 1개만 연결 -->
-<script src="js/main.js?v=20261010_v3"></script>
+<script src="js/main.js?v=20261010_v4"></script>
 </body>
 </html>
