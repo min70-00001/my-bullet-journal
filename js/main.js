@@ -4458,8 +4458,22 @@ ${dateText}
 // 🗄️ 서랍장(가계부/독서/뜨개) 및 신규 탭 로직 덮어쓰기
 // ==========================================
 
-// 1. 하단 탭 이동 덮어쓰기
+// 1. 하단 탭 이동 덮어쓰기 (오늘 숏컷 & 서랍 로비 리셋 탑재)
 function switchTab(tab, subAction) {
+  // 🚀 1. '오늘(day)' 탭 클릭 시: 다른 날짜를 보고 있었더라도 진짜 오늘 날짜로 즉시 이동!
+  if (tab === 'day') {
+    if (typeof jumpToRealToday === 'function') {
+      jumpToRealToday();
+    }
+  }
+
+  // 🚀 2. '서랍(drawer)' 탭 클릭 시: 세부 모듈 보고 있었더라도 무조건 서랍 로비 허브로 복귀!
+  if (tab === 'drawer') {
+    if (typeof backToDrawerHub === 'function') {
+      backToDrawerHub();
+    }
+  }
+
   ['day', 'calendar', 'tracker', 'drawer'].forEach(t => {
     const view = document.getElementById(`view-${t}`);
     const nav = document.getElementById(`nav-${t}`);
@@ -4484,11 +4498,10 @@ function switchTab(tab, subAction) {
   } else if (tab === 'drawer') {
     if (subAction === 'knit') setDrawerSubTab('knit');
     else if (subAction === 'book') setDrawerSubTab('book');
-    else setDrawerSubTab('budget');
   }
 }
 
-// 2. 서랍장 내부 서브 탭 전환
+// 3. 서랍장 내부 서브 탭 전환
 // 서랍장 세부 화면 진입 (메모장/가계부/책장/쇼룸)
 function enterDrawerSub(type) {
   const hub = document.getElementById('drawerHubGrid');
