@@ -839,101 +839,146 @@
       </div>
     </div>
 
-  <!-- A. 똑똑 가계부 모듈 (풀패키지) -->
-  <div id="drawerBudgetModule" style="display: none;" class="hidden bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-4">
-    <!-- 헤더 & 설정 버튼 -->
-    <div class="flex items-center justify-between border-b border-stone-150 pb-2.5">
-      <div class="flex items-center gap-2">
-        <span class="text-base font-bold text-stone-800">💰 밍글 가계부</span>
-        <span id="accountBookMonthBadge" class="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">2026년 10월</span>
-      </div>
-      <button onclick="openExpenseCategorySettingModal()" class="text-xs text-stone-500 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+<!-- A. 가계부 서랍 메인 화면 모듈 -->
+<div id="drawerBudgetModule" class="hidden space-y-3">
+  <!-- 가계부 메인 카드 -->
+  <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
+    <div class="flex items-center justify-between">
+      <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+        <span>💰</span> 밍글 가계부 <span id="accountBookMonthBadge" class="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold text-[9px] ml-1">2026년 10월</span>
+      </h3>
+      <button type="button" onclick="openExpenseCategorySettingModal()" class="text-[10px] text-stone-500 hover:text-stone-700 bg-stone-100 px-2 py-1 rounded-lg font-medium transition flex items-center gap-1">
         ⚙️ 설정
       </button>
     </div>
 
-    <!-- 가계부 내부 4단 탭 네비게이션 (전체 탭 추가) -->
-    <div class="grid grid-cols-4 gap-1 bg-stone-100 p-1 rounded-xl text-xs font-medium text-stone-500 text-center">
-      <button id="abTabBtnCalendar" onclick="switchAccountBookTab('calendar')" class="py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-semibold transition">📅 달력</button>
-      <button id="abTabBtnAll" onclick="switchAccountBookTab('all')" class="py-1.5 rounded-lg hover:text-stone-700 transition">📋 전체</button>
-      <button id="abTabBtnBudget" onclick="switchAccountBookTab('budget')" class="py-1.5 rounded-lg hover:text-stone-700 transition">📊 예산</button>
-      <button id="abTabBtnFixed" onclick="switchAccountBookTab('fixed')" class="py-1.5 rounded-lg hover:text-stone-700 transition">🔔 고정</button>
+    <!-- 가계부 4단 탭 (달력 / 전체 / 예산 / 고정) -->
+    <div class="flex items-center bg-stone-100/70 p-1 rounded-xl w-full">
+      <button type="button" id="abTabBtnCalendar" onclick="switchAccountBookTab('calendar')" class="flex-1 py-1.5 rounded-lg bg-white text-stone-800 shadow-2xs font-bold transition flex items-center justify-center gap-1 text-[11px]">
+        <span>📅</span>달력
+      </button>
+      <button type="button" id="abTabBtnList" onclick="switchAccountBookTab('list')" class="flex-1 py-1.5 rounded-lg text-stone-500 hover:text-stone-700 font-medium transition flex items-center justify-center gap-1 text-[11px]">
+        <span>📋</span>전체
+      </button>
+      <button type="button" id="abTabBtnBudget" onclick="switchAccountBookTab('budget')" class="flex-1 py-1.5 rounded-lg text-stone-500 hover:text-stone-700 font-medium transition flex items-center justify-center gap-1 text-[11px]">
+        <span>📊</span>예산
+      </button>
+      <button type="button" id="abTabBtnFixed" onclick="switchAccountBookTab('fixed')" class="flex-1 py-1.5 rounded-lg text-stone-500 hover:text-stone-700 font-medium transition flex items-center justify-center gap-1 text-[11px]">
+        <span>🔔</span>고정
+      </button>
     </div>
 
-    <!-- 1. 지출 달력 뷰 -->
+    <!-- 뷰 1: 달력 (Calendar) -->
     <div id="abViewCalendar" class="space-y-3">
-      <div class="bg-amber-50/70 border border-amber-200/60 rounded-xl p-3 flex justify-between items-center text-xs">
-        <div>
-          <span class="text-stone-500 text-[11px]">이번 달 누적 지출</span>
-          <p id="abMonthTotalExpense" class="text-lg font-extrabold text-amber-900 font-mono mt-0.5">0원</p>
+      <div class="flex items-center justify-between text-xs mb-1 bg-stone-50 p-2 rounded-xl border border-stone-100">
+        <button type="button" onclick="changeAccountBookMonth(-1)" class="text-stone-400 hover:text-stone-700 px-2 py-1 font-bold">◀</button>
+        <div class="text-center flex-1">
+          <span id="abCalendarMonthTitle" class="font-bold text-stone-800">2026.10</span>
+          <div class="text-[10px] text-stone-400 mt-0.5" id="abMonthCountBadge">총 0건 기록</div>
         </div>
-        <div class="text-right">
-          <span class="text-stone-400 text-[10px]">고정지출 포함</span>
-          <p id="abMonthCountBadge" class="text-[11px] font-medium text-stone-600">총 0건 기록</p>
-        </div>
+        <button type="button" onclick="changeAccountBookMonth(1)" class="text-stone-400 hover:text-stone-700 px-2 py-1 font-bold">▶</button>
       </div>
-      <div class="bg-stone-50/60 rounded-xl p-3 border border-stone-200/60">
-        <div class="flex items-center justify-between mb-2">
-          <button onclick="changeAccountBookMonth(-1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">〈</button>
-          <span id="abCalendarMonthTitle" class="text-xs font-bold text-stone-700 font-mono">2026.10</span>
-          <button onclick="changeAccountBookMonth(1)" class="p-1 text-stone-400 hover:text-stone-700 font-bold">〉</button>
-        </div>
-        <div class="grid grid-cols-7 text-center text-[10px] text-stone-400 pb-1 mb-1 border-b border-stone-200/50">
-          <span class="text-red-400">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="text-blue-400">토</span>
-        </div>
-        <div id="abCalendarGrid" class="grid grid-cols-7 gap-1 text-center"></div>
+      <div class="flex items-center justify-between px-1">
+        <span class="text-[10px] font-bold text-stone-500">이번 달 총 지출</span>
+        <span id="abMonthTotalExpense" class="font-mono font-bold text-rose-600 text-sm">-0원</span>
       </div>
-      <div class="space-y-2 pt-1">
-        <div class="flex items-center justify-between text-xs">
-          <span class="font-bold text-stone-700 flex items-center gap-1.5">
-            <span id="abSelectedDateLabel">10월 5일 (오늘)</span> 지출
-          </span>
-          <span id="abSelectedDateTotal" class="font-mono font-semibold text-amber-800">0원</span>
+      <div class="grid grid-cols-7 gap-1 text-center mb-1">
+        <span class="text-[9px] font-bold text-rose-500">일</span>
+        <span class="text-[9px] font-bold text-stone-400">월</span>
+        <span class="text-[9px] font-bold text-stone-400">화</span>
+        <span class="text-[9px] font-bold text-stone-400">수</span>
+        <span class="text-[9px] font-bold text-stone-400">목</span>
+        <span class="text-[9px] font-bold text-stone-400">금</span>
+        <span class="text-[9px] font-bold text-blue-500">토</span>
+      </div>
+      <div id="abCalendarGrid" class="grid grid-cols-7 gap-1"></div>
+      <div class="mt-4 pt-3 border-t border-stone-100 space-y-2">
+        <div class="flex items-center justify-between px-1">
+          <span id="abSelectedDateLabel" class="text-xs font-bold text-stone-700">10월 10일</span>
+          <div id="abSelectedDateTotal"></div>
         </div>
-        <div id="abDayExpenseList" class="space-y-1.5 max-h-56 overflow-y-auto pr-1"></div>
+        <div id="abDayExpenseList" class="space-y-1.5"></div>
       </div>
     </div>
 
-    <!-- 1-2. 전체 내역 뷰 (새로 추가) -->
-    <div id="abViewAll" class="space-y-3 hidden">
-      <div class="flex justify-between items-center text-xs">
-        <span class="font-bold text-stone-700">이번 달 전체 지출 내역</span>
-      </div>
-      <div id="abAllExpenseList" class="space-y-1.5 max-h-[60vh] overflow-y-auto pr-1"></div>
+    <!-- 뷰 2: 전체 타임라인 리스트 (List) -->
+    <div id="abViewList" class="hidden space-y-2">
+      <div id="budgetList"></div>
     </div>
 
-    <!-- 2. 월간 예산 뷰 (세부 예산 UI 슬롯 확보) -->
-    <div id="abViewBudget" class="space-y-3 hidden">
-      <div class="bg-stone-50 p-3 rounded-xl border border-stone-200/60 space-y-2">
-        <div class="flex justify-between items-center text-xs">
-          <span class="text-stone-500 font-medium">이번 달 총 목표 예산</span>
-          <button onclick="openSetTotalBudgetModal()" class="text-[11px] text-amber-700 underline font-medium">예산 수정</button>
+    <!-- 뷰 3: 예산 탭 (Budget) -->
+    <div id="abViewBudget" class="hidden space-y-4">
+      <div class="p-3 bg-stone-50 rounded-xl border border-stone-200/60">
+        <div class="flex justify-between items-center text-[10px] text-stone-500 mb-1">
+          <span>이번 달 총 목표 예산</span>
+          <button type="button" onclick="openSetTotalBudgetModal()" class="text-amber-700 font-bold hover:underline">예산 수정</button>
         </div>
-        <div class="flex items-baseline justify-between">
-          <span id="abTotalBudgetAmount" class="text-xl font-bold font-mono text-stone-800">1,000,000원</span>
+        <div class="flex justify-between items-end mb-2">
+          <span id="abTotalBudgetAmount" class="text-lg font-mono font-bold text-stone-800">1,000,000원</span>
           <span id="abRemainingBudgetLabel" class="text-xs font-semibold text-emerald-700">잔여: 1,000,000원</span>
         </div>
-        <div class="w-full bg-stone-200 rounded-full h-2 overflow-hidden">
-          <div id="abBudgetProgressBar" class="bg-amber-500 h-2 rounded-full transition-all duration-300" style="width: 0%;"></div>
+        <div class="w-full bg-stone-200 rounded-full h-2 overflow-hidden shadow-inner">
+          <div id="abBudgetProgressBar" class="bg-amber-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
         </div>
       </div>
-      <div class="space-y-2">
-        <span class="text-xs font-bold text-stone-700">카테고리별 세부 예산 & 지출</span>
-        <div id="abCategoryBudgetList" class="space-y-1.5 text-xs"></div>
-      </div>
+      <div id="abCategoryBudgetList" class="space-y-2"></div>
     </div>
 
-    <!-- 3. 고정지출 뷰 -->
-    <div id="abViewFixed" class="space-y-3 hidden">
-      <div class="flex justify-between items-center">
-        <span class="text-xs text-stone-500">매월 정기적으로 나가는 구독료 & 공과금</span>
-        <button onclick="openAddFixedExpenseModal()" class="text-[11px] bg-amber-100 hover:bg-amber-200 text-amber-900 font-medium px-2 py-1 rounded-lg transition">
-          + 고정지출 추가
-        </button>
+    <!-- 뷰 4: 고정지출 탭 (Fixed) -->
+    <div id="abViewFixed" class="hidden space-y-3">
+      <div class="flex items-center justify-between">
+        <p class="text-[10px] text-stone-500">매월 반복되는 구독료, 공과금을 등록하세요.</p>
+        <button type="button" onclick="openAddFixedExpenseModal()" class="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-1 rounded-lg">+ 항목 추가</button>
       </div>
-      <div id="abFixedExpenseList" class="space-y-1.5 text-xs"></div>
+      <div id="abFixedExpenseList" class="space-y-2"></div>
     </div>
   </div>
+</div>
+
+<!-- ⚙️ 가계부 설정 모달 (카테고리 & 결제수단) -->
+<div id="modalExpenseCategorySetting" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-xl border border-stone-200 flex flex-col max-h-[85vh]">
+    <div class="flex items-center justify-between border-b border-stone-100 pb-2 shrink-0">
+      <h3 class="text-sm font-bold text-stone-800">⚙️ 가계부 환경설정</h3>
+      <button type="button" onclick="closeExpenseCategorySettingModal()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
+    </div>
+
+    <div class="overflow-y-auto space-y-5 no-scrollbar flex-1 pr-1">
+      <!-- 💳 결제 수단 관리 부활! -->
+      <section>
+        <h4 class="text-xs font-bold text-stone-700 mb-2 flex items-center gap-1"><span>💳</span> 결제수단 관리</h4>
+        <div class="flex gap-1.5 mb-2">
+          <input type="text" id="settingNewPayMethodInput" placeholder="새 결제수단 (예: 네이버페이)" class="flex-1 border border-stone-200 rounded-lg px-2 py-1.5 text-[11px] focus:outline-stone-400">
+          <button type="button" onclick="addNewPayMethod()" class="px-2.5 py-1.5 bg-stone-800 text-white rounded-lg text-[11px] font-bold">추가</button>
+        </div>
+        <div id="settingPayMethodTagList" class="flex flex-wrap gap-1.5"></div>
+      </section>
+
+      <!-- 📁 지출 카테고리 관리 -->
+      <section>
+        <h4 class="text-xs font-bold text-stone-700 mb-2 flex items-center gap-1"><span>📁</span> 지출 카테고리 관리</h4>
+        <div class="bg-stone-50 border border-stone-100 rounded-xl p-3 space-y-3">
+          <div class="flex gap-1.5">
+            <input type="text" id="settingNewMainCatInput" placeholder="새 대분류 (예: 경조사)" class="flex-1 border border-stone-200 rounded-lg px-2 py-1.5 text-[11px] focus:outline-stone-400">
+            <button type="button" onclick="addNewMainCategory()" class="px-2.5 py-1.5 bg-stone-800 text-white rounded-lg text-[11px] font-bold">추가</button>
+          </div>
+          <div class="h-px bg-stone-200/60 my-2"></div>
+          <div>
+            <label class="text-[10px] text-stone-500 block mb-1">대분류 선택</label>
+            <select id="settingMainCatSelect" onchange="renderSettingSubCats()" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs font-bold text-stone-700 bg-white"></select>
+          </div>
+          <div>
+            <div class="flex gap-1.5 mb-2">
+              <input type="text" id="settingNewSubCatInput" placeholder="해당 대분류에 소분류 추가..." class="flex-1 border border-stone-200 rounded-lg px-2 py-1.5 text-[11px] focus:outline-stone-400">
+              <button type="button" onclick="addNewSubCategory()" class="px-2.5 py-1.5 bg-amber-500 text-amber-950 rounded-lg text-[11px] font-bold">추가</button>
+            </div>
+            <div id="settingSubCatTagList" class="flex flex-wrap gap-1.5 min-h-[40px] p-2 bg-white rounded-lg border border-stone-100 shadow-inner"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
 
       <!-- B. 독서 책장 모듈 -->
       <div id="drawerBookModule" class="hidden bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
@@ -1860,6 +1905,6 @@
 </div>
 
 <!-- 📁 거대한 통합 두뇌 파일 1개만 연결 -->
-<script src="js/main.js?v=20261010_v7"></script>
+<script src="js/main.js?v=20261010_v8"></script>
 </body>
 </html>
