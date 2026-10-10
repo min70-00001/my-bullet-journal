@@ -6856,38 +6856,34 @@ function formatWeightInput(input) {
 }
 
 // ==========================================
-// 📝 메모장 서랍 (리치 에디터 & 파이어베이스 연동)
+// 📝 메모장 서랍 (리치 에디터, 폴더 관리 & 파이어베이스)
 // ==========================================
 
 let currentNoteFolderFilter = '전체';
-const defaultNoteFolders = ['전체', '개발일지', '쇼핑리스트', '자유메모'];
 let unsubscribeNotes = null;
 
-// 1. 파이어베이스 데이터 구독 및 로컬 저장
 function subscribeNotesData() {
   renderNoteFolderTabs();
   renderNoteCards();
-
   if (!db) return;
   if (unsubscribeNotes) unsubscribeNotes();
   unsubscribeNotes = db.collection('drawer_notes').doc('master').onSnapshot(doc => {
     if (doc.exists) {
-      const data = doc.data();
-      localStorage.setItem('mingle_notes_data', JSON.stringify(data));
+      localStorage.setItem('mingle_notes_data', JSON.stringify(doc.data()));
       renderNoteFolderTabs();
       renderNoteCards();
+      if (!document.getElementById('noteFolderManageModal').classList.contains('hidden')) renderNoteFolderManageList();
     }
   }, err => console.error(err));
 }
 
 function getNotesData() {
-  const defaultData = { folders: [...defaultNoteFolders], notes: [] };
+  const defaultData = { folders: ['미분류', '개발일지', '쇼핑리스트'], notes: [] };
   try {
     const data = JSON.parse(localStorage.getItem('mingle_notes_data'));
+    if (data && !data.folders) data.folders = ['미분류'];
     return data || defaultData;
-  } catch(e) {
-    return defaultData;
-  }
+  } catch(e) { return defaultData; }
 }
 
 function saveNotesData(data) {
@@ -6897,7 +6893,7 @@ function saveNotesData(data) {
   if (db) db.collection('drawer_notes').doc('master').set(data).catch(console.error);
 }
 
-// 2. 폴더 관리 & 탭 렌더링
+// 📂 폴더 탭 렌더링
 function setNoteFolderFilter(folder) {
   currentNoteFolderFilter = folder;
   renderNoteFolderTabs();
@@ -6910,32 +6906,44 @@ function renderNoteFolderTabs() {
   if (!container) return;
 
   const data = getNotesData();
-  const folders = data.folders || defaultNoteFolders;
+  const allFolders = ['전체', ...data.folders];
 
-  // 상단 폴더 탭 버튼들
-  container.innerHTML = folders.map(f => {
-    const isActive = currentNoteFolderFilter === f;
-    const activeClass = isActive 
-      ? 'bg-stone-800 text-white font-bold shadow-xs' 
-      : 'bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50';
+  container.innerHTML = allFolders.map(f => {
+    const activeClass = currentNoteFolderFilter === f ? 'bg-stone-800 text-white font-bold shadow-xs' : 'bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50';
     return `<button onclick="setNoteFolderFilter('${f}')" class="px-3 py-1.5 rounded-xl text-[11px] whitespace-nowrap transition-colors ${activeClass}">${f}</button>`;
-  }).join('') + `<button onclick="openNewFolderModal()" class="px-3 py-1.5 rounded-xl text-[11px] whitespace-nowrap bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 font-bold transition-colors">+ 새 폴더</button>`;
+  }).join('') + `<button onclick="openNoteFolderManager()" class="px-2 py-1.5 rounded-xl text-[11px] whitespace-nowrap bg-white text-stone-500 border border-stone-200 hover:bg-stone-50 font-bold transition-colors">⚙️ 관리</button>`;
 
-  // 모달 안의 폴더 선택 셀렉트 박스 ('전체' 제외)
   if (select) {
     const curVal = select.value;
-    select.innerHTML = folders.filter(f => f !== '전체').map(f => `<option value="${f}">${f}</option>`).join('');
-    if (curVal && folders.includes(curVal)) select.value = curVal;
+    select.innerHTML = data.folders.map(f => `<option value="${f}">${f}</option>`).join('');
+    if (curVal && data.folders.includes(curVal)) select.value = curVal;
   }
 }
 
-function openNewFolderModal() { 
-  document.getElementById('newFolderModal').classList.remove('hidden'); 
-  document.getElementById('newFolderNameInput').value = ''; 
+// ⚙️ 폴더 관리 모달 로직
+function openNoteFolderManager() {
+  document.getElementById('noteFolderManageModal').classList.remove('hidden');
+  renderNoteFolderManageList();
+}
+function closeNoteFolderManager() {
+  document.getElementById('noteFolderManageModal').classList.add('hidden');
+  document.getElementById('newFolderNameInput').value = '';
 }
 
-function closeNewFolderModal() { 
-  document.getElementById('newFolderModal').classList.add('hidden'); 
+function renderNoteFolderManageList() {
+  const container = document.getElementById('noteFolderManageList');
+  const data = getNotesData();
+  container.innerHTML = data.folders.map((f, idx) => `
+    <div class="flex items-center justify-between p-2 rounded-lg border border-stone-100 bg-stone-50 text-xs">
+      <span class="font-bold text-stone-700 flex-1 truncate">${f}</span>
+      <div class="flex items-center gap-1 shrink-0">
+        <button onclick="moveNoteFolder(${idx}, -1)" class="text-stone-400 hover:text-stone-600 px-1">▲</button>
+        <button onclick="moveNoteFolder(${idx}, 1)" class="text-stone-400 hover:text-stone-600 px-1">▼</button>
+        <button onclick="editNoteFolder('${f}')" class="text-stone-400 hover:text-amber-600 px-1">✏️</button>
+        ${f !== '미분류' ? `<button onclick="deleteNoteFolder('${f}')" class="text-stone-400 hover:text-rose-500 font-bold px-1">✕</button>` : `<span class="w-4"></span>`}
+      </div>
+    </div>
+  `).join('');
 }
 
 function createNewFolder() {
@@ -6945,38 +6953,72 @@ function createNewFolder() {
   if (!data.folders.includes(val)) {
     data.folders.push(val);
     saveNotesData(data);
+    document.getElementById('newFolderNameInput').value = '';
+    renderNoteFolderManageList();
+  } else {
+    alert('이미 존재하는 폴더명입니다.');
   }
-  closeNewFolderModal();
 }
 
-// 3. 에디터 툴바 기능 (볼드, 밑줄, 형광펜, 체크박스, 퀵 삽입)
+function editNoteFolder(oldName) {
+  const newName = prompt(`'${oldName}' 폴더의 새 이름을 입력하세요:`, oldName);
+  if (!newName || !newName.trim() || newName.trim() === oldName) return;
+  
+  const data = getNotesData();
+  if (data.folders.includes(newName.trim())) return alert('이미 존재하는 폴더명입니다.');
+  
+  const idx = data.folders.indexOf(oldName);
+  if (idx > -1) data.folders[idx] = newName.trim();
+  
+  data.notes.forEach(n => { if (n.folder === oldName) n.folder = newName.trim(); });
+  saveNotesData(data);
+  renderNoteFolderManageList();
+}
+
+function deleteNoteFolder(folderName) {
+  if (folderName === '미분류') return;
+  if (!confirm(`'${folderName}' 폴더를 삭제하시겠습니까?\n내부 메모들은 '미분류'로 자동 이동됩니다.`)) return;
+  
+  const data = getNotesData();
+  data.folders = data.folders.filter(f => f !== folderName);
+  data.notes.forEach(n => { if (n.folder === folderName) n.folder = '미분류'; });
+  
+  if (currentNoteFolderFilter === folderName) currentNoteFolderFilter = '전체';
+  saveNotesData(data);
+  renderNoteFolderManageList();
+}
+
+function moveNoteFolder(idx, delta) {
+  const data = getNotesData();
+  const targetIdx = idx + delta;
+  if (targetIdx < 0 || targetIdx >= data.folders.length) return;
+  const temp = data.folders[idx];
+  data.folders[idx] = data.folders[targetIdx];
+  data.folders[targetIdx] = temp;
+  saveNotesData(data);
+  renderNoteFolderManageList();
+}
+
+// ✍️ 에디터 툴바 명령 (볼드, 밑줄, 리스트, 체크박스 등)
 function execNoteCommand(command, value = null) {
   document.execCommand(command, false, value);
   document.getElementById('noteContentEditor').focus();
 }
 
-function toggleNoteHighlight() {
-  execNoteCommand('backColor', '#FEF08A'); // 꼬마전구 형광펜 (bg-yellow-200)
-}
-
 function insertNoteCheckbox() {
-  const id = 'chk_' + Date.now();
-  const html = `<input type="checkbox" id="${id}" class="mx-1 rounded text-amber-500 border-stone-300 focus:ring-0 cursor-pointer inline-block align-middle"> `;
-  execNoteCommand('insertHTML', html);
+  document.getElementById('noteContentEditor').focus();
+  document.execCommand('insertHTML', false, `<input type="checkbox" class="mx-1 rounded text-amber-500 border-stone-300 focus:ring-0 align-middle"> &nbsp;`);
 }
 
 function insertNoteQuickData(type) {
   const now = new Date();
-  let text = '';
-  if (type === 'date') {
-    text = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} `;
-  } else if (type === 'time') {
-    text = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} `;
-  }
-  execNoteCommand('insertText', text);
+  document.getElementById('noteContentEditor').focus();
+  let text = type === 'date' ? `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ` 
+                             : `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} `;
+  document.execCommand('insertText', false, text);
 }
 
-// 4. 모달 열기 / 닫기 / 저장 / 삭제
+// 📝 메모 저장 및 관리 로직
 function openNoteEditorModal(id = null) {
   const modal = document.getElementById('noteEditorModal');
   const titleInp = document.getElementById('noteTitleInput');
@@ -6992,28 +7034,24 @@ function openNoteEditorModal(id = null) {
     if (note) {
       idInp.value = id;
       titleInp.value = note.title;
-      folderSel.value = note.folder || '자유메모';
+      folderSel.value = note.folder || '미분류';
       editor.innerHTML = note.content;
       modLabel.innerText = note.updatedAt;
       delBtn.classList.remove('hidden');
     }
   } else {
-    // 새 메모
     idInp.value = '';
     titleInp.value = '';
-    folderSel.value = currentNoteFolderFilter === '전체' ? '자유메모' : currentNoteFolderFilter;
+    folderSel.value = currentNoteFolderFilter === '전체' ? '미분류' : currentNoteFolderFilter;
     editor.innerHTML = '';
     const now = new Date();
     modLabel.innerText = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
     delBtn.classList.add('hidden');
   }
   modal.classList.remove('hidden');
-  setTimeout(() => editor.focus(), 100);
 }
 
-function closeNoteEditorModal() { 
-  document.getElementById('noteEditorModal').classList.add('hidden'); 
-}
+function closeNoteEditorModal() { document.getElementById('noteEditorModal').classList.add('hidden'); }
 
 function saveNote() {
   const idInp = document.getElementById('editingNoteId').value;
@@ -7021,10 +7059,8 @@ function saveNote() {
   const folder = document.getElementById('noteFolderSelect').value;
   const content = document.getElementById('noteContentEditor').innerHTML;
   
-  // 제목도 없고 내용도 비어있으면 막기
   if (!title && !document.getElementById('noteContentEditor').textContent.trim()) { 
-    alert('메모 내용을 입력해주세요.'); 
-    return; 
+    return alert('메모 내용을 입력해주세요.'); 
   }
 
   const data = getNotesData();
@@ -7040,14 +7076,7 @@ function saveNote() {
       data.notes[idx].updatedAt = timeStr;
     }
   } else {
-    data.notes.push({
-      id: Date.now(),
-      title: title || '제목 없음',
-      folder,
-      content,
-      createdAt: timeStr,
-      updatedAt: timeStr
-    });
+    data.notes.push({ id: Date.now(), title: title || '제목 없음', folder, content, createdAt: timeStr, updatedAt: timeStr });
   }
 
   saveNotesData(data);
@@ -7063,7 +7092,6 @@ function deleteCurrentNote() {
   closeNoteEditorModal();
 }
 
-// 5. 메모 카드 목록 렌더링
 function renderNoteCards() {
   const container = document.getElementById('noteCardsContainer');
   const searchInp = document.getElementById('noteSearchInput');
@@ -7071,24 +7099,12 @@ function renderNoteCards() {
 
   const data = getNotesData();
   let notes = data.notes || [];
-
-  // 최신순(내림차순) 정렬
   notes.sort((a, b) => b.id - a.id);
 
-  // 1. 폴더 필터
-  if (currentNoteFolderFilter !== '전체') {
-    notes = notes.filter(n => n.folder === currentNoteFolderFilter);
-  }
-
-  // 2. 검색어 필터
-  if (searchInp) {
-    const query = searchInp.value.trim().toLowerCase();
-    if (query) {
-      notes = notes.filter(n => 
-        (n.title && n.title.toLowerCase().includes(query)) || 
-        (n.content && n.content.toLowerCase().includes(query))
-      );
-    }
+  if (currentNoteFolderFilter !== '전체') notes = notes.filter(n => n.folder === currentNoteFolderFilter);
+  if (searchInp && searchInp.value.trim()) {
+    const q = searchInp.value.trim().toLowerCase();
+    notes = notes.filter(n => (n.title && n.title.toLowerCase().includes(q)) || (n.content && n.content.toLowerCase().includes(q)));
   }
 
   if (notes.length === 0) {
@@ -7097,11 +7113,10 @@ function renderNoteCards() {
   }
 
   container.innerHTML = notes.map(n => {
-    // HTML 태그 제거하고 순수 텍스트만 뽑아서 미리보기 생성
     const tmp = document.createElement('div');
     tmp.innerHTML = n.content;
     const plainText = tmp.textContent || tmp.innerText || '';
-    const preview = plainText.length > 50 ? plainText.substring(0, 50) + '...' : plainText;
+    const preview = plainText.length > 40 ? plainText.substring(0, 40) + '...' : plainText;
 
     return `
       <div onclick="openNoteEditorModal(${n.id})" class="p-3 bg-white border border-stone-200 rounded-xl hover:border-amber-300 hover:shadow-md transition-all cursor-pointer flex flex-col h-32 group">
@@ -7110,9 +7125,7 @@ function renderNoteCards() {
           <span class="text-[9px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-medium border border-stone-200 shrink-0">${n.folder}</span>
         </div>
         <p class="text-[11px] text-stone-500 flex-1 overflow-hidden leading-relaxed break-all">${preview}</p>
-        <div class="text-[9px] text-stone-300 mt-2 pt-2 border-t border-stone-100 shrink-0 font-mono text-right">
-          ${n.updatedAt}
-        </div>
+        <div class="text-[9px] text-stone-300 mt-2 pt-2 border-t border-stone-100 shrink-0 font-mono text-right">${n.updatedAt}</div>
       </div>
     `;
   }).join('');
