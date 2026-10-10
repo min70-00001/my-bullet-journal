@@ -1794,7 +1794,7 @@
   </div>
 </div>
 
-<!-- 📝 메모 에디터 모달 (리치 텍스트 에디터 포함) -->
+<!-- 📝 메모장 에디터 모달 (리치 텍스트 에디터 포함) -->
 <div id="noteEditorModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 hidden">
   <div class="bg-white rounded-2xl w-full max-w-lg h-[80vh] flex flex-col shadow-xl overflow-hidden">
     <!-- 모달 헤더 -->
@@ -1808,27 +1808,27 @@
       <button type="button" onclick="closeNoteEditorModal()" class="text-stone-400 hover:text-stone-600 px-2 py-1 shrink-0">✕</button>
     </div>
 
-    <!-- 에디터 툴바 (텍스트 스타일 & 퀵 삽입) -->
-    <div class="flex items-center gap-1 p-2 bg-stone-50/50 border-b border-stone-100 shrink-0 overflow-x-auto no-scrollbar">
-      <!-- 텍스트 스타일 -->
-      <button type="button" onclick="execNoteCommand('bold')" class="p-1.5 text-stone-600 hover:bg-stone-200 rounded transition" title="굵게"><b class="font-serif">B</b></button>
-      <button type="button" onclick="execNoteCommand('underline')" class="p-1.5 text-stone-600 hover:bg-stone-200 rounded transition" title="밑줄"><u class="font-serif">U</u></button>
-      <button type="button" onclick="execNoteCommand('strikeThrough')" class="p-1.5 text-stone-600 hover:bg-stone-200 rounded transition" title="취소선"><s class="font-serif">S</s></button>
+    <!-- 에디터 툴바 (상태 감지 & 형광펜 순환 탑재) -->
+    <div class="flex items-center gap-1 p-2 bg-stone-50/50 border-b border-stone-100 shrink-0 overflow-x-auto no-scrollbar" id="noteToolbar">
+      <!-- 텍스트 스타일 (id 추가됨) -->
+      <button type="button" id="btnNoteBold" onclick="execNoteCommand('bold')" class="p-1.5 text-stone-600 hover:bg-stone-200 rounded transition font-serif" title="굵게"><b>B</b></button>
+      <button type="button" id="btnNoteUnderline" onclick="execNoteCommand('underline')" class="p-1.5 text-stone-600 hover:bg-stone-200 rounded transition font-serif" title="밑줄"><u>U</u></button>
+      <button type="button" id="btnNoteStrike" onclick="execNoteCommand('strikeThrough')" class="p-1.5 text-stone-600 hover:bg-stone-200 rounded transition font-serif" title="취소선"><s>S</s></button>
       
-      <!-- 형광펜 (배경색 노란색 고정) -->
-      <button type="button" onclick="toggleNoteHighlight()" class="p-1.5 text-stone-600 hover:bg-stone-200 rounded transition flex items-center gap-0.5" title="형광펜">
-        <span class="w-3 h-3 rounded-full bg-yellow-200 inline-block border border-stone-300"></span>
+      <!-- 형광펜 (순환형: 노랑->초록->핑크->해제) -->
+      <button type="button" onclick="cycleNoteHighlight()" class="p-1.5 text-stone-600 hover:bg-stone-200 rounded transition flex items-center gap-0.5" title="형광펜 색상변경/해제">
+        <span id="noteHighlightIndicator" class="w-3 h-3 rounded-full bg-[#FEF08A] inline-block border border-stone-300"></span>
       </button>
 
-      <div class="w-px h-4 bg-stone-300 mx-1"></div> <!-- 구분선 -->
+      <div class="w-px h-4 bg-stone-300 mx-1"></div>
 
-      <!-- 리스트 & 체크박스 -->
-      <button type="button" onclick="execNoteCommand('insertUnorderedList')" class="p-1.5 text-stone-600 hover:bg-stone-200 rounded transition text-xs font-bold" title="글머리 기호">•</button>
+      <!-- 구분점 & 체크박스 -->
+      <button type="button" onclick="insertNoteBullet()" class="p-1.5 text-stone-600 hover:bg-stone-200 rounded transition text-xs font-bold" title="글머리 기호">•</button>
       <button type="button" onclick="insertNoteCheckbox()" class="p-1.5 text-stone-600 hover:bg-stone-200 rounded transition text-[10px]" title="체크박스">☑</button>
 
-      <div class="w-px h-4 bg-stone-300 mx-1"></div> <!-- 구분선 -->
+      <div class="w-px h-4 bg-stone-300 mx-1"></div>
 
-      <!-- 퀵 데이터 삽입 (오늘 날짜, 현재 시간) -->
+      <!-- 퀵 삽입 -->
       <button type="button" onclick="insertNoteQuickData('date')" class="px-2 py-1 bg-white border border-stone-200 text-stone-600 hover:bg-stone-100 rounded text-[10px] whitespace-nowrap transition shadow-2xs">오늘 날짜</button>
       <button type="button" onclick="insertNoteQuickData('time')" class="px-2 py-1 bg-white border border-stone-200 text-stone-600 hover:bg-stone-100 rounded text-[10px] whitespace-nowrap transition shadow-2xs">현재 시간</button>
     </div>
