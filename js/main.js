@@ -8837,3 +8837,208 @@ function openBudgetStatsModal() {
 
   document.getElementById('modalBudgetStats').classList.remove('hidden');
 }
+
+// ==========================================
+// 🛠️ 카테고리 순서 강제 고정 & 새 UI 렌더링 & 지출 추가/삭제 버그 픽스
+// ==========================================
+
+// 1. 파이어베이스가 순서 섞는 거 방지 (배열로 순서 강제 기억!)
+function getStoredCategories() {
+  try {
+    const saved = localStorage.getItem('mingle_expense_custom_cats');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const orderedCats = {};
+      // _order 라는 비밀 키로 순서를 강제 기억해둠!
+      const orderArr = parsed._order || Object.keys(parsed).filter(k => k !== '_order');
+      orderArr.forEach(k => {
+        if (k !== '_order' && parsed[k]) orderedCats[k] = parsed[k];
+      });
+      // 혹시 누락된 거 있으면 뒤에 붙이기
+      Object.keys(parsed).forEach(k => {
+        if (k !== '_order' && !orderedCats[k]) orderedCats[k] = parsed[k];
+      });
+      if (Object.keys(orderedCats).length > 0) return orderedCats;
+    }
+  } catch(e) {}
+  
+  return window.DEFAULT_EXPENSE_CATS || {
+    '식비': ['식재료', '외식', '커피/간식'], '생활비': ['생필품', '공과금', '주거비'],
+    '교통': ['대중교통', '택시', '주유'], '쇼핑': ['의류', '뷰티', '기타'],
+    '문화/여가': ['영화/도서', '여행', '모임'], '의료/건강': ['병원', '약국', '운동'],
+    '가족': ['부모님', '반려동물'], '기타': ['기타']
+  };
+}
+
+function saveStoredCategories(cats) {
+  // 로컬과 클라우드에 저장할 때 _order 키를 몰래 넣어서 순서 박제!
+  const saveObj = { ...cats, _order: Object.keys(cats) };
+  localStorage.setItem('mingle_expense_custom_cats', JSON.stringify(saveObj));
+  
+  if (typeof db !== 'undefined' && db) {
+    db.collection('account_book_settings').doc('categories').set(saveObj).catch(e => console.error(e));
+  }
+  if (typeof refreshExpenseWidgetDropdowns === 'function') refreshExpenseWidgetDropdowns();
+  renderSettingCategoryFullList();
+}
+
+// 2. 새롭고 직관적인 카테고리 UI 렌더링
+function renderSettingCategoryFullList() {
+  const container = document.getElementById('settingCategoryFullList');
+  if (!container) return;
+  const cats = getStoredCategories();
+  
+  container.innerHTML = Object.keys(cats).map(main => `
+    <div class="bg-stone-50 border border-stone-200 rounded-xl p-2.5 shadow-2xs">
+      <div class="flex justify-between items-center mb-2 border-b border-stone-100 pb-2">
+        <div class="font-bold text-stone-800 text-xs">${main}</div>
+        <div class="flex gap-1">
+          <button onclick="moveMainCategory('${main}', -1)" class="text-[10px] text-stone-500 hover:text-stone-800 bg-white border border-stone-200 px-1.5 py-0.5 rounded transition">▲</button>
+          <button onclick="moveMainCategory('${main}', 1)" class="text-[10px] text-stone-500 hover:text-stone-800 bg-white border border-stone-200 px-1.5 py-0.5 rounded transition">▼</button>
+          <button onclick="deleteMainCategory('${main}')" class="text-[10px] text-rose-500 hover:text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded ml-1 transition">✕ 삭제</button>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-1.5 mb-2">
+        ${cats[main].map(sub => `
+          <div class="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 px-1.5 py-0.5 rounded-lg text-[10px] font-bold">
+            <span>${sub}</span>
+            <button onclick="deleteSubCategory('${main}', '${sub}')" class="text-amber-500 hover:text-rose-500 ml-1">✕</button>
+          </div>
+        `).join('')}
+      </div>
+      <div class="flex gap-1.5">
+        <input type="text" id="newSub_${main}" placeholder="소분류 추가..." class="flex-1 border border-stone-200 rounded-lg px-2 py-1 text-[10px] focus:outline-stone-400">
+        <button onclick="addNewSubCategoryBtn('${main}')" class="px-2.5 py-1 bg-amber-400 hover:bg-amber-500 text-amber-950 rounded-lg text-[10px] font-bold transition">추가</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// 모달 열릴 때 새 UI 그려주도록 덮어쓰기
+const originalOpenExpenseCategorySettingModal = typeof openExpenseCategorySettingModal === 'function' ? openExpenseCategorySettingModal : function(){};
+openExpenseCategorySettingModal = function() {
+  originalOpenExpenseCategorySettingModal();
+  renderSettingCategoryFullList();
+}
+
+// 카테고리 기능들 (프롬프트/버튼용)
+function addNewMainCategoryPrompt() {
+  const val = prompt('새로운 대분류 이름을 입력해주세요:');
+  if (!val || !val.trim()) return;
+  const cats = getStoredCategories();
+  if (cats[val.trim()]) return alert('이미 존재하는 대분류입니다.');
+  cats[val.trim()] = ['기타'];
+  saveStoredCategories(cats);
+}
+
+function addNewSubCategoryBtn(mainCat) {
+  const input = document.getElementById(`newSub_${mainCat}`);
+  const val = input.value.trim();
+  if (!val) return;
+  const cats = getStoredCategories();
+  if (!cats[mainCat]) cats[mainCat] = [];
+  if (cats[mainCat].includes(val)) return alert('이미 존재하는 소분류입니다.');
+  cats[mainCat].push(val);
+  saveStoredCategories(cats);
+}
+
+function moveMainCategory(mainCat, direction) {
+  const cats = getStoredCategories();
+  const keys = Object.keys(cats);
+  const idx = keys.indexOf(mainCat);
+  if (idx < 0) return;
+  const targetIdx = idx + direction;
+  if (targetIdx < 0 || targetIdx >= keys.length) return;
+  
+  const temp = keys[idx];
+  keys[idx] = keys[targetIdx];
+  keys[targetIdx] = temp;
+  
+  const newCats = {};
+  keys.forEach(k => newCats[k] = cats[k]);
+  saveStoredCategories(newCats);
+}
+
+function deleteMainCategory(mainCat) {
+  if (!confirm(`'${mainCat}' 대분류를 삭제하시겠습니까?`)) return;
+  const cats = getStoredCategories();
+  delete cats[mainCat];
+  if (Object.keys(cats).length === 0) cats['기타'] = ['기타'];
+  saveStoredCategories(cats);
+}
+
+function deleteSubCategory(mainCat, subCat) {
+  const cats = getStoredCategories();
+  if (!cats[mainCat]) return;
+  cats[mainCat] = cats[mainCat].filter(s => s !== subCat);
+  if (cats[mainCat].length === 0) cats[mainCat].push('기타');
+  saveStoredCategories(cats);
+}
+
+// 3. 🚨 잃어버린 지출 추가/삭제 버그 완벽 복구 🚨
+function saveNewAccountBookExpense() {
+  const dateVal = document.getElementById('addAbExpDate').value;
+  const timeVal = document.getElementById('addAbExpTime').value.trim() || '12:00';
+  const mainCat = document.getElementById('addAbExpMainCat').value;
+  const subCat = document.getElementById('addAbExpSubCat').value;
+  const titleVal = document.getElementById('addAbExpTitle').value.trim();
+  const payVal = document.getElementById('addAbExpPay').value;
+  const amtVal = parseFloat(document.getElementById('addAbExpAmt').value) || 0;
+
+  if (!dateVal) return alert('날짜를 입력해주세요.');
+  if (amtVal <= 0) return alert('금액을 입력해주세요.');
+
+  let dayData = {};
+  try { dayData = JSON.parse(localStorage.getItem('mingle_day_' + dateVal) || '{}'); } catch(e) {}
+  if (!Array.isArray(dayData.expenses)) dayData.expenses = [];
+
+  dayData.expenses.push({
+    id: 'exp_' + Date.now(),
+    date: dateVal, time: timeVal,
+    mainCat: mainCat, category: `${mainCat}/${subCat}`, subCategory: subCat,
+    title: titleVal || subCat, memo: titleVal || subCat,
+    payMethod: payVal, payment: payVal, amount: amtVal
+  });
+
+  if (typeof saveDayDataLocal === 'function') saveDayDataLocal(dateVal, dayData);
+  else localStorage.setItem('mingle_day_' + dateVal, JSON.stringify(dayData));
+
+  if (typeof db !== 'undefined' && db) {
+    db.collection('diary_days').doc(dateVal).set({ expenses: dayData.expenses }, { merge: true }).catch(console.error);
+  }
+
+  const modal = document.getElementById('modalAbExpenseAdd');
+  if (modal) modal.classList.add('hidden');
+  
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+  if (typeof renderBudgetDashboard === 'function') renderBudgetDashboard();
+}
+
+function deleteAccountBookExpenseEntry(dateStr, idx) {
+  if (!confirm('이 지출 내역을 삭제할까요?')) return;
+  let dayData = {};
+  try { dayData = JSON.parse(localStorage.getItem('mingle_day_' + dateStr) || '{}'); } catch(e) {}
+  if (!Array.isArray(dayData.expenses)) return;
+
+  const sorted = [...dayData.expenses].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  const targetItem = sorted[idx] || dayData.expenses[idx];
+  
+  if (targetItem) {
+    const realIdx = dayData.expenses.findIndex(e => String(e.id) === String(targetItem.id));
+    if (realIdx > -1) dayData.expenses.splice(realIdx, 1);
+  } else {
+    dayData.expenses.splice(idx, 1);
+  }
+
+  if (typeof saveDayDataLocal === 'function') saveDayDataLocal(dateStr, dayData);
+  else localStorage.setItem('mingle_day_' + dateStr, JSON.stringify(dayData));
+
+  if (typeof db !== 'undefined' && db) {
+    db.collection('diary_days').doc(dateStr).set({ expenses: dayData.expenses }, { merge: true }).catch(console.error);
+  }
+
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+  if (typeof renderBudgetDashboard === 'function') renderBudgetDashboard();
+}
