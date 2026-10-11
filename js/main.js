@@ -7526,3 +7526,162 @@ setDrawerSubTab = function(type) {
     syncMonthlyExpensesFromFirebase(budgetListYear, budgetListMonth);
   }
 };
+
+// ==========================================
+// 🎯 세부 예산 그룹 관리자 (모달 로직 & 렌더링 덮어쓰기)
+// ==========================================
+
+function openBudgetGroupManageModal() {
+  document.getElementById('modalBudgetGroupManage').classList.remove('hidden');
+  renderBudgetGroupManageList();
+  
+  // 가계부에 등록된 '대분류' 목록 불러와서 체크박스로 뿌려주기
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
+  const mainCats = Object.keys(cats);
+  const container = document.getElementById('newBgCatsContainer');
+  if (container) {
+    container.innerHTML = mainCats.map(c => `
+      <label class="flex items-center gap-1 text-[11px] text-stone-700 bg-stone-50 px-1.5 py-1 rounded border border-stone-100 cursor-pointer hover:bg-stone-100 transition">
+        <input type="checkbox" value="${c}" class="new-bg-cat-chk rounded text-amber-500 focus:ring-0 w-3 h-3 border-stone-300">
+        <span>${c}</span>
+      </label>
+    `).join('');
+  }
+}
+
+function closeBudgetGroupManageModal() {
+  document.getElementById('modalBudgetGroupManage').classList.add('hidden');
+  document.getElementById('newBgName').value = '';
+  document.getElementById('newBgAmount').value = '';
+}
+
+function renderBudgetGroupManageList() {
+  const container = document.getElementById('budgetGroupManageList');
+  if (!container) return;
+  const groups = typeof getBudgetGroups === 'function' ? getBudgetGroups() : [];
+  
+  if (groups.length === 0) {
+    container.innerHTML = '<p class="text-[11px] text-stone-400 text-center py-3 bg-stone-50 rounded-xl border border-stone-100 border-dashed">등록된 그룹이 없어요.</p>';
+    return;
+  }
+
+  container.innerHTML = groups.map(g => `
+    <div class="flex items-center justify-between p-2.5 rounded-xl border border-stone-200 bg-white shadow-2xs">
+      <div class="flex-1 min-w-0 pr-2">
+        <div class="font-bold text-stone-800 text-xs truncate">${g.name}</div>
+        <div class="text-[10px] text-stone-500 mt-0.5 truncate">${g.mainCats.join(', ')}</div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="font-mono font-bold text-amber-700 text-xs">${Number(g.amount).toLocaleString()}원</span>
+        <button onclick="deleteBudgetGroup('${g.id}')" class="text-stone-300 hover:text-rose-500 text-sm font-bold px-1.5 transition">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addNewBudgetGroup() {
+  const name = document.getElementById('newBgName').value.trim();
+  const amount = parseInt(document.getElementById('newBgAmount').value, 10);
+  const chks = document.querySelectorAll('.new-bg-cat-chk:checked');
+  const selectedCats = Array.from(chks).map(chk => chk.value);
+
+  if (!name) return alert('그룹 이름을 입력해주세요!');
+  if (isNaN(amount) || amount <= 0) return alert('예산을 올바르게 입력해주세요!');
+  if (selectedCats.length === 0) return alert('포함할 대분류를 1개 이상 체크해주세요!');
+
+  const groups = typeof getBudgetGroups === 'function' ? getBudgetGroups() : [];
+  groups.push({
+    id: 'bg_' + Date.now(),
+    name,
+    amount,
+    mainCats: selectedCats
+  });
+
+  if (typeof saveBudgetGroups === 'function') saveBudgetGroups(groups);
+  renderBudgetGroupManageList();
+  
+  document.getElementById('newBgName').value = '';
+  document.getElementById('newBgAmount').value = '';
+  document.querySelectorAll('.new-bg-cat-chk').forEach(chk => chk.checked = false);
+}
+
+function deleteBudgetGroup(id) {
+  if (!confirm('이 예산 그룹을 삭제할까요?\n(그룹만 삭제될 뿐, 기존 지출 내역은 지워지지 않아요!)')) return;
+  let groups = typeof getBudgetGroups === 'function' ? getBudgetGroups() : [];
+  groups = groups.filter(g => g.id !== id);
+  if (typeof saveBudgetGroups === 'function') saveBudgetGroups(groups);
+  renderBudgetGroupManageList();
+}
+
+// ---------------------------------------------------
+// ⚙️ "준비 중" 알림 제거하고 진짜 모달 띄우도록 화면 업데이트!
+// ---------------------------------------------------
+function renderAccountBookBudget() {
+  const y = window.abCurrentYear || new Date().getFullYear();
+  const m = window.abCurrentMonth || (new Date().getMonth() + 1);
+  const monthData = getMonthExpensesData(y, m);
+
+  const budgetTotal = parseInt(localStorage.getItem('mingle_monthly_budget_target') || '1000000', 10);
+  const totalAmtEl = document.getElementById('abTotalBudgetAmount');
+  const remainEl = document.getElementById('abRemainingBudgetLabel');
+  const barEl = document.getElementById('abBudgetProgressBar');
+
+  if (totalAmtEl) totalAmtEl.innerText = `${budgetTotal.toLocaleString()}원`;
+  const remain = budgetTotal - monthData.monthTotal;
+  
+  if (remainEl) {
+    if (remain >= 0) {
+      remainEl.className = 'text-xs font-semibold text-emerald-700';
+      remainEl.innerText = `총 잔여: ${remain.toLocaleString()}원`;
+    } else {
+      remainEl.className = 'text-xs font-semibold text-rose-600';
+      remainEl.innerText = `총 초과: ${Math.abs(remain).toLocaleString()}원!`;
+    }
+  }
+
+  if (barEl) {
+    const pct = Math.min(100, Math.round((monthData.monthTotal / budgetTotal) * 100));
+    barEl.style.width = `${pct}%`;
+    barEl.className = pct > 90 ? 'bg-rose-500 h-2 rounded-full transition-all duration-300' : 'bg-amber-500 h-2 rounded-full transition-all duration-300';
+  }
+
+  const catListEl = document.getElementById('abCategoryBudgetList');
+  if (!catListEl) return;
+  
+  const groups = typeof getBudgetGroups === 'function' ? getBudgetGroups() : [];
+  
+  // 버튼 클릭 시 찐 모달 오픈 연결!
+  let html = `<div class="flex justify-between items-end mb-2"><span class="text-xs font-bold text-stone-600">세부 예산 그룹</span> <button onclick="openBudgetGroupManageModal()" class="text-[10px] text-stone-500 border border-stone-200 bg-white shadow-2xs px-2 py-1 rounded-lg hover:bg-stone-50 font-bold transition">⚙️ 그룹 관리</button></div>`;
+
+  if (groups.length === 0) {
+     html += `<div class="p-4 text-center bg-stone-50 border border-stone-200 border-dashed rounded-xl text-xs text-stone-400">우측 상단 <b>그룹 관리</b>를 눌러<br>생활비, 반려케어 등 세부 예산을 설정해보세요!</div>`;
+  } else {
+      groups.forEach(g => {
+        let spent = 0;
+        g.mainCats.forEach(cat => {
+          spent += (monthData.catTotals[cat] || 0);
+        });
+        
+        const pct = g.amount > 0 ? Math.round((spent / g.amount) * 100) : 0;
+        const isOver = spent > g.amount;
+        const barColor = isOver ? 'bg-rose-500' : (pct > 80 ? 'bg-orange-400' : 'bg-emerald-400');
+
+        html += `
+          <div class="bg-stone-50 border border-stone-200/60 p-2.5 rounded-xl space-y-1.5 mb-2 shadow-2xs">
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-bold text-stone-700 flex items-center gap-1">🎯 ${g.name} <span class="text-[9px] font-normal text-stone-400">(${g.mainCats.join(', ')})</span></span>
+            </div>
+            <div class="flex justify-between items-center text-[10px]">
+              <span class="text-stone-500">예산: ${Number(g.amount).toLocaleString()}원</span>
+              <span class="font-mono font-bold ${isOver ? 'text-rose-600' : 'text-stone-800'}">${spent.toLocaleString()}원 (${pct}%)</span>
+            </div>
+            <div class="w-full bg-stone-200 rounded-full h-1.5 overflow-hidden">
+              <div class="${barColor} h-1.5 rounded-full transition-all" style="width: ${Math.min(100, pct)}%"></div>
+            </div>
+          </div>
+        `;
+      });
+  }
+  
+  catListEl.innerHTML = html;
+}
