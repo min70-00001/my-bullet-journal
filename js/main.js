@@ -8581,3 +8581,67 @@ function saveEditedAccountBookExpense(oldDate, idx) {
   if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
   if (typeof renderBudgetDashboard === 'function') renderBudgetDashboard();
 }
+
+// ==========================================
+// ☁️ 가계부 환경설정(카테고리, 예산그룹) 기기간 실시간 동기화 로직
+// ==========================================
+
+let unsubscribeAbCategories = null;
+let unsubscribeAbMaster = null;
+
+function subscribeAccountBookSettings() {
+  if (typeof db === 'undefined' || !db) return;
+  
+  // 1. 대분류/소분류 실시간 다운로드 및 동기화
+  if (unsubscribeAbCategories) unsubscribeAbCategories();
+  unsubscribeAbCategories = db.collection('account_book_settings').doc('categories').onSnapshot(doc => {
+    if (doc.exists) {
+      const data = doc.data();
+      if (Object.keys(data).length > 0) {
+        // 클라우드 데이터로 로컬 덮어쓰기
+        localStorage.setItem('mingle_expense_custom_cats', JSON.stringify(data));
+        
+        // 만약 카테고리 설정 모달이 열려있다면 화면도 즉시 갱신
+        const sel = document.getElementById('settingMainCatSelect');
+        const modal = document.getElementById('modalExpenseCategorySetting');
+        if (sel && modal && !modal.classList.contains('hidden')) {
+          const curVal = sel.value;
+          sel.innerHTML = Object.keys(data).map(k => `<option value="${k}">${k}</option>`).join('');
+          if (data[curVal]) sel.value = curVal;
+          if (typeof renderSettingSubCats === 'function') renderSettingSubCats();
+        }
+        
+        // 오늘 페이지 위젯 카테고리도 즉시 갱신
+        if (typeof refreshExpenseWidgetDropdowns === 'function') refreshExpenseWidgetDropdowns();
+      }
+    }
+  }, err => console.error('카테고리 동기화 에러:', err));
+
+  // 2. 세부 예산 그룹 실시간 다운로드 및 동기화
+  if (unsubscribeAbMaster) unsubscribeAbMaster();
+  unsubscribeAbMaster = db.collection('account_book_settings').doc('master').onSnapshot(doc => {
+    if (doc.exists) {
+      const data = doc.data();
+      if (data.budgetGroups && Array.isArray(data.budgetGroups)) {
+        localStorage.setItem('mingle_budget_groups', JSON.stringify(data.budgetGroups));
+        
+        // 예산 탭 갱신
+        if (typeof renderAccountBookBudget === 'function') renderAccountBookBudget();
+        
+        // 예산 그룹 관리 모달이 열려있다면 갱신
+        const bgModal = document.getElementById('modalBudgetGroupManage');
+        if (bgModal && !bgModal.classList.contains('hidden') && typeof renderBudgetGroupManageList === 'function') {
+          renderBudgetGroupManageList();
+        }
+      }
+    }
+  }, err => console.error('예산 그룹 동기화 에러:', err));
+}
+
+// 앱 켜질 때 파이어베이스 세팅 기다렸다가 동기화 싹 시작하기!
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(subscribeAccountBookSettings, 1500); 
+});
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  setTimeout(subscribeAccountBookSettings, 1500);
+}
