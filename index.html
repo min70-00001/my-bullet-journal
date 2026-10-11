@@ -954,28 +954,15 @@
         <div id="settingPayMethodTagList" class="flex flex-wrap gap-1.5"></div>
       </section>
 
-      <!-- 📁 지출 카테고리 관리 -->
-      <section>
-        <h4 class="text-xs font-bold text-stone-700 mb-2 flex items-center gap-1"><span>📁</span> 지출 카테고리 관리</h4>
-        <div class="bg-stone-50 border border-stone-100 rounded-xl p-3 space-y-3">
-          <div class="flex gap-1.5">
-            <input type="text" id="settingNewMainCatInput" placeholder="새 대분류 (예: 경조사)" class="flex-1 border border-stone-200 rounded-lg px-2 py-1.5 text-[11px] focus:outline-stone-400">
-            <button type="button" onclick="addNewMainCategory()" class="px-2.5 py-1.5 bg-stone-800 text-white rounded-lg text-[11px] font-bold">추가</button>
+      <!-- 📁 지출 카테고리 관리 (직관적인 리스트형으로 완벽 업그레이드!) -->
+        <section>
+          <div class="flex justify-between items-center mb-2">
+            <h4 class="text-xs font-bold text-stone-700 flex items-center gap-1"><span>📁</span> 카테고리 관리</h4>
+            <button type="button" onclick="addNewMainCategoryPrompt()" class="text-[10px] bg-stone-800 text-white px-2 py-1 rounded-lg font-bold hover:bg-stone-900 shadow-sm">+ 대분류 추가</button>
           </div>
-          <div class="h-px bg-stone-200/60 my-2"></div>
-          <div>
-            <label class="text-[10px] text-stone-500 block mb-1">대분류 선택</label>
-            <select id="settingMainCatSelect" onchange="renderSettingSubCats()" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs font-bold text-stone-700 bg-white"></select>
-          </div>
-          <div>
-            <div class="flex gap-1.5 mb-2">
-              <input type="text" id="settingNewSubCatInput" placeholder="해당 대분류에 소분류 추가..." class="flex-1 border border-stone-200 rounded-lg px-2 py-1.5 text-[11px] focus:outline-stone-400">
-              <button type="button" onclick="addNewSubCategory()" class="px-2.5 py-1.5 bg-amber-500 text-amber-950 rounded-lg text-[11px] font-bold">추가</button>
-            </div>
-            <div id="settingSubCatTagList" class="flex flex-wrap gap-1.5 min-h-[40px] p-2 bg-white rounded-lg border border-stone-100 shadow-inner"></div>
-          </div>
-        </div>
-      </section>
+          <!-- JS가 여기에 대분류 박스들을 예쁘게 그려줄 거야! -->
+          <div id="settingCategoryFullList" class="space-y-2 overflow-y-auto max-h-[40vh] p-1 no-scrollbar"></div>
+        </section>
     </div>
   </div>
 </div>
@@ -1970,6 +1957,6 @@
 </div>
 
 <!-- 📁 거대한 통합 두뇌 파일 1개만 연결 -->
-<script src="js/main.js?v=20261011_v4282342"></script>
+<script src="js/main.js?v=20261012_v1"></script>
 </body>
 </html>
