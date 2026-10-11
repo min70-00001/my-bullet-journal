@@ -7685,3 +7685,393 @@ function renderAccountBookBudget() {
   
   catListEl.innerHTML = html;
 }
+
+// ==========================================
+// 🛠️ 가계부 치명적 버그 수정 & 시간 자동 포맷 & 지출 통계 추가
+// ==========================================
+
+// 1. 위젯(메인화면) 카테고리 즉시 갱신
+function refreshExpenseWidgetDropdowns() {
+  const mainSel = document.getElementById('expenseMainCatSelect');
+  const subSel = document.getElementById('expenseSubCatSelect');
+  if (!mainSel || !subSel) return;
+  
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
+  const mainKeys = Object.keys(cats);
+  
+  const currentMain = mainSel.value || mainKeys[0];
+  mainSel.innerHTML = mainKeys.map(k => `<option value="${k}">${k}</option>`).join('');
+  if (mainKeys.includes(currentMain)) mainSel.value = currentMain;
+
+  const subKeys = cats[mainSel.value] || ['기타'];
+  const currentSub = subSel.value;
+  subSel.innerHTML = subKeys.map(k => `<option value="${k}">${k}</option>`).join('');
+  if (subKeys.includes(currentSub)) subSel.value = currentSub;
+}
+
+const originalSaveStoredCategories = typeof saveStoredCategories === 'function' ? saveStoredCategories : function(){};
+saveStoredCategories = function(cats) {
+  originalSaveStoredCategories(cats);
+  refreshExpenseWidgetDropdowns();
+};
+
+function onExpenseMainCatChange() {
+  const mainSel = document.getElementById('expenseMainCatSelect');
+  const subSel = document.getElementById('expenseSubCatSelect');
+  if (!mainSel || !subSel) return;
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
+  const subKeys = cats[mainSel.value] || ['기타'];
+  subSel.innerHTML = subKeys.map(k => `<option value="${k}">${k}</option>`).join('');
+}
+
+
+// 2. 가계부 서랍 지출 추가 모달 (스마트 시간 포맷터 적용!)
+function openAddAccountBookExpenseModal(defaultDate) {
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
+  const mainCats = Object.keys(cats);
+  const defaultMain = mainCats[0] || '식비';
+  const defaultSubs = cats[defaultMain] || ['식재료'];
+  const payMethods = typeof getStoredPayMethods === 'function' ? getStoredPayMethods() : ['현금', '카드', '계좌이체', '간편결제'];
+
+  const now = new Date();
+  const curTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  let modalEl = document.getElementById('modalAbExpenseAdd');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'modalAbExpenseAdd';
+    document.body.appendChild(modalEl);
+  }
+
+  modalEl.className = 'fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4';
+  modalEl.innerHTML = `
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full space-y-3.5 shadow-xl border border-stone-200">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>➕</span> 가계부 지출 추가</h3>
+        <button type="button" onclick="document.getElementById('modalAbExpenseAdd').remove()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
+      </div>
+      <div class="space-y-2.5 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-[10px] text-stone-500 font-medium block mb-1">날짜</label><input type="date" id="addAbExpDate" value="${defaultDate}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs"></div>
+          <div><label class="text-[10px] text-stone-500 font-medium block mb-1">시간</label>
+          <input type="text" id="addAbExpTime" value="${curTime}" onkeyup="formatSmartTimeInput(this)" maxlength="5" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono text-xs"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-[10px] text-stone-500 font-medium block mb-1">대분류</label><select id="addAbExpMainCat" onchange="onAbAddMainCatChange()" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs font-medium">${mainCats.map(m => `<option value="${m}">${m}</option>`).join('')}</select></div>
+          <div><label class="text-[10px] text-stone-500 font-medium block mb-1">소분류</label><select id="addAbExpSubCat" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs font-medium">${defaultSubs.map(s => `<option value="${s}">${s}</option>`).join('')}</select></div>
+        </div>
+        <div><label class="text-[10px] text-stone-500 font-medium block mb-1">지출 내용</label><input type="text" id="addAbExpTitle" placeholder="예: 맛있는 점심" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs"></div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-[10px] text-stone-500 font-medium block mb-1">결제수단</label><select id="addAbExpPay" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">${payMethods.map(m => `<option value="${m}">${m}</option>`).join('')}</select></div>
+          <div><label class="text-[10px] text-stone-500 font-medium block mb-1">금액 (원)</label><input type="number" id="addAbExpAmt" placeholder="0" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono font-bold text-xs"></div>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-1.5">
+        <button type="button" onclick="document.getElementById('modalAbExpenseAdd').remove()" class="flex-1 py-1.5 bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200 font-medium text-xs">취소</button>
+        <button type="button" onclick="saveNewAccountBookExpense()" class="flex-1 py-1.5 bg-stone-800 text-white rounded-xl hover:bg-stone-900 font-bold text-xs shadow-sm">추가하기</button>
+      </div>
+    </div>
+  `;
+  const timeInp = document.getElementById('addAbExpTime');
+  if (timeInp) timeInp.onfocus = function() { this.value = ''; };
+}
+
+// 가계부 서랍 지출 수정 모달 (스마트 시간 포맷터 적용!)
+function openEditAccountBookExpenseModal(dateStr, idx) {
+  let dayData = {};
+  try { dayData = JSON.parse(localStorage.getItem('mingle_day_' + dateStr) || '{}'); } catch(e) {}
+  const list = Array.isArray(dayData.expenses) ? dayData.expenses : [];
+  const item = list[idx];
+  if (!item) return;
+
+  const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
+  const mainCats = Object.keys(cats);
+  const payMethods = typeof getStoredPayMethods === 'function' ? getStoredPayMethods() : ['현금', '카드', '계좌이체', '간편결제'];
+
+  const rawCat = item.category || item.subCategory || '';
+  let curMain = item.mainCat || '';
+  let curSub = '';
+
+  if (rawCat.includes('/')) {
+    const parts = rawCat.split('/');
+    if (!curMain) curMain = parts[0].trim();
+    curSub = parts[1].trim();
+  } else {
+    curSub = rawCat;
+    if (!curMain) curMain = mainCats.find(k => (cats[k] || []).includes(curSub)) || mainCats[0] || '식비';
+  }
+  if (!curMain) curMain = mainCats[0] || '식비';
+  const subOptions = cats[curMain] || [curSub || '기타'];
+
+  let modalEl = document.getElementById('modalAbExpenseEdit');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'modalAbExpenseEdit';
+    document.body.appendChild(modalEl);
+  }
+
+  modalEl.className = 'fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4';
+  modalEl.innerHTML = `
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full space-y-3.5 shadow-xl border border-stone-200">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>✏️</span> 지출 내역 수정</h3>
+        <button type="button" onclick="document.getElementById('modalAbExpenseEdit').remove()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
+      </div>
+      <div class="space-y-2.5 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-[10px] text-stone-500 font-medium block mb-1">날짜</label><input type="date" id="editAbExpDate" value="${item.date || dateStr}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs"></div>
+          <div><label class="text-[10px] text-stone-500 font-medium block mb-1">시간</label>
+          <input type="text" id="editAbExpTime" value="${item.time || ''}" onkeyup="formatSmartTimeInput(this)" maxlength="5" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono text-xs"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-[10px] text-stone-500 font-medium block mb-1">대분류</label><select id="editAbExpMainCat" onchange="onAbEditMainCatChange()" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs font-medium">${mainCats.map(m => `<option value="${m}" ${m === curMain ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+          <div><label class="text-[10px] text-stone-500 font-medium block mb-1">소분류</label><select id="editAbExpSubCat" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs font-medium">${subOptions.map(s => `<option value="${s}" ${s === curSub ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+        </div>
+        <div><label class="text-[10px] text-stone-500 font-medium block mb-1">지출 내용</label><input type="text" id="editAbExpTitle" value="${item.title || item.memo || ''}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 text-xs"></div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-[10px] text-stone-500 font-medium block mb-1">결제수단</label><select id="editAbExpPay" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 bg-white text-xs">${payMethods.map(function(m) { return '<option value="' + m + '" ' + (m === (item.payMethod ? item.payMethod : item.payment) ? 'selected' : '') + '>' + m + '</option>'; }).join('')}</select></div>
+          <div><label class="text-[10px] text-stone-500 font-medium block mb-1">금액 (원)</label><input type="number" id="editAbExpAmt" value="${item.amount || 0}" class="w-full border border-stone-200 rounded-lg px-2 py-1 text-stone-800 font-mono font-bold text-xs"></div>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-1.5">
+        <button type="button" onclick="document.getElementById('modalAbExpenseEdit').remove()" class="flex-1 py-1.5 bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200 font-medium text-xs">취소</button>
+        <button type="button" onclick="saveEditedAccountBookExpense('${dateStr}', ${idx})" class="flex-1 py-1.5 bg-stone-800 text-white rounded-xl hover:bg-stone-900 font-bold text-xs shadow-sm">수정 완료</button>
+      </div>
+    </div>
+  `;
+  const timeInp = document.getElementById('editAbExpTime');
+  if (timeInp) timeInp.onfocus = function() { this.value = ''; };
+}
+
+// 3. 클라우드 전송 버그 수정
+function saveNewAccountBookExpense() {
+  const dateVal = document.getElementById('addAbExpDate').value;
+  const timeVal = document.getElementById('addAbExpTime').value.trim() || '12:00';
+  const mainCat = document.getElementById('addAbExpMainCat').value;
+  const subCat = document.getElementById('addAbExpSubCat').value;
+  const titleVal = document.getElementById('addAbExpTitle').value.trim();
+  const payVal = document.getElementById('addAbExpPay').value;
+  const amtVal = parseFloat(document.getElementById('addAbExpAmt').value) || 0;
+
+  if (!dateVal) { alert('날짜를 입력해주세요.'); return; }
+  if (amtVal <= 0) { alert('금액을 입력해주세요.'); return; }
+
+  let dayData = {};
+  try { dayData = JSON.parse(localStorage.getItem('mingle_day_' + dateVal) || '{}'); } catch(e) {}
+  if (!Array.isArray(dayData.expenses)) dayData.expenses = [];
+
+  const fullCategory = `${mainCat}/${subCat}`;
+
+  dayData.expenses.push({
+    id: 'exp_' + Date.now(),
+    date: dateVal, time: timeVal,
+    mainCat: mainCat, category: fullCategory, subCategory: subCat,
+    title: titleVal || subCat, memo: titleVal || subCat,
+    payMethod: payVal, payment: payVal, amount: amtVal
+  });
+
+  if (typeof saveDayDataLocal === 'function') saveDayDataLocal(dateVal, dayData);
+  if (typeof db !== 'undefined' && db) {
+    db.collection('diary_days').doc(dateVal).set({ expenses: dayData.expenses }, { merge: true }).catch(console.error);
+  }
+
+  document.getElementById('modalAbExpenseAdd')?.remove();
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+}
+
+function saveEditedAccountBookExpense(oldDate, idx) {
+  let oldDayData = {};
+  try { oldDayData = JSON.parse(localStorage.getItem('mingle_day_' + oldDate) || '{}'); } catch(e) {}
+  if (!Array.isArray(oldDayData.expenses) || !oldDayData.expenses[idx]) return;
+
+  const newDate = document.getElementById('editAbExpDate').value;
+  const newTime = document.getElementById('editAbExpTime').value.trim();
+  const mainCat = document.getElementById('editAbExpMainCat').value;
+  const subCat = document.getElementById('editAbExpSubCat').value;
+  const newTitle = document.getElementById('editAbExpTitle').value.trim();
+  const newPay = document.getElementById('editAbExpPay').value;
+  const newAmt = parseFloat(document.getElementById('editAbExpAmt').value) || 0;
+
+  const fullCategory = `${mainCat}/${subCat}`;
+
+  if (newDate === oldDate) {
+    oldDayData.expenses[idx] = { ...oldDayData.expenses[idx], time: newTime, mainCat, category: fullCategory, subCategory: subCat, title: newTitle, memo: newTitle, payMethod: newPay, payment: newPay, amount: newAmt };
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(oldDate, oldDayData);
+    if (db) db.collection('diary_days').doc(oldDate).set({ expenses: oldDayData.expenses }, { merge: true }).catch(console.error);
+  } else {
+    const movedItem = oldDayData.expenses.splice(idx, 1)[0];
+    movedItem.date = newDate; movedItem.time = newTime; movedItem.mainCat = mainCat; movedItem.category = fullCategory; movedItem.subCategory = subCat; movedItem.title = newTitle; movedItem.memo = newTitle; movedItem.payMethod = newPay; movedItem.payment = newPay; movedItem.amount = newAmt;
+    
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(oldDate, oldDayData);
+    if (db) db.collection('diary_days').doc(oldDate).set({ expenses: oldDayData.expenses }, { merge: true }).catch(console.error);
+
+    let newDayData = {};
+    try { newDayData = JSON.parse(localStorage.getItem('mingle_day_' + newDate) || '{}'); } catch(e) {}
+    if (!Array.isArray(newDayData.expenses)) newDayData.expenses = [];
+    newDayData.expenses.push(movedItem);
+
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(newDate, newDayData);
+    if (db) db.collection('diary_days').doc(newDate).set({ expenses: newDayData.expenses }, { merge: true }).catch(console.error);
+    window.abSelectedDate = newDate;
+  }
+
+  document.getElementById('modalAbExpenseEdit')?.remove();
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+}
+
+function deleteAccountBookExpenseEntry(dateStr, idx) {
+  if (!confirm('이 지출 내역을 삭제할까요?')) return;
+  let dayData = {};
+  try { dayData = JSON.parse(localStorage.getItem('mingle_day_' + dateStr) || '{}'); } catch(e) {}
+  if (!Array.isArray(dayData.expenses)) return;
+
+  dayData.expenses.splice(idx, 1);
+  if (typeof saveDayDataLocal === 'function') saveDayDataLocal(dateStr, dayData);
+  if (db) db.collection('diary_days').doc(dateStr).set({ expenses: dayData.expenses }, { merge: true }).catch(console.error);
+
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+}
+
+// 4. 지출 데이터 수집 엔진 & 통계 모달
+function getMonthExpensesData(year, month) {
+  const result = { dailyTotals: {}, monthTotal: 0, totalCount: 0, catTotals: {}, payTotals: {} };
+  const prefix = `mingle_day_${year}-${String(month).padStart(2, '0')}`;
+  
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(prefix)) {
+      const dateStr = key.replace('mingle_day_', '');
+      try {
+        const dayData = JSON.parse(localStorage.getItem(key) || '{}');
+        const expenses = dayData.expenses || [];
+        let daySum = 0;
+        expenses.forEach(item => {
+          const amt = Number(item.amount) || 0;
+          daySum += amt;
+          result.monthTotal += amt;
+          result.totalCount += 1;
+          const main = item.mainCat || (item.category && item.category.includes('/') ? item.category.split('/')[0] : '기타');
+          result.catTotals[main] = (result.catTotals[main] || 0) + amt;
+          const pay = item.payMethod || item.payment || '기타';
+          result.payTotals[pay] = (result.payTotals[pay] || 0) + amt;
+        });
+        if (daySum > 0) result.dailyTotals[dateStr] = daySum;
+      } catch(e) {}
+    }
+  }
+  return result;
+}
+
+function openBudgetStatsModal() {
+  const y = window.abCurrentYear || new Date().getFullYear();
+  const m = window.abCurrentMonth || (new Date().getMonth() + 1);
+  const data = getMonthExpensesData(y, m);
+
+  const payHtml = Object.keys(data.payTotals).sort((a,b)=>data.payTotals[b]-data.payTotals[a]).map(k => {
+    const amt = data.payTotals[k];
+    const pct = data.monthTotal > 0 ? Math.round((amt/data.monthTotal)*100) : 0;
+    return `<div class="mb-2"><div class="flex justify-between text-[11px] mb-1"><span class="font-bold text-stone-700">${k}</span><span class="text-stone-600 font-mono">${amt.toLocaleString()}원 <span class="text-[9px] text-stone-400">(${pct}%)</span></span></div><div class="w-full bg-stone-200 rounded-full h-1.5"><div class="bg-sky-400 h-1.5 rounded-full shadow-xs" style="width:${pct}%"></div></div></div>`;
+  }).join('');
+
+  const catHtml = Object.keys(data.catTotals).sort((a,b)=>data.catTotals[b]-data.catTotals[a]).map(k => {
+    const amt = data.catTotals[k];
+    const pct = data.monthTotal > 0 ? Math.round((amt/data.monthTotal)*100) : 0;
+    return `<div class="mb-2"><div class="flex justify-between text-[11px] mb-1"><span class="font-bold text-stone-700">${k}</span><span class="text-stone-600 font-mono">${amt.toLocaleString()}원 <span class="text-[9px] text-stone-400">(${pct}%)</span></span></div><div class="w-full bg-stone-200 rounded-full h-1.5"><div class="bg-amber-400 h-1.5 rounded-full shadow-xs" style="width:${pct}%"></div></div></div>`;
+  }).join('');
+
+  document.getElementById('statsModalMonthTitle').innerHTML = `<span>📊</span> ${y}년 ${m}월 지출 통계`;
+  document.getElementById('statsModalTotal').innerText = `${data.monthTotal.toLocaleString()}원`;
+  document.getElementById('statsPayContainer').innerHTML = payHtml || '<p class="text-xs text-stone-400 text-center py-2">결제 내역이 없습니다.</p>';
+  document.getElementById('statsCatContainer').innerHTML = catHtml || '<p class="text-xs text-stone-400 text-center py-2">지출 내역이 없습니다.</p>';
+
+  document.getElementById('modalBudgetStats').classList.remove('hidden');
+}
+
+function closeBudgetStatsModal() {
+  document.getElementById('modalBudgetStats').classList.add('hidden');
+}
+
+// 5. 예산 탭 렌더링 수정 (목표예산 박스 클릭 시 통계 모달 연동)
+function renderAccountBookBudget() {
+  const y = window.abCurrentYear || new Date().getFullYear();
+  const m = window.abCurrentMonth || (new Date().getMonth() + 1);
+  const monthData = getMonthExpensesData(y, m);
+
+  const budgetTotal = parseInt(localStorage.getItem('mingle_monthly_budget_target') || '1000000', 10);
+  const totalAmtEl = document.getElementById('abTotalBudgetAmount');
+  const remainEl = document.getElementById('abRemainingBudgetLabel');
+  const barEl = document.getElementById('abBudgetProgressBar');
+
+  if (totalAmtEl) totalAmtEl.innerText = `${budgetTotal.toLocaleString()}원`;
+  const remain = budgetTotal - monthData.monthTotal;
+  
+  if (remainEl) {
+    if (remain >= 0) {
+      remainEl.className = 'text-xs font-semibold text-emerald-700';
+      remainEl.innerText = `총 잔여: ${remain.toLocaleString()}원`;
+    } else {
+      remainEl.className = 'text-xs font-semibold text-rose-600';
+      remainEl.innerText = `총 초과: ${Math.abs(remain).toLocaleString()}원!`;
+    }
+  }
+
+  if (barEl) {
+    const pct = Math.min(100, Math.round((monthData.monthTotal / budgetTotal) * 100));
+    barEl.style.width = `${pct}%`;
+    barEl.className = pct > 90 ? 'bg-rose-500 h-2 rounded-full transition-all duration-300' : 'bg-amber-500 h-2 rounded-full transition-all duration-300';
+  }
+
+  const budgetBox = document.querySelector('#abViewBudget > div:first-child');
+  if (budgetBox) {
+    budgetBox.classList.add('cursor-pointer', 'hover:bg-stone-100', 'transition');
+    budgetBox.onclick = function(e) {
+      if(e.target.tagName.toLowerCase() === 'button') return; 
+      openBudgetStatsModal();
+    };
+    if(!document.getElementById('statsClickHint')) {
+      const hint = document.createElement('div');
+      hint.id = 'statsClickHint';
+      hint.className = 'text-[9px] text-stone-400 text-center mt-2 pt-1 border-t border-dashed border-stone-200';
+      hint.innerText = '👆 이 박스를 누르면 카드 실적/통계를 볼 수 있어요!';
+      budgetBox.appendChild(hint);
+    }
+  }
+
+  const catListEl = document.getElementById('abCategoryBudgetList');
+  if (!catListEl) return;
+  
+  const groups = typeof getBudgetGroups === 'function' ? getBudgetGroups() : [];
+  let html = `<div class="flex justify-between items-end mb-2 mt-4"><span class="text-xs font-bold text-stone-600">세부 예산 그룹</span> <button onclick="openBudgetGroupManageModal()" class="text-[10px] text-stone-500 border border-stone-200 bg-white shadow-2xs px-2 py-1 rounded-lg hover:bg-stone-50 font-bold transition">⚙️ 그룹 관리</button></div>`;
+
+  if (groups.length === 0) {
+     html += `<div class="p-4 text-center bg-stone-50 border border-stone-200 border-dashed rounded-xl text-xs text-stone-400">우측 상단 <b>그룹 관리</b>를 눌러<br>생활비, 반려케어 등 세부 예산을 설정해보세요!</div>`;
+  } else {
+      groups.forEach(g => {
+        let spent = 0;
+        g.mainCats.forEach(cat => spent += (monthData.catTotals[cat] || 0));
+        
+        const pct = g.amount > 0 ? Math.round((spent / g.amount) * 100) : 0;
+        const isOver = spent > g.amount;
+        const barColor = isOver ? 'bg-rose-500' : (pct > 80 ? 'bg-orange-400' : 'bg-emerald-400');
+
+        html += `
+          <div class="bg-stone-50 border border-stone-200/60 p-2.5 rounded-xl space-y-1.5 mb-2 shadow-2xs">
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-bold text-stone-700 flex items-center gap-1">🎯 ${g.name} <span class="text-[9px] font-normal text-stone-400">(${g.mainCats.join(', ')})</span></span>
+            </div>
+            <div class="flex justify-between items-center text-[10px]">
+              <span class="text-stone-500">예산: ${Number(g.amount).toLocaleString()}원</span>
+              <span class="font-mono font-bold ${isOver ? 'text-rose-600' : 'text-stone-800'}">${spent.toLocaleString()}원 (${pct}%)</span>
+            </div>
+            <div class="w-full bg-stone-200 rounded-full h-1.5 overflow-hidden">
+              <div class="${barColor} h-1.5 rounded-full transition-all" style="width: ${Math.min(100, pct)}%"></div>
+            </div>
+          </div>
+        `;
+      });
+  }
+  catListEl.innerHTML = html;
+}
