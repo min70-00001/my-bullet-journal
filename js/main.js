@@ -8305,3 +8305,279 @@ function saveEditedAccountBookExpense(oldDate, idx) {
   if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
   if (typeof renderBudgetDashboard === 'function') renderBudgetDashboard();
 }
+
+// ==========================================
+// 🚨 완벽 복구 & 카테고리 관리 기능 (순서 변경 포함)
+// ==========================================
+
+// 1. 설정 저장 및 불러오기 (초기값 보장)
+function getStoredCategories() {
+  try {
+    const saved = localStorage.getItem('mingle_expense_custom_cats');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Object.keys(parsed).length > 0) return parsed;
+    }
+  } catch(e) {}
+  // 기본 카테고리 세팅
+  return window.DEFAULT_EXPENSE_CATS || {
+    '식비': ['식재료', '외식', '커피/간식'],
+    '생활비': ['생필품', '공과금', '주거비'],
+    '교통': ['대중교통', '택시', '주유'],
+    '쇼핑': ['의류', '뷰티', '기타'],
+    '문화/여가': ['영화/도서', '여행', '모임'],
+    '의료/건강': ['병원', '약국', '운동'],
+    '가족': ['부모님', '반려동물'],
+    '기타': ['기타']
+  };
+}
+
+function saveStoredCategories(cats) {
+  localStorage.setItem('mingle_expense_custom_cats', JSON.stringify(cats));
+  if (typeof db !== 'undefined' && db) {
+    db.collection('account_book_settings').doc('categories').set(cats).catch(e=>console.error(e));
+  }
+  // 위젯(오늘 페이지) 즉시 갱신
+  refreshExpenseWidgetDropdowns();
+}
+
+// 2. 위젯(오늘 페이지) 카테고리 갱신
+function refreshExpenseWidgetDropdowns() {
+  const mainSel = document.getElementById('expenseMainCatSelect');
+  const subSel = document.getElementById('expenseSubCatSelect');
+  if (!mainSel || !subSel) return;
+  
+  const cats = getStoredCategories();
+  const mainKeys = Object.keys(cats);
+  
+  const currentMain = mainSel.value || mainKeys[0];
+  mainSel.innerHTML = mainKeys.map(k => `<option value="${k}">${k}</option>`).join('');
+  if (mainKeys.includes(currentMain)) mainSel.value = currentMain;
+  else mainSel.value = mainKeys[0];
+
+  const subKeys = cats[mainSel.value] || ['기타'];
+  const currentSub = subSel.value;
+  subSel.innerHTML = subKeys.map(k => `<option value="${k}">${k}</option>`).join('');
+  if (subKeys.includes(currentSub)) subSel.value = currentSub;
+  else subSel.value = subKeys[0];
+}
+
+// 3. 가계부 설정 모달 (결제수단, 대분류, 소분류 관리 & 순서 조절)
+function openExpenseCategorySettingModal() {
+  const modal = document.getElementById('modalExpenseCategorySetting');
+  if(modal) modal.classList.remove('hidden');
+  
+  const cats = getStoredCategories();
+  const sel = document.getElementById('settingMainCatSelect');
+  if(sel) sel.innerHTML = Object.keys(cats).map(k => `<option value="${k}">${k}</option>`).join('');
+  renderSettingSubCats();
+  if(typeof renderSettingPayMethods === 'function') renderSettingPayMethods();
+}
+
+function addNewMainCategory() {
+  const input = document.getElementById('settingNewMainCatInput');
+  const val = input.value.trim();
+  if(!val) return;
+  const cats = getStoredCategories();
+  if(cats[val]) return alert('이미 존재하는 대분류입니다.');
+  cats[val] = ['기타'];
+  saveStoredCategories(cats);
+  input.value = '';
+  
+  const sel = document.getElementById('settingMainCatSelect');
+  if(sel) {
+    sel.innerHTML = Object.keys(cats).map(k => `<option value="${k}">${k}</option>`).join('');
+    sel.value = val;
+  }
+  renderSettingSubCats();
+}
+
+function renderSettingSubCats() {
+  const sel = document.getElementById('settingMainCatSelect');
+  const container = document.getElementById('settingSubCatTagList');
+  if(!sel || !container) return;
+  
+  const mainCat = sel.value;
+  const cats = getStoredCategories();
+  const subs = cats[mainCat] || [];
+  
+  let html = `<div class="w-full flex justify-between items-center mb-2 pb-2 border-b border-stone-100">
+    <div class="flex gap-1">
+      <button onclick="moveMainCategory('${mainCat}', -1)" class="text-[10px] bg-stone-100 px-2 py-1 rounded hover:bg-stone-200">◀ 앞(위)으로</button>
+      <button onclick="moveMainCategory('${mainCat}', 1)" class="text-[10px] bg-stone-100 px-2 py-1 rounded hover:bg-stone-200">뒤(아래)로 ▶</button>
+    </div>
+    <button onclick="deleteMainCategory('${mainCat}')" class="text-[10px] text-rose-500 font-bold hover:underline">대분류 삭제</button>
+  </div>`;
+  
+  html += subs.map(s => `
+    <div class="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 px-2 py-1 rounded-lg text-[11px] font-bold">
+      <span>${s}</span>
+      <button onclick="deleteSubCategory('${mainCat}', '${s}')" class="text-amber-500 hover:text-amber-700 ml-1">✕</button>
+    </div>
+  `).join('');
+  container.innerHTML = html;
+}
+
+function moveMainCategory(mainCat, direction) {
+  const cats = getStoredCategories();
+  const keys = Object.keys(cats);
+  const idx = keys.indexOf(mainCat);
+  if(idx < 0) return;
+  const targetIdx = idx + direction;
+  if(targetIdx < 0 || targetIdx >= keys.length) return;
+  
+  const temp = keys[idx];
+  keys[idx] = keys[targetIdx];
+  keys[targetIdx] = temp;
+  
+  const newCats = {};
+  keys.forEach(k => newCats[k] = cats[k]);
+  saveStoredCategories(newCats);
+  
+  const sel = document.getElementById('settingMainCatSelect');
+  if(sel) {
+    sel.innerHTML = Object.keys(newCats).map(k => `<option value="${k}">${k}</option>`).join('');
+    sel.value = mainCat;
+  }
+  renderSettingSubCats();
+}
+
+function deleteMainCategory(mainCat) {
+  if(!confirm(`'${mainCat}' 대분류를 삭제하시겠습니까?\n(기존 지출 내역은 남지만 '기타'로 표시될 수 있습니다)`)) return;
+  const cats = getStoredCategories();
+  delete cats[mainCat];
+  if(Object.keys(cats).length === 0) cats['기타'] = ['기타'];
+  saveStoredCategories(cats);
+  
+  const sel = document.getElementById('settingMainCatSelect');
+  if(sel) {
+    sel.innerHTML = Object.keys(cats).map(k => `<option value="${k}">${k}</option>`).join('');
+  }
+  renderSettingSubCats();
+}
+
+function addNewSubCategory() {
+  const mainSel = document.getElementById('settingMainCatSelect');
+  const input = document.getElementById('settingNewSubCatInput');
+  const mainCat = mainSel.value;
+  const val = input.value.trim();
+  if(!mainCat || !val) return;
+  
+  const cats = getStoredCategories();
+  if(!cats[mainCat]) cats[mainCat] = [];
+  if(cats[mainCat].includes(val)) return alert('이미 존재하는 소분류입니다.');
+  cats[mainCat].push(val);
+  saveStoredCategories(cats);
+  input.value = '';
+  renderSettingSubCats();
+}
+
+function deleteSubCategory(mainCat, subCat) {
+  const cats = getStoredCategories();
+  if(!cats[mainCat]) return;
+  cats[mainCat] = cats[mainCat].filter(s => s !== subCat);
+  if(cats[mainCat].length === 0) cats[mainCat].push('기타');
+  saveStoredCategories(cats);
+  renderSettingSubCats();
+}
+
+function closeExpenseCategorySettingModal() {
+  const modal = document.getElementById('modalExpenseCategorySetting');
+  if(modal) modal.classList.add('hidden');
+}
+
+// 결제수단 관리
+function getStoredPayMethods() {
+  try {
+    const saved = localStorage.getItem('mingle_expense_pay_methods');
+    return saved ? JSON.parse(saved) : ['현금', '카드', '계좌이체', '간편결제'];
+  } catch(e) { return ['현금', '카드', '계좌이체', '간편결제']; }
+}
+function saveStoredPayMethods(methods) {
+  localStorage.setItem('mingle_expense_pay_methods', JSON.stringify(methods));
+  if(typeof renderSettingPayMethods === 'function') renderSettingPayMethods();
+}
+function renderSettingPayMethods() {
+  const container = document.getElementById('settingPayMethodTagList');
+  if(!container) return;
+  const methods = getStoredPayMethods();
+  container.innerHTML = methods.map(m => `
+    <div class="flex items-center gap-1 bg-stone-100 border border-stone-200 text-stone-700 px-2 py-1 rounded-lg text-[11px] font-bold">
+      <span>${m}</span>
+      <button onclick="deletePayMethod('${m}')" class="text-stone-400 hover:text-rose-500 ml-1">✕</button>
+    </div>
+  `).join('');
+}
+function addNewPayMethod() {
+  const input = document.getElementById('settingNewPayMethodInput');
+  const val = input.value.trim();
+  if(!val) return;
+  const methods = getStoredPayMethods();
+  if(methods.includes(val)) return alert('이미 존재하는 결제수단입니다.');
+  methods.push(val);
+  saveStoredPayMethods(methods);
+  input.value = '';
+}
+function deletePayMethod(val) {
+  const methods = getStoredPayMethods().filter(m => m !== val);
+  saveStoredPayMethods(methods);
+}
+
+// 4. 지출 내역 수정 버그 완전 정복 (기타로 뜨는 현상 해결)
+function saveEditedAccountBookExpense(oldDate, idx) {
+  let oldDayData = {};
+  try { oldDayData = JSON.parse(localStorage.getItem('mingle_day_' + oldDate) || '{}'); } catch(e) {}
+  if (!Array.isArray(oldDayData.expenses) || !oldDayData.expenses[idx]) return;
+
+  const newDate = document.getElementById('editAbExpDate').value;
+  const newTime = document.getElementById('editAbExpTime').value.trim();
+  const mainCat = document.getElementById('editAbExpMainCat').value;
+  const subCat = document.getElementById('editAbExpSubCat').value;
+  const newTitle = document.getElementById('editAbExpTitle').value.trim();
+  const newPay = document.getElementById('editAbExpPay').value;
+  const newAmt = parseFloat(document.getElementById('editAbExpAmt').value) || 0;
+
+  const fullCategory = `${mainCat}/${subCat}`;
+
+  // 🚨 여기서 누락되었던 subCat 키 추가! (오늘 페이지, 위젯과 완벽 호환)
+  const updatedItemFields = { 
+      time: newTime, 
+      mainCat: mainCat, 
+      subCat: subCat, // ✨ 가장 중요한 포인트! (이게 빠져서 기타로 떴음)
+      category: fullCategory, 
+      subCategory: subCat, 
+      title: newTitle, 
+      memo: newTitle, 
+      payMethod: newPay, 
+      payment: newPay, 
+      amount: newAmt 
+  };
+
+  if (newDate === oldDate) {
+    oldDayData.expenses[idx] = { ...oldDayData.expenses[idx], ...updatedItemFields };
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(oldDate, oldDayData);
+    if (db) db.collection('diary_days').doc(oldDate).set({ expenses: oldDayData.expenses }, { merge: true }).catch(console.error);
+  } else {
+    const movedItem = oldDayData.expenses.splice(idx, 1)[0];
+    const finalMovedItem = { ...movedItem, ...updatedItemFields, date: newDate };
+    
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(oldDate, oldDayData);
+    if (db) db.collection('diary_days').doc(oldDate).set({ expenses: oldDayData.expenses }, { merge: true }).catch(console.error);
+
+    let newDayData = {};
+    try { newDayData = JSON.parse(localStorage.getItem('mingle_day_' + newDate) || '{}'); } catch(e) {}
+    if (!Array.isArray(newDayData.expenses)) newDayData.expenses = [];
+    newDayData.expenses.push(finalMovedItem);
+
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(newDate, newDayData);
+    if (db) db.collection('diary_days').doc(newDate).set({ expenses: newDayData.expenses }, { merge: true }).catch(console.error);
+    window.abSelectedDate = newDate;
+  }
+
+  const modal = document.getElementById('modalAbExpenseEdit');
+  if(modal) modal.classList.add('hidden');
+  
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+  if (typeof renderBudgetDashboard === 'function') renderBudgetDashboard();
+}
