@@ -5564,7 +5564,7 @@ function saveEditedTodayExpense(idx) {
   if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
 }
 
-// 지출 새 항목 추가
+// 💸 오늘 페이지 지출 새 항목 추가 (가계부 서랍 데이터 규격 완벽 통합!)
 function addExpenseEntry() {
   const timeInput = document.getElementById('expenseTimeInput');
   const mainSelect = document.getElementById('expenseMainCatSelect');
@@ -5580,59 +5580,64 @@ function addExpenseEntry() {
     return;
   }
 
-  const title = (itemInput?.value || '').trim() || subSelect?.value || '기타 지출';
+  const mainCatVal = mainSelect?.value || '기타';
+  const subCatVal = subSelect?.value || '일반';
+  const payVal = paySelect?.value || '카드';
+  const title = (itemInput?.value || '').trim() || subCatVal;
+  
   const newEntry = {
     id: 'exp_' + Date.now(),
     time: timeInput?.value || '00:00',
-    mainCat: mainSelect?.value || '기타',
-    subCat: subSelect?.value || '일반',
-    payMethod: paySelect?.value || '카드',
+    mainCat: mainCatVal,
+    subCat: subCatVal, // 기존 호환성 유지
+    category: `${mainCatVal}/${subCatVal}`, // 서랍장 호환용 1
+    subCategory: subCatVal, // 서랍장 호환용 2
+    payMethod: payVal,
+    payment: payVal, // 서랍장 호환용 3
     title: title,
+    memo: title, // 서랍장 호환용 4
     amount: amount
   };
 
-    const key = 'mingle_day_' + currentDate;
-    let dayData = {};
-    try {
-      const stored = localStorage.getItem(key);
-      dayData = stored ? JSON.parse(stored) : {};
-    } catch(e) {
-      dayData = {};
-    }
+  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
+  const key = 'mingle_day_' + curDate;
+  let dayData = {};
+  try {
+    const stored = localStorage.getItem(key);
+    dayData = stored ? JSON.parse(stored) : {};
+  } catch(e) {
+    dayData = {};
+  }
 
-    if (!Array.isArray(dayData.expenses)) {
-      dayData.expenses = [];
-    }
-    dayData.expenses.push(newEntry);
+  if (!Array.isArray(dayData.expenses)) {
+    dayData.expenses = [];
+  }
+  dayData.expenses.push(newEntry);
 
-    // 시간순 정렬
-    dayData.expenses.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  // 시간순 정렬
+  dayData.expenses.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
-    // 1. 로컬 스토리지 안전 저장
-    localStorage.setItem(key, JSON.stringify(dayData));
-    if (typeof saveDayDataLocal === 'function') {
-      try { saveDayDataLocal(currentDate, dayData); } catch(e) {}
-    }
-    if (window.currentDayData) window.currentDayData.expenses = dayData.expenses;
+  // 로컬 & 파이어베이스 저장
+  localStorage.setItem(key, JSON.stringify(dayData));
+  if (typeof saveDayDataLocal === 'function') {
+    try { saveDayDataLocal(curDate, dayData); } catch(e) {}
+  }
+  if (window.currentDayData) window.currentDayData.expenses = dayData.expenses;
 
-    // 2. 파이어베이스에 즉시 동기화 (기존 다른 데이터 절대 안 건드림)
-    if (typeof db !== 'undefined' && db) {
-      db.collection('diary_days').doc(currentDate).set({
-        expenses: dayData.expenses
-      }, { merge: true }).catch(err => console.error(err));
-    }
+  if (typeof db !== 'undefined' && db) {
+    db.collection('diary_days').doc(curDate).set({
+      expenses: dayData.expenses
+    }, { merge: true }).catch(err => console.error(err));
+  }
 
-    // 3. 화면 지출 목록 갱신
-    if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
-    if (typeof renderTodayExpenses === 'function') renderTodayExpenses();
-    if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+  // 화면 갱신
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
 
   // 인풋 초기화
   if (itemInput) itemInput.value = '';
   if (amountInput) amountInput.value = '';
-  setExpenseNowTime();
-
-  renderExpenseWidget();
+  if (typeof setExpenseNowTime === 'function') setExpenseNowTime();
 }
 
 // 지출 항목 삭제
