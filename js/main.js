@@ -8645,3 +8645,195 @@ document.addEventListener('DOMContentLoaded', () => {
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   setTimeout(subscribeAccountBookSettings, 1500);
 }
+
+// ==========================================
+// 💳 결제수단 실적 목표 관리 & 클릭 시 수정 모달 연동
+// ==========================================
+
+// 1. 기존 문자열 리스트를 [이름, 목표액] 객체 배열로 자동 변환 (호환성 유지)
+function getStoredPayMethods() {
+  try {
+    const saved = localStorage.getItem('mingle_expense_pay_methods');
+    let parsed = saved ? JSON.parse(saved) : ['현금', '카드', '계좌이체', '간편결제'];
+    return parsed.map(p => typeof p === 'string' ? { name: p, target: 0 } : p);
+  } catch(e) { 
+    return [{name: '현금', target: 0}, {name: '카드', target: 0}, {name: '계좌이체', target: 0}, {name: '간편결제', target: 0}]; 
+  }
+}
+
+function saveStoredPayMethods(methods) {
+  localStorage.setItem('mingle_expense_pay_methods', JSON.stringify(methods));
+  if (typeof db !== 'undefined' && db) {
+    db.collection('account_book_settings').doc('pay_methods').set({ methods }).catch(e=>console.error(e));
+  }
+  if (typeof renderSettingPayMethods === 'function') renderSettingPayMethods();
+}
+
+// 2. 모달 동적 생성 (HTML 수정 없이 JS가 알아서 팝업창을 만들어줌!)
+function ensurePayMethodModalExists() {
+  if (document.getElementById('modalPayMethodManage')) return;
+  const modalHTML = `
+    <div id="modalPayMethodManage" class="fixed inset-0 z-[80] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+      <div class="bg-white rounded-2xl p-5 max-w-xs w-full space-y-3.5 shadow-xl border border-stone-200">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+          <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>💳</span> 결제수단 관리</h3>
+          <button type="button" onclick="closePayMethodModal()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
+        </div>
+        <div class="space-y-3">
+          <input type="hidden" id="editPayMethodOldName" value="">
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">결제수단 이름</label>
+            <input type="text" id="editPayMethodName" placeholder="예: 하나카드" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs focus:outline-stone-400">
+          </div>
+          <div>
+            <label class="text-[10px] text-stone-500 font-medium block mb-1">월 실적 목표 (원) <span class="text-stone-400 font-normal">- 없으면 0</span></label>
+            <input type="number" id="editPayMethodTarget" placeholder="예: 300000" class="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-stone-400">
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" id="btnDeletePayMethod" class="hidden px-3 py-1.5 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 font-bold text-xs">삭제</button>
+          <button type="button" onclick="savePayMethod()" class="flex-1 py-1.5 bg-stone-800 text-white rounded-xl hover:bg-stone-900 font-bold text-xs shadow-sm">저장하기</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// 3. 결제수단 설정 영역 렌더링 덮어쓰기
+function renderSettingPayMethods() {
+  const container = document.getElementById('settingPayMethodTagList');
+  if(!container) return;
+  
+  // 💡 구버전 UI(인풋창 있는 버전)면 껍데기를 통째로 최신식으로 강제 성형!
+  const parent = container.parentElement;
+  if (parent && parent.innerHTML.includes('settingNewPayMethodInput')) {
+    parent.innerHTML = `
+      <div class="flex justify-between items-center mb-2">
+        <h4 class="text-xs font-bold text-stone-700 flex items-center gap-1"><span>💳</span> 결제수단 (실적 관리)</h4>
+        <button type="button" onclick="openPayMethodModal()" class="text-[10px] bg-stone-800 text-white px-2 py-1 rounded-lg font-bold hover:bg-stone-900 shadow-sm">+ 새 결제수단</button>
+      </div>
+      <div id="settingPayMethodTagList" class="flex flex-col gap-1.5"></div>
+    `;
+    return setTimeout(renderSettingPayMethods, 10);
+  }
+  
+  const methods = getStoredPayMethods();
+  container.innerHTML = methods.map(m => `
+    <div onclick="openPayMethodModal('${m.name}', ${m.target})" class="flex items-center justify-between bg-white border border-stone-200 p-2.5 rounded-xl cursor-pointer hover:border-amber-300 transition shadow-2xs">
+      <div class="font-bold text-stone-700 text-[11px]">${m.name}</div>
+      <div class="text-[10px] text-stone-500 font-mono bg-stone-50 px-1.5 py-0.5 rounded">목표: ${m.target > 0 ? m.target.toLocaleString() + '원' : '없음'}</div>
+    </div>
+  `).join('');
+}
+
+// 4. 결제수단 모달 열기/닫기/저장 로직
+function openPayMethodModal(name = '', target = 0) {
+  ensurePayMethodModalExists();
+  document.getElementById('editPayMethodOldName').value = name;
+  document.getElementById('editPayMethodName').value = name;
+  document.getElementById('editPayMethodTarget').value = target || '';
+  
+  const delBtn = document.getElementById('btnDeletePayMethod');
+  if (name) {
+    delBtn.classList.remove('hidden');
+    delBtn.onclick = () => deletePayMethod(name);
+  } else {
+    delBtn.classList.add('hidden');
+  }
+  document.getElementById('modalPayMethodManage').classList.remove('hidden');
+}
+
+function closePayMethodModal() {
+  const modal = document.getElementById('modalPayMethodManage');
+  if(modal) modal.classList.add('hidden');
+}
+
+function savePayMethod() {
+  const oldName = document.getElementById('editPayMethodOldName').value;
+  const newName = document.getElementById('editPayMethodName').value.trim();
+  const target = parseInt(document.getElementById('editPayMethodTarget').value) || 0;
+  
+  if(!newName) return alert('결제수단 이름을 입력해주세요!');
+  
+  let methods = getStoredPayMethods();
+  if(oldName) {
+    const existIdx = methods.findIndex(m => m.name === oldName);
+    if(existIdx > -1) {
+        methods[existIdx].name = newName;
+        methods[existIdx].target = target;
+    }
+  } else {
+    if(methods.some(m => m.name === newName)) return alert('이미 존재하는 결제수단입니다.');
+    methods.push({ name: newName, target });
+  }
+  saveStoredPayMethods(methods);
+  closePayMethodModal();
+}
+
+function deletePayMethod(name) {
+  if(!confirm(`'${name}' 결제수단을 삭제하시겠습니까?`)) return;
+  let methods = getStoredPayMethods().filter(m => m.name !== name);
+  saveStoredPayMethods(methods);
+  closePayMethodModal();
+}
+
+// 5. 지출 통계 모달 덮어쓰기 (카드 실적 달성 여부 프로그레스 바 탑재!)
+function openBudgetStatsModal() {
+  const y = window.abCurrentYear || new Date().getFullYear();
+  const m = window.abCurrentMonth || (new Date().getMonth() + 1);
+  const data = getMonthExpensesData(y, m);
+  const payMethods = getStoredPayMethods();
+
+  const payHtml = Object.keys(data.payTotals).sort((a,b)=>data.payTotals[b]-data.payTotals[a]).map(k => {
+    const amt = data.payTotals[k];
+    const pm = payMethods.find(p => p.name === k);
+    const target = pm ? pm.target : 0;
+    
+    if (target > 0) {
+      const pct = Math.min(100, Math.round((amt / target) * 100));
+      const isMet = amt >= target;
+      const barColor = isMet ? 'bg-emerald-400' : 'bg-sky-400';
+      return `
+        <div class="mb-3 p-2 bg-white rounded-xl border border-stone-100 shadow-2xs">
+          <div class="flex justify-between items-end mb-1.5">
+            <span class="font-bold text-stone-700 text-xs">${k}</span>
+            <div class="text-right">
+              <div class="text-[11px] font-bold text-stone-800 font-mono">${amt.toLocaleString()}원 <span class="${isMet ? 'text-emerald-500' : 'text-stone-400'} text-[10px]">(${pct}%)</span></div>
+              <div class="text-[9px] text-stone-400 font-mono mt-0.5">목표: ${target.toLocaleString()}원 ${isMet ? '✅ 달성' : '🏃‍♂️ 진행중'}</div>
+            </div>
+          </div>
+          <div class="w-full bg-stone-100 rounded-full h-1.5 overflow-hidden">
+            <div class="${barColor} h-1.5 rounded-full transition-all" style="width:${pct}%"></div>
+          </div>
+        </div>
+      `;
+    } else {
+      const pctTotal = data.monthTotal > 0 ? Math.round((amt/data.monthTotal)*100) : 0;
+      return `
+        <div class="mb-2">
+          <div class="flex justify-between text-[11px] mb-1">
+            <span class="font-bold text-stone-700">${k}</span>
+            <span class="text-stone-600 font-mono">${amt.toLocaleString()}원 <span class="text-[9px] text-stone-400">(${pctTotal}%)</span></span>
+          </div>
+          <div class="w-full bg-stone-200 rounded-full h-1.5">
+            <div class="bg-stone-400 h-1.5 rounded-full shadow-xs" style="width:${pctTotal}%"></div>
+          </div>
+        </div>
+      `;
+    }
+  }).join('');
+
+  const catHtml = Object.keys(data.catTotals).sort((a,b)=>data.catTotals[b]-data.catTotals[a]).map(k => {
+    const amt = data.catTotals[k];
+    const pct = data.monthTotal > 0 ? Math.round((amt/data.monthTotal)*100) : 0;
+    return `<div class="mb-2"><div class="flex justify-between text-[11px] mb-1"><span class="font-bold text-stone-700">${k}</span><span class="text-stone-600 font-mono">${amt.toLocaleString()}원 <span class="text-[9px] text-stone-400">(${pct}%)</span></span></div><div class="w-full bg-stone-200 rounded-full h-1.5"><div class="bg-amber-400 h-1.5 rounded-full shadow-xs" style="width:${pct}%"></div></div></div>`;
+  }).join('');
+
+  document.getElementById('statsModalMonthTitle').innerHTML = `<span>📊</span> ${y}년 ${m}월 지출 통계`;
+  document.getElementById('statsModalTotal').innerText = `${data.monthTotal.toLocaleString()}원`;
+  document.getElementById('statsPayContainer').innerHTML = payHtml || '<p class="text-xs text-stone-400 text-center py-2">결제 내역이 없습니다.</p>';
+  document.getElementById('statsCatContainer').innerHTML = catHtml || '<p class="text-xs text-stone-400 text-center py-2">지출 내역이 없습니다.</p>';
+
+  document.getElementById('modalBudgetStats').classList.remove('hidden');
+}
