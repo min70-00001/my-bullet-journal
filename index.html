@@ -1903,7 +1903,8 @@
     <div id="noteFolderManageList" class="space-y-1.5 overflow-y-auto flex-1 no-scrollbar"></div>
   </div>
 </div>
-    <!-- 🎯 세부 예산 그룹 관리 모달 -->
+    
+<!-- 🎯 세부 예산 그룹 관리 모달 -->
 <div id="modalBudgetGroupManage" class="fixed inset-0 z-[60] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
   <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-xl border border-stone-200 flex flex-col max-h-[85vh]">
     <!-- 모달 헤더 -->
@@ -1941,8 +1942,34 @@
   </div>
 </div>
 
+<!-- 📊 지출 통계 모달 (카드 실적 & 대분류 확인용) -->
+<div id="modalBudgetStats" class="fixed inset-0 z-[60] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-xl border border-stone-200 flex flex-col max-h-[85vh]">
+    <div class="flex items-center justify-between border-b border-stone-100 pb-2 shrink-0">
+      <h3 id="statsModalMonthTitle" class="text-sm font-bold text-stone-800 flex items-center gap-1.5"><span>📊</span> 이번 달 지출 통계</h3>
+      <button type="button" onclick="closeBudgetStatsModal()" class="text-stone-400 hover:text-stone-600 font-bold text-base">&times;</button>
+    </div>
+    <div class="overflow-y-auto space-y-4 no-scrollbar flex-1 pr-1 pb-2">
+      <!-- 총 지출 요약 -->
+      <div class="text-center py-3 bg-stone-50 rounded-xl border border-stone-100">
+        <div class="text-[10px] text-stone-500 mb-0.5">이번 달 총 지출액</div>
+        <div id="statsModalTotal" class="font-mono text-xl font-bold text-rose-600">0원</div>
+      </div>
+      <!-- 결제수단 (카드 실적용) -->
+      <div>
+        <h4 class="text-xs font-bold text-stone-700 mb-2 flex items-center gap-1"><span>💳</span> 결제수단별 지출 (실적 확인)</h4>
+        <div id="statsPayContainer" class="bg-stone-50 p-3 rounded-xl border border-stone-100"></div>
+      </div>
+      <!-- 대분류별 통계 -->
+      <div>
+        <h4 class="text-xs font-bold text-stone-700 mb-2 flex items-center gap-1"><span>📁</span> 대분류별 지출</h4>
+        <div id="statsCatContainer" class="bg-stone-50 p-3 rounded-xl border border-stone-100"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- 📁 거대한 통합 두뇌 파일 1개만 연결 -->
-<script src="js/main.js?v=20261011_v1"></script>
+<script src="js/main.js?v=20261011_v2"></script>
 </body>
 </html>
