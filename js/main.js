@@ -9175,3 +9175,60 @@ function openEditAccountBookExpenseModal(dateStr, idx) {
   `;
   modalEl.classList.remove('hidden');
 }
+
+// ==========================================
+// 🚑 잃어버린 수정 저장 기능 복구 (ReferenceError 해결!)
+// ==========================================
+
+function saveEditedAccountBookExpenseSafe() {
+  const targetId = document.getElementById('editAbExpId').value;
+  const oldDate = document.getElementById('editAbExpOldDate').value;
+  
+  let oldDayData = {};
+  try { oldDayData = JSON.parse(localStorage.getItem('mingle_day_' + oldDate) || '{}'); } catch(e) {}
+  if (!Array.isArray(oldDayData.expenses)) return;
+
+  const realIdx = oldDayData.expenses.findIndex(e => String(e.id) === String(targetId));
+  if (realIdx === -1) return;
+
+  const newDate = document.getElementById('editAbExpDate').value;
+  const newTime = document.getElementById('editAbExpTime').value.trim();
+  const mainCat = document.getElementById('editAbExpMainCat').value;
+  const subCat = document.getElementById('editAbExpSubCat').value;
+  const newTitle = document.getElementById('editAbExpTitle').value.trim();
+  const newPay = document.getElementById('editAbExpPay').value;
+  const newAmt = parseFloat(document.getElementById('editAbExpAmt').value) || 0;
+  const fullCategory = `${mainCat}/${subCat}`;
+
+  const updatedItemFields = { 
+      time: newTime, mainCat: mainCat, subCat: subCat, category: fullCategory, subCategory: subCat, 
+      title: newTitle, memo: newTitle, payMethod: newPay, payment: newPay, amount: newAmt 
+  };
+
+  if (newDate === oldDate) {
+    oldDayData.expenses[realIdx] = { ...oldDayData.expenses[realIdx], ...updatedItemFields };
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(oldDate, oldDayData);
+    if (typeof db !== 'undefined' && db) db.collection('diary_days').doc(oldDate).set({ expenses: oldDayData.expenses }, { merge: true }).catch(console.error);
+  } else {
+    const movedItem = oldDayData.expenses.splice(realIdx, 1)[0];
+    const finalMovedItem = { ...movedItem, ...updatedItemFields, date: newDate };
+    
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(oldDate, oldDayData);
+    if (typeof db !== 'undefined' && db) db.collection('diary_days').doc(oldDate).set({ expenses: oldDayData.expenses }, { merge: true }).catch(console.error);
+
+    let newDayData = {};
+    try { newDayData = JSON.parse(localStorage.getItem('mingle_day_' + newDate) || '{}'); } catch(e) {}
+    if (!Array.isArray(newDayData.expenses)) newDayData.expenses = [];
+    newDayData.expenses.push(finalMovedItem);
+
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(newDate, newDayData);
+    if (typeof db !== 'undefined' && db) db.collection('diary_days').doc(newDate).set({ expenses: newDayData.expenses }, { merge: true }).catch(console.error);
+    window.abSelectedDate = newDate;
+  }
+
+  const modalEl = document.getElementById('modalAbExpenseEdit');
+  if (modalEl) modalEl.classList.add('hidden');
+  if (typeof renderAccountBookCalendar === 'function') renderAccountBookCalendar();
+  if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
+  if (typeof renderBudgetDashboard === 'function') renderBudgetDashboard();
+}
