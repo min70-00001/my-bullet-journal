@@ -3685,10 +3685,9 @@ function renderAnniversaries() {
       if (document.getElementById('bookInputReview')) document.getElementById('bookInputReview').value = '';
       if (document.getElementById('bookInputRating')) document.getElementById('bookInputRating').value = '5';
 
-  // 💡 [추가] 문장 수집 컨테이너 싹 비우고 빈 칸 1개 띄우기 (신규 등록용)
-  const quoteContainer = document.getElementById('bookQuotesContainer');
-  if (quoteContainer) {
-    quoteContainer.innerHTML = '';
+  // 💡 [수정] 문장 수집 컨테이너 싹 비우고 빈 칸 1개 띄우기 (변수 선언 에러 영구 박멸!)
+  if (document.getElementById('bookQuotesContainer')) {
+    document.getElementById('bookQuotesContainer').innerHTML = '';
     addBookQuoteField();
   }
 
@@ -9427,15 +9426,15 @@ function openBookDetailModal(bookId = null) {
     addBookQuoteField(); // 비어있으면 1칸 기본 생성
   }
 
-    // 💡 [추가] 저장된 문장 불러오기 (수정용 모달 함수 안에 넣기!)
-  var quoteContainer = document.getElementById('bookQuotesContainer');
-  if (quoteContainer) quoteContainer.innerHTML = '';
+  // 💡 [수정] 저장된 문장 불러오기 (변수 선언 에러 영구 박멸!)
+  if (document.getElementById('bookQuotesContainer')) {
+    document.getElementById('bookQuotesContainer').innerHTML = '';
+  }
   
-  // book(또는 현재 선택된 책 데이터 변수) 안에 문장이 있으면 쫙 뿌려주기
   if (typeof book !== 'undefined' && book && book.quotes && book.quotes.length > 0) {
     book.quotes.forEach(q => addBookQuoteField(q.page, q.text));
   } else {
-    addBookQuoteField(); // 저장된 문장이 없으면 기본 1칸만
+    addBookQuoteField(); 
   }
 
   modal.classList.remove('hidden');
