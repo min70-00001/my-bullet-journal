@@ -9428,7 +9428,7 @@ function openBookDetailModal(bookId = null) {
   }
 
     // 💡 [추가] 저장된 문장 불러오기 (수정용 모달 함수 안에 넣기!)
-  const quoteContainer = document.getElementById('bookQuotesContainer');
+  var quoteContainer = document.getElementById('bookQuotesContainer');
   if (quoteContainer) quoteContainer.innerHTML = '';
   
   // book(또는 현재 선택된 책 데이터 변수) 안에 문장이 있으면 쫙 뿌려주기
