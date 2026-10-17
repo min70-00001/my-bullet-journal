@@ -9520,3 +9520,69 @@ function addBookQuoteField(page = '', text = '') {
     newTextarea.style.height = newTextarea.scrollHeight + 'px';
   }
 }
+
+// ==========================================
+// 📚 등록된 책 상세/수정 모달 열기 함수 (ReferenceError 해결)
+// ==========================================
+function openBookEditModal(id) {
+  const modal = document.getElementById('bookDetailModal');
+  if (!modal) return;
+
+  // 1. 선택한 책 데이터 가져오기
+  const books = getBooksMaster();
+  const book = books.find(b => String(b.id) === String(id));
+  if (!book) return;
+
+  // 2. 모달에 기존 데이터 쏙쏙 채워넣기
+  document.getElementById('bookEditId').value = book.id;
+  document.getElementById('bookModalTitle').innerHTML = '<span>✏️</span> 도서 상세 및 수정';
+  document.getElementById('bookSearchSection')?.classList.add('hidden');
+  document.getElementById('bookModalDeleteBtn')?.classList.remove('hidden');
+  document.getElementById('bookHistorySection')?.classList.remove('hidden');
+
+  document.getElementById('bookInputTitle').value = book.title || '';
+  document.getElementById('bookInputAuthor').value = book.author || '';
+  document.getElementById('bookInputTotalPage').value = book.totalPage || '';
+  document.getElementById('bookCoverUrl').value = book.cover || '';
+  
+  if (document.getElementById('bookInputStatus')) document.getElementById('bookInputStatus').value = book.status || 'reading';
+  if (document.getElementById('bookInputStartDate')) document.getElementById('bookInputStartDate').value = book.startDate || '';
+  if (document.getElementById('bookInputEndDate')) document.getElementById('bookInputEndDate').value = book.endDate || '';
+  if (document.getElementById('bookInputRating')) document.getElementById('bookInputRating').value = book.rating || '5';
+  if (document.getElementById('bookInputReview')) document.getElementById('bookInputReview').value = book.review || '';
+
+  // 3. 표지 이미지 불러오기
+  const coverImg = document.getElementById('bookPreviewCover');
+  const icon = document.getElementById('bookPreviewIcon');
+  const text = document.getElementById('bookPreviewText');
+
+  if (book.cover) {
+    if (coverImg) {
+      coverImg.src = book.cover;
+      coverImg.classList.remove('hidden');
+    }
+    if (icon) icon.classList.add('hidden');
+    if (text) text.classList.add('hidden');
+  } else {
+    if (coverImg) {
+      coverImg.src = '';
+      coverImg.classList.add('hidden');
+    }
+    if (icon) icon.classList.remove('hidden');
+    if (text) text.classList.remove('hidden');
+  }
+
+  // 4. 💡 저장된 문장 수집 목록 예쁘게 불러오기 (에러 안 나는 안전한 방식)
+  if (document.getElementById('bookQuotesContainer')) {
+    document.getElementById('bookQuotesContainer').innerHTML = '';
+  }
+  
+  if (book.quotes && book.quotes.length > 0) {
+    book.quotes.forEach(q => addBookQuoteField(q.page, q.text));
+  } else {
+    addBookQuoteField(); 
+  }
+
+  // 모달 짠! 하고 열기
+  modal.classList.remove('hidden');
+}
