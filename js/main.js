@@ -3685,6 +3685,13 @@ function renderAnniversaries() {
       if (document.getElementById('bookInputReview')) document.getElementById('bookInputReview').value = '';
       if (document.getElementById('bookInputRating')) document.getElementById('bookInputRating').value = '5';
 
+  // 💡 [추가] 문장 수집 컨테이너 싹 비우고 빈 칸 1개 띄우기 (신규 등록용)
+  const quoteContainer = document.getElementById('bookQuotesContainer');
+  if (quoteContainer) {
+    quoteContainer.innerHTML = '';
+    addBookQuoteField();
+  }
+
       modal.classList.remove('hidden');
     }
 
@@ -5200,6 +5207,16 @@ function saveBookMaster() {
     return;
   }
 
+  // 💡 [추가됨] 입력된 문장들 싹 긁어오기
+  const quotes = [];
+  const quotePages = document.querySelectorAll('.quote-page-input');
+  const quoteTexts = document.querySelectorAll('.quote-text-input');
+  for (let i = 0; i < quotePages.length; i++) {
+    const p = quotePages[i].value.trim();
+    const t = quoteTexts[i].value.trim();
+    if (p || t) quotes.push({ page: p, text: t });
+  }
+
   const books = getBooksMaster();
   const editId = document.getElementById('bookEditId')?.value;
   const bookData = {
@@ -5211,7 +5228,8 @@ function saveBookMaster() {
     startDate: document.getElementById('bookInputStartDate')?.value || '',
     endDate: document.getElementById('bookInputEndDate')?.value || '',
     rating: document.getElementById('bookInputRating')?.value || '5',
-    review: document.getElementById('bookInputReview')?.value.trim() || ''
+    review: document.getElementById('bookInputReview')?.value.trim() || '',
+    quotes: quotes // 💡 [추가됨] 여기에 긁어온 문장 데이터 쏙 넣기!
   };
 
   if (editId) {
@@ -9408,7 +9426,18 @@ function openBookDetailModal(bookId = null) {
     delBtn.classList.add('hidden');
     addBookQuoteField(); // 비어있으면 1칸 기본 생성
   }
+
+    // 💡 [추가] 저장된 문장 불러오기 (수정용 모달 함수 안에 넣기!)
+  const quoteContainer = document.getElementById('bookQuotesContainer');
+  if (quoteContainer) quoteContainer.innerHTML = '';
   
+  // book(또는 현재 선택된 책 데이터 변수) 안에 문장이 있으면 쫙 뿌려주기
+  if (typeof book !== 'undefined' && book && book.quotes && book.quotes.length > 0) {
+    book.quotes.forEach(q => addBookQuoteField(q.page, q.text));
+  } else {
+    addBookQuoteField(); // 저장된 문장이 없으면 기본 1칸만
+  }
+
   modal.classList.remove('hidden');
 }
 
@@ -9467,4 +9496,28 @@ function deleteBook() {
   
   saveBooksToLocalAndCloud(books);
   closeBookDetailModal();
+}
+
+// ==========================================
+// 📚 책장: 문장 수집 필드 추가 기능
+// ==========================================
+function addBookQuoteField(page = '', text = '') {
+  const container = document.getElementById('bookQuotesContainer');
+  if (!container) return;
+
+  const idx = Date.now() + Math.floor(Math.random() * 1000);
+  const html = `
+    <div id="quote_${idx}" class="flex gap-1.5 items-start bg-white p-2 rounded-lg border border-amber-200/60 shadow-inner group">
+      <input type="text" placeholder="p.12" value="${page}" class="quote-page-input w-12 border border-stone-200 rounded-md px-1.5 py-1.5 text-[10px] text-stone-700 text-center focus:outline-amber-400">
+      <textarea rows="1" placeholder="인상깊은 문장..." oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'" class="quote-text-input flex-1 border border-stone-200 rounded-md px-2 py-1.5 text-[10px] text-stone-700 resize-none focus:outline-amber-400 overflow-hidden min-h-[28px]">${text}</textarea>
+      <button type="button" onclick="document.getElementById('quote_${idx}').remove()" class="text-stone-300 hover:text-rose-500 font-bold px-1 py-0.5">&times;</button>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', html);
+  
+  const newTextarea = document.querySelector(`#quote_${idx} textarea`);
+  if(newTextarea) {
+    newTextarea.style.height = '';
+    newTextarea.style.height = newTextarea.scrollHeight + 'px';
+  }
 }
