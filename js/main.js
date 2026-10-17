@@ -9586,3 +9586,20 @@ function openBookEditModal(id) {
   // 모달 짠! 하고 열기
   modal.classList.remove('hidden');
 }
+
+// ==========================================
+// 🚑 책장 모달 안 닫히는(버튼 안 먹히는) 버그 픽스
+// ==========================================
+function closeBookDetailModal() {
+  // 우리가 진짜로 쓰는 모달 이름으로 제대로 닫기!
+  const modal = document.getElementById('bookDetailModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  } 
+  
+  // 혹시 몰라서 예전 이름으로 된 모달도 있으면 다 닫아버리게 방어막!
+  const oldModal = document.getElementById('modalBookDetail');
+  if (oldModal) {
+    oldModal.classList.add('hidden');
+  }
+}
