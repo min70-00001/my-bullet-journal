@@ -1466,13 +1466,13 @@
 
       <div>
         <label class="text-[10px] text-stone-500 block mb-1">한 줄 서평 / 감상 메모</label>
-        <textarea id="bookInputReview" rows="2" placeholder="마음에 남는 생각이나 서평을 남겨보세요." class="w-full bg-stone-50 border border-stone-200 rounded-xl p-2 text-xs focus:outline-none focus:border-amber-400 resize-none"></textarea>
+        <textarea id="bookInputReview" rows="2" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'" placeholder="마음에 남는 생각이나 서평을 남겨보세요." class="w-full bg-stone-50 border border-stone-200 rounded-xl p-2 text-xs focus:outline-none focus:border-amber-400 resize-none overflow-hidden min-h-[60px]"></textarea>
       </div>
 
       <!-- ⭐️ 문장 수집 (인상깊은 구절) 추가! -->
       <div class="bg-amber-50/50 border border-amber-100 rounded-xl p-3">
         <div class="flex items-center justify-between mb-2">
-          <h4 class="text-xs font-bold text-stone-700 flex items-center gap-1"><span>✍️</span> 인상깊은 구절</h4>
+          <h4 class="text-xs font-bold text-stone-700 flex items-center gap-1"><span>✍️</span> 문장 수집</h4>
         </div>
         <div id="bookQuotesContainer" class="space-y-1.5 mb-2">
           <!-- JS가 여기에 문장 입력칸을 넣어줄 거야! -->
@@ -1972,6 +1972,6 @@
 </div>
 
 <!-- 📁 거대한 통합 두뇌 파일 1개만 연결 -->
-<script src="js/main.js?v=20261017_v5"></script>
+<script src="js/main.js?v=20261017_v6"></script>
 </body>
 </html>
