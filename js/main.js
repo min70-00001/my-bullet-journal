@@ -9757,3 +9757,175 @@ openBookEditModal = function(id) {
     }
   }, 10);
 };
+
+// ==========================================
+// 📖 1. 책 클릭 시 감성 '읽기 전용' 모달 띄우기 & 렌더링 변경
+// ==========================================
+
+// 기존 책장 그리는 함수를 덮어써서, 누르면 '수정'이 아니라 '읽기 전용 뷰'가 열리게 변경!
+function renderBookShelf() {
+  const container = document.getElementById('bookshelfList');
+  if (!container) return;
+
+  const books = typeof getBooksMaster === 'function' ? getBooksMaster() : [];
+  const filtered = (typeof currentBookFilter === 'undefined' || currentBookFilter === 'all') 
+                    ? books : books.filter(b => b.status === currentBookFilter);
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="bg-stone-50 rounded-xl p-6 text-center text-stone-400 text-xs border border-stone-200">
+        <p>등록된 도서가 없어요 📚</p>
+        <p class="text-[10px] mt-1 text-stone-400">[+ 도서 등록]을 눌러 구글 책 검색으로 손쉽게 추가해보세요!</p>
+      </div>
+    `;
+    return;
+  }
+
+  const statusBadges = {
+    reading: '<span class="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9px] px-1.5 py-0.2 rounded font-bold">읽는 중</span>',
+    completed: '<span class="bg-amber-50 text-amber-900 border border-amber-200 text-[9px] px-1.5 py-0.2 rounded font-bold">완독 🏆</span>',
+    wish: '<span class="bg-stone-100 text-stone-600 border border-stone-200 text-[9px] px-1.5 py-0.2 rounded font-bold">위시 🔖</span>',
+    stopped: '<span class="bg-rose-50 text-rose-800 border border-rose-200 text-[9px] px-1.5 py-0.2 rounded font-bold">중단</span>'
+  };
+
+  container.innerHTML = filtered.map(b => {
+    const totalP = b.totalPage || 0;
+    const currP = b.currentPage || 0;
+    const percent = totalP > 0 ? Math.min(100, Math.round((currP / totalP) * 100)) : 0;
+
+    return `
+      <!-- 💡 클릭 시 openBookViewModal 이 실행되도록 변경! -->
+      <div onclick="openBookViewModal('${b.id}')" class="p-3 bg-white rounded-xl border border-stone-200 shadow-2xs hover:border-emerald-300 transition-all cursor-pointer flex gap-3">
+        <img src="${b.cover || 'https://via.placeholder.com/60x85?text=Cover'}" class="w-12 h-16 object-cover rounded-md border border-stone-200 shrink-0">
+        <div class="flex-1 min-w-0 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-1">
+              <h4 class="font-bold text-xs text-stone-800 truncate">${b.title}</h4>
+              ${statusBadges[b.status] || ''}
+            </div>
+            <p class="text-[10px] text-stone-500 truncate mt-0.5">${b.author || '저자 미상'}</p>
+          </div>
+          ${totalP > 0 ? `
+            <div class="space-y-0.5 mt-1.5">
+              <div class="flex justify-between text-[9px] font-mono text-stone-500">
+                <span>${currP} /${totalP}p</span>
+                <span>${percent}%</span>
+              </div>
+              <div class="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
+                <div class="bg-emerald-500 h-full rounded-full transition-all" style="width: ${percent}%"></div>
+              </div>
+            </div>
+          ` : `
+            <div class="text-[10px] text-amber-500 mt-1">${typeof getRatingStars === 'function' ? getRatingStars(b.rating) : '⭐⭐⭐⭐⭐'}</div>
+          `}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// 📖 깔끔한 감성 '읽기 전용' 책 상세 모달 동적 생성 함수
+function openBookViewModal(id) {
+  const books = typeof getBooksMaster === 'function' ? getBooksMaster() : [];
+  const book = books.find(b => String(b.id) === String(id));
+  if (!book) return;
+
+  let modalEl = document.getElementById('modalBookViewOnly');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'modalBookViewOnly';
+    document.body.appendChild(modalEl);
+  }
+
+  const statusBadges = {
+    reading: '<span class="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] px-2 py-0.5 rounded font-bold">📖 읽는 중</span>',
+    completed: '<span class="bg-amber-50 text-amber-900 border border-amber-200 text-[10px] px-2 py-0.5 rounded font-bold">🏆 완독한 책</span>',
+    wish: '<span class="bg-stone-100 text-stone-600 border border-stone-200 text-[10px] px-2 py-0.5 rounded font-bold">🔖 위시 도서</span>',
+    stopped: '<span class="bg-rose-50 text-rose-800 border border-rose-200 text-[10px] px-2 py-0.5 rounded font-bold">⏸️ 중단됨</span>'
+  };
+
+  const quotesHtml = (book.quotes && book.quotes.length > 0) ? book.quotes.map(q => `
+    <div class="flex gap-2 items-start mb-2.5">
+      ${q.page ? `<span class="shrink-0 text-[9px] font-bold text-amber-700 bg-amber-100/60 border border-amber-200 px-1.5 py-0.5 rounded shadow-2xs mt-0.5">p.${q.page}</span>` : ''}
+      <p class="text-[11px] text-stone-700 leading-relaxed break-words">${q.text}</p>
+    </div>
+  `).join('') : '<p class="text-[11px] text-stone-400 py-1 italic">수집된 문장이 없습니다.</p>';
+
+  modalEl.className = 'fixed inset-0 z-[80] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4';
+  modalEl.innerHTML = `
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full shadow-xl max-h-[85vh] overflow-y-auto no-scrollbar flex flex-col relative">
+      
+      <!-- 상단 액션 버튼 (수정 & 닫기) -->
+      <div class="absolute top-4 right-4 flex gap-1.5">
+        <button onclick="openBookEditModalFromView('${id}')" class="bg-stone-100 hover:bg-stone-200 text-stone-600 px-2 py-1.5 rounded-lg text-[10px] font-bold transition shadow-2xs">✏️ 수정</button>
+        <button onclick="document.getElementById('modalBookViewOnly').classList.add('hidden')" class="bg-stone-100 hover:bg-rose-100 hover:text-rose-500 text-stone-500 px-2 py-1.5 rounded-lg text-[10px] font-bold transition shadow-2xs">✕ 닫기</button>
+      </div>
+
+      <div class="flex gap-4 items-start pt-8 pb-4 border-b border-stone-100">
+        <img src="${book.cover || 'https://via.placeholder.com/60x85?text=Cover'}" class="w-20 h-28 object-cover rounded-md border border-stone-200 shadow-sm shrink-0">
+        <div class="flex-1 space-y-1.5 min-w-0">
+          <div class="mb-1">${statusBadges[book.status] || ''}</div>
+          <h4 class="font-bold text-sm text-stone-800 leading-snug break-words pr-2">${book.title}</h4>
+          <p class="text-[11px] text-stone-500 truncate">${book.author || '저자 미상'}</p>
+          <div class="text-[10px] text-amber-500 pt-1">${typeof getRatingStars === 'function' ? getRatingStars(book.rating) : '⭐⭐⭐⭐⭐'} <span class="text-stone-400 font-bold ml-0.5">${book.rating || 5}</span></div>
+          ${book.totalPage ? `<p class="text-[10px] text-stone-400 font-mono mt-1">총 ${book.totalPage}p</p>` : ''}
+        </div>
+      </div>
+
+      ${book.review ? `
+        <div class="mt-4 bg-stone-50 border border-stone-100 p-3.5 rounded-xl shadow-inner">
+          <h4 class="text-[10px] font-bold text-stone-500 mb-1.5">💬 한 줄 서평 / 메모</h4>
+          <p class="text-[11px] text-stone-700 leading-relaxed whitespace-pre-wrap break-words">${book.review}</p>
+        </div>
+      ` : ''}
+
+      <div class="mt-4 bg-amber-50/50 border border-amber-100/60 p-3.5 rounded-xl">
+        <h4 class="text-[11px] font-bold text-amber-900 mb-3 flex items-center gap-1 border-b border-amber-100 pb-1.5"><span>✍️</span> 인상깊은 구절</h4>
+        ${quotesHtml}
+      </div>
+      
+      ${book.startDate || book.endDate ? `
+        <div class="mt-4 text-[9px] text-stone-400 font-mono text-right bg-white">
+          🗓 독서 기간 : ${book.startDate \vert{}\vert{} '?'} ~${book.endDate || '?'}
+        </div>
+      ` : ''}
+
+    </div>
+  `;
+  modalEl.classList.remove('hidden');
+}
+
+// ✏️ 읽기 모드에서 수정 버튼 눌렀을 때: 읽기 창 닫고 기존 수정 창 띄우기!
+function openBookEditModalFromView(id) {
+  document.getElementById('modalBookViewOnly').classList.add('hidden');
+  if (typeof openBookEditModal === 'function') openBookEditModal(id);
+}
+
+
+// ==========================================
+// 🗄️ 2. 서랍 탭 새로고침 시 튕기는 현상 (타이밍 개선 완벽 픽스)
+// ==========================================
+window.addEventListener('DOMContentLoaded', () => {
+  // 브라우저가 화면을 다 그린 뒤에 아주 살짝 딜레이를 줘서 안전하게 탭 전환
+  setTimeout(() => {
+    try {
+      const activeTab = localStorage.getItem('mingle_active_tab');
+      const drawerSub = sessionStorage.getItem('mingle_drawer_subtab');
+      
+      if (activeTab === 'drawer' && drawerSub) {
+        // 1. 하단 네비게이션 바 '서랍' 활성화 유지
+        if (typeof switchTab === 'function') switchTab('drawer');
+        
+        // 2. 4단 로비 닫고, 세부 모듈(책장/가계부/쇼룸) 진입 함수 실행!
+        if (typeof enterDrawerSub === 'function') {
+          enterDrawerSub(drawerSub);
+        }
+        
+        // 3. 서브 탭 색상/상태 활성화
+        if (typeof setDrawerSubTab === 'function') {
+          setDrawerSubTab(drawerSub);
+        }
+      }
+    } catch(e) {}
+  }, 250); 
+});
