@@ -9886,7 +9886,7 @@ function openBookViewModal(id) {
       
       ${book.startDate || book.endDate ? `
         <div class="mt-4 text-[9px] text-stone-400 font-mono text-right bg-white">
-          🗓 독서 기간 : ${book.startDate \vert{}\vert{} '?'} ~${book.endDate || '?'}
+          🗓 독서 기간 : ${book.startDate || '?'} ~ ${book.endDate || '?'}⁠
         </div>
       ` : ''}
 
