@@ -9232,3 +9232,57 @@ function saveEditedAccountBookExpenseSafe() {
   if (typeof renderExpenseWidget === 'function') renderExpenseWidget();
   if (typeof renderBudgetDashboard === 'function') renderBudgetDashboard();
 }
+
+// ==========================================
+// 🚑 일일페이지 위젯 결제수단 [object Object] 표시 버그 수정
+// ==========================================
+
+// 기존에 만들었던 '위젯 카테고리 갱신 함수'를 업그레이드! (결제수단까지 싹 고침)
+function refreshExpenseWidgetDropdowns() {
+  // 1. 대분류/소분류 갱신
+  const mainSel = document.getElementById('expenseMainCatSelect');
+  const subSel = document.getElementById('expenseSubCatSelect');
+  if (mainSel && subSel) {
+    const cats = typeof getStoredCategories === 'function' ? getStoredCategories() : (window.DEFAULT_EXPENSE_CATS || {});
+    const mainKeys = Object.keys(cats);
+    
+    const currentMain = mainSel.value || mainKeys[0];
+    mainSel.innerHTML = mainKeys.map(k => `<option value="${k}">${k}</option>`).join('');
+    if (mainKeys.includes(currentMain)) mainSel.value = currentMain;
+    else mainSel.value = mainKeys[0];
+
+    const subKeys = cats[mainSel.value] || ['기타'];
+    const currentSub = subSel.value;
+    subSel.innerHTML = subKeys.map(k => `<option value="${k}">${k}</option>`).join('');
+    if (subKeys.includes(currentSub)) subSel.value = currentSub;
+    else subSel.value = subKeys[0];
+  }
+
+  // 2. 💡 결제수단 갱신 (이게 누락돼서 [object Object]가 떴었음!)
+  const paySel = document.getElementById('expensePayMethodSelect');
+  if (paySel) {
+    const rawPayMethods = typeof getStoredPayMethods === 'function' ? getStoredPayMethods() : [{name:'현금'}, {name:'카드'}, {name:'계좌이체'}, {name:'간편결제'}];
+    // 객체에서 이름(name)만 쏙 뽑아내기
+    const payMethodNames = rawPayMethods.map(p => typeof p === 'object' ? p.name : p);
+    
+    const currentPay = paySel.value;
+    paySel.innerHTML = payMethodNames.map(m => `<option value="${m}">${m}</option>`).join('');
+    
+    if (payMethodNames.includes(currentPay)) paySel.value = currentPay;
+    else if (payMethodNames.length > 0) paySel.value = payMethodNames[0];
+  }
+}
+
+// 결제수단 설정이 변경될 때, 위젯 쪽 셀렉트박스도 즉시 새로고침되도록 함수 덮어쓰기
+saveStoredPayMethods = function(methods) {
+  localStorage.setItem('mingle_expense_pay_methods', JSON.stringify(methods));
+  if (typeof db !== 'undefined' && db) {
+    db.collection('account_book_settings').doc('pay_methods').set({ methods }).catch(e=>console.error(e));
+  }
+  if (typeof renderSettingPayMethods === 'function') renderSettingPayMethods();
+  refreshExpenseWidgetDropdowns(); // 위젯 결제수단도 즉시 반영!
+};
+
+// 화면 켜질 때 [object Object] 뜬 거 싹 지우고 예쁘게 다시 그려주기
+document.addEventListener('DOMContentLoaded', refreshExpenseWidgetDropdowns);
+setTimeout(refreshExpenseWidgetDropdowns, 500); 
