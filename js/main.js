@@ -9603,3 +9603,157 @@ function closeBookDetailModal() {
     oldModal.classList.add('hidden');
   }
 }
+
+// ==========================================
+// 📚 1. 책장 목록 3.5점 별점 표시(✨) 버그 픽스
+// ==========================================
+function renderBookShelf() {
+  const container = document.getElementById('bookshelfList');
+  if (!container) return;
+
+  const books = getBooksMaster();
+  const filtered = (typeof currentBookFilter === 'undefined' || currentBookFilter === 'all') 
+                    ? books : books.filter(b => b.status === currentBookFilter);
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="bg-stone-50 rounded-xl p-6 text-center text-stone-400 text-xs border border-stone-200">
+        <p>등록된 도서가 없어요 📚</p>
+        <p class="text-[10px] mt-1 text-stone-400">[+ 도서 등록]을 눌러 구글 책 검색으로 손쉽게 추가해보세요!</p>
+      </div>
+    `;
+    return;
+  }
+
+  const statusBadges = {
+    reading: '<span class="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9px] px-1.5 py-0.2 rounded font-bold">읽는 중</span>',
+    completed: '<span class="bg-amber-50 text-amber-900 border border-amber-200 text-[9px] px-1.5 py-0.2 rounded font-bold">완독 🏆</span>',
+    wish: '<span class="bg-stone-100 text-stone-600 border border-stone-200 text-[9px] px-1.5 py-0.2 rounded font-bold">위시 🔖</span>',
+    stopped: '<span class="bg-rose-50 text-rose-800 border border-rose-200 text-[9px] px-1.5 py-0.2 rounded font-bold">중단</span>'
+  };
+
+  container.innerHTML = filtered.map(b => {
+    const totalP = b.totalPage || 0;
+    const currP = b.currentPage || 0;
+    const percent = totalP > 0 ? Math.min(100, Math.round((currP / totalP) * 100)) : 0;
+
+    return `
+      <div onclick="openBookEditModal(${b.id})" class="p-3 bg-white rounded-xl border border-stone-200 shadow-2xs hover:border-emerald-300 transition-all cursor-pointer flex gap-3">
+        <img src="${b.cover || 'https://via.placeholder.com/60x85?text=Cover'}" class="w-12 h-16 object-cover rounded-md border border-stone-200 shrink-0">
+        <div class="flex-1 min-w-0 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-1">
+              <h4 class="font-bold text-xs text-stone-800 truncate">${b.title}</h4>
+              ${statusBadges[b.status] || ''}
+            </div>
+            <p class="text-[10px] text-stone-500 truncate mt-0.5">${b.author || '저자 미상'}</p>
+          </div>
+          ${totalP > 0 ? `
+            <div class="space-y-0.5 mt-1.5">
+              <div class="flex justify-between text-[9px] font-mono text-stone-500">
+                <span>${currP} /${totalP}p</span>
+                <span>${percent}%</span>
+              </div>
+              <div class="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
+                <div class="bg-emerald-500 h-full rounded-full transition-all" style="width: ${percent}%"></div>
+              </div>
+            </div>
+          ` : `
+            <div class="text-[10px] text-amber-500 mt-1">${getRatingStars(b.rating)}</div>
+          `}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+
+// ==========================================
+// ☁️ 2. 책장 파이어베이스 연동(동기화) 누락 완벽 픽스
+// ==========================================
+function subscribeArchives() {
+  if (typeof renderBookShelf === 'function') renderBookShelf();
+  if (typeof renderKnittingShowroom === 'function') renderKnittingShowroom();
+
+  if (!db) return;
+  
+  // 💡 책장 동기화 (옛날 주소 지우고 올바른 최신 주소로 연결!)
+  if (typeof unsubscribeBooks !== 'undefined' && unsubscribeBooks) unsubscribeBooks();
+  unsubscribeBooks = db.collection('drawer_book').doc('master').onSnapshot((doc) => {
+    if (doc.exists) {
+      const data = doc.data().books || [];
+      localStorage.setItem('mingle_books_data', JSON.stringify(data));
+      if (typeof renderBookShelf === 'function') renderBookShelf();
+    }
+  }, err => console.error(err));
+
+  // 쇼룸 동기화
+  if (typeof unsubscribeKnits !== 'undefined' && unsubscribeKnits) unsubscribeKnits();
+  unsubscribeKnits = db.collection('knitting_showroom').onSnapshot((snapshot) => {
+    const knits = [];
+    snapshot.forEach(doc => knits.push({ id: doc.id, ...doc.data() }));
+    localStorage.setItem('mingle_knitting_showroom', JSON.stringify(knits));
+    if (typeof renderKnittingShowroom === 'function') renderKnittingShowroom();
+  }, err => console.error(err));
+}
+
+
+// ==========================================
+// 🗄️ 3. 서랍 탭 새로고침 시 튕기는 현상 완벽 픽스
+// ==========================================
+const originalSetDrawerSubTab3 = typeof setDrawerSubTab === 'function' ? setDrawerSubTab : function(){};
+setDrawerSubTab = function(type) {
+  originalSetDrawerSubTab3(type);
+  try { sessionStorage.setItem('mingle_drawer_subtab', type); } catch(e) {}
+};
+
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    try {
+      const activeTab = localStorage.getItem('mingle_active_tab') || 'day';
+      const drawerSub = sessionStorage.getItem('mingle_drawer_subtab');
+      if (activeTab === 'drawer' && drawerSub) {
+        const hub = document.getElementById('drawerHubGrid');
+        if (hub) hub.classList.add('hidden');
+        
+        ['budget', 'book', 'knit', 'note'].forEach(t => {
+          const mod = document.getElementById(`drawer${t.charAt(0).toUpperCase() + t.slice(1)}Module`);
+          if (mod) {
+            if (t === drawerSub) {
+              mod.classList.remove('hidden');
+              mod.style.display = 'block';
+            } else {
+              mod.classList.add('hidden');
+              mod.style.display = 'none';
+            }
+          }
+        });
+
+        if (drawerSub === 'budget') {
+          if (typeof renderBudgetDashboard === 'function') renderBudgetDashboard();
+        } else if (drawerSub === 'book') {
+          if (typeof renderBookShelf === 'function') renderBookShelf();
+        } else if (drawerSub === 'knit') {
+          if (typeof renderKnittingShowroom === 'function') renderKnittingShowroom();
+        }
+      }
+    } catch(e) {}
+  }, 200); // 살짝 딜레이 줘서 안전하게 화면 덮어쓰기!
+});
+
+
+// ==========================================
+// ✍️ 4. 서평 데이터 불러올 때 텍스트 박스 높이 자동 조절
+// ==========================================
+const origOpenBookEditModal2 = typeof openBookEditModal === 'function' ? openBookEditModal : function(){};
+openBookEditModal = function(id) {
+  origOpenBookEditModal2(id);
+  // 모달 켜지고 내용이 다 채워진 직후에, 글자 길이에 맞춰서 박스 길이 쫙 늘려주기!
+  setTimeout(() => {
+    const ta = document.getElementById('bookInputReview');
+    if (ta && ta.value) {
+      ta.style.height = ''; 
+      ta.style.height = ta.scrollHeight + 'px';
+    }
+  }, 10);
+};
