@@ -9309,7 +9309,7 @@ setTimeout(refreshExpenseWidgetDropdowns, 500);
 // 📚 책장 서랍 파이어베이스 동기화 & 문장 수집 기능 추가
 // ==========================================
 
-let unsubscribeBooks = null;
+unsubscribeBooks = null;
 
 // 1. 책장 실시간 동기화 (폰 <-> 아이패드 연동의 핵심!)
 function subscribeBookDrawer() {
