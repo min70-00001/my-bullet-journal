@@ -9286,3 +9286,185 @@ saveStoredPayMethods = function(methods) {
 // 화면 켜질 때 [object Object] 뜬 거 싹 지우고 예쁘게 다시 그려주기
 document.addEventListener('DOMContentLoaded', refreshExpenseWidgetDropdowns);
 setTimeout(refreshExpenseWidgetDropdowns, 500); 
+
+// ==========================================
+// 📚 책장 서랍 파이어베이스 동기화 & 문장 수집 기능 추가
+// ==========================================
+
+let unsubscribeBooks = null;
+
+// 1. 책장 실시간 동기화 (폰 <-> 아이패드 연동의 핵심!)
+function subscribeBookDrawer() {
+  if (typeof db === 'undefined' || !db) return;
+  if (unsubscribeBooks) unsubscribeBooks();
+  
+  unsubscribeBooks = db.collection('mingle_data').doc('library').onSnapshot(doc => {
+    if (doc.exists) {
+      const data = doc.data();
+      if (data.bookList) {
+        localStorage.setItem('mingle_books', JSON.stringify(data.bookList));
+        if (typeof renderBookList === 'function') renderBookList(); // 기존 화면 갱신
+      }
+    }
+  }, err => console.error('책장 동기화 에러:', err));
+}
+
+// 초기 로딩 시 책장 동기화 시작!
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(subscribeBookDrawer, 1000); 
+});
+
+function saveBooksToLocalAndCloud(books) {
+  localStorage.setItem('mingle_books', JSON.stringify(books));
+  if (typeof db !== 'undefined' && db) {
+    db.collection('mingle_data').doc('library').set({ bookList: books }, { merge: true }).catch(console.error);
+  }
+  if (typeof renderBookList === 'function') renderBookList();
+}
+
+// 2. 🚨 에러 났던 모달 닫기 함수 추가!
+function closeBookDetailModal() {
+  const modal = document.getElementById('modalBookDetail');
+  if (modal) modal.classList.add('hidden');
+}
+
+// 3. 인상깊은 구절 필드 동적 추가
+function addBookQuoteField(page = '', text = '') {
+  const container = document.getElementById('bookQuotesContainer');
+  if (!container) return;
+
+  const idx = Date.now() + Math.floor(Math.random() * 1000);
+  const html = `
+    <div id="quote_${idx}" class="flex gap-1.5 items-start bg-white p-2 rounded-lg border border-amber-200/60 shadow-inner group">
+      <input type="text" placeholder="p.123" value="${page}" class="quote-page-input w-14 border border-stone-200 rounded-md px-1.5 py-1.5 text-[10px] text-stone-700 text-center focus:outline-amber-400">
+      <textarea rows="1" placeholder="인상깊은 문장..." oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'" class="quote-text-input flex-1 border border-stone-200 rounded-md px-2 py-1.5 text-[10px] text-stone-700 resize-none focus:outline-amber-400 overflow-hidden min-h-[28px]">${text}</textarea>
+      <button type="button" onclick="document.getElementById('quote_${idx}').remove()" class="text-stone-300 hover:text-rose-500 font-bold px-1 py-0.5">&times;</button>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', html);
+  
+  // 방금 추가된 textarea 높이 자동 조절
+  const newTextarea = document.querySelector(`#quote_${idx} textarea`);
+  if(newTextarea) {
+    newTextarea.style.height = '';
+    newTextarea.style.height = newTextarea.scrollHeight + 'px';
+  }
+}
+
+// 4. 모달 열기 로직 덮어쓰기 (기존 데이터 & 문장 불러오기)
+function openBookDetailModal(bookId = null) {
+  const modal = document.getElementById('modalBookDetail');
+  if (!modal) return;
+  
+  const titleEl = document.getElementById('bookModalTitle');
+  const delBtn = document.getElementById('btnDeleteBook');
+  const quoteContainer = document.getElementById('bookQuotesContainer');
+  
+  // 인풋 초기화
+  document.getElementById('editBookId').value = '';
+  document.getElementById('bookTitleInput').value = '';
+  document.getElementById('bookAuthorInput').value = '';
+  document.getElementById('bookPublisherInput').value = '';
+  document.getElementById('bookStatusSelect').value = '읽는 중';
+  document.getElementById('bookRatingSelect').value = '0';
+  document.getElementById('bookReviewInput').value = '';
+  document.getElementById('bookCoverImg').src = '';
+  document.getElementById('bookCoverImg').classList.add('hidden');
+  document.getElementById('bookCoverPlaceholder').classList.remove('hidden');
+  quoteContainer.innerHTML = '';
+
+  if (bookId) {
+    titleEl.innerHTML = '<span>✏️</span> 도서 상세 / 수정';
+    delBtn.classList.remove('hidden');
+    
+    let books = [];
+    try { books = JSON.parse(localStorage.getItem('mingle_books') || '[]'); } catch(e) {}
+    const book = books.find(b => String(b.id) === String(bookId));
+    
+    if (book) {
+      document.getElementById('editBookId').value = book.id;
+      document.getElementById('bookTitleInput').value = book.title || '';
+      document.getElementById('bookAuthorInput').value = book.author || '';
+      document.getElementById('bookPublisherInput').value = book.publisher || '';
+      document.getElementById('bookStatusSelect').value = book.status || '읽는 중';
+      document.getElementById('bookRatingSelect').value = book.rating || '0';
+      document.getElementById('bookReviewInput').value = book.review || '';
+      
+      if (book.coverUrl) {
+        document.getElementById('bookCoverImg').src = book.coverUrl;
+        document.getElementById('bookCoverImg').classList.remove('hidden');
+        document.getElementById('bookCoverPlaceholder').classList.add('hidden');
+      }
+
+      // 문장 렌더링
+      if (book.quotes && book.quotes.length > 0) {
+        book.quotes.forEach(q => addBookQuoteField(q.page, q.text));
+      } else {
+        addBookQuoteField(); // 비어있으면 1칸 기본 생성
+      }
+    }
+  } else {
+    titleEl.innerHTML = '<span>📚</span> 도서 신규 등록';
+    delBtn.classList.add('hidden');
+    addBookQuoteField(); // 비어있으면 1칸 기본 생성
+  }
+  
+  modal.classList.remove('hidden');
+}
+
+// 5. 책장 저장 로직 덮어쓰기 (문장 수집 포함)
+function saveBookDetail() {
+  const id = document.getElementById('editBookId').value;
+  const title = document.getElementById('bookTitleInput').value.trim();
+  const author = document.getElementById('bookAuthorInput').value.trim();
+  const publisher = document.getElementById('bookPublisherInput').value.trim();
+  const status = document.getElementById('bookStatusSelect').value;
+  const rating = document.getElementById('bookRatingSelect').value;
+  const review = document.getElementById('bookReviewInput').value.trim();
+  const coverUrl = document.getElementById('bookCoverImg').src;
+
+  if (!title) return alert('도서명을 입력해주세요.');
+
+  // 💡 문장 싹 긁어오기
+  const quotes = [];
+  const quotePages = document.querySelectorAll('.quote-page-input');
+  const quoteTexts = document.querySelectorAll('.quote-text-input');
+  for (let i = 0; i < quotePages.length; i++) {
+    const p = quotePages[i].value.trim();
+    const t = quoteTexts[i].value.trim();
+    if (p || t) quotes.push({ page: p, text: t });
+  }
+
+  let books = [];
+  try { books = JSON.parse(localStorage.getItem('mingle_books') || '[]'); } catch(e) {}
+
+  if (id) {
+    const idx = books.findIndex(b => String(b.id) === String(id));
+    if (idx > -1) {
+      books[idx] = { ...books[idx], title, author, publisher, status, rating, review, quotes, coverUrl: coverUrl.includes(window.location.origin) ? '' : coverUrl };
+    }
+  } else {
+    books.push({
+      id: 'book_' + Date.now(),
+      title, author, publisher, status, rating, review, quotes,
+      coverUrl: coverUrl.includes(window.location.origin) ? '' : coverUrl,
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  saveBooksToLocalAndCloud(books);
+  closeBookDetailModal();
+}
+
+function deleteBook() {
+  const id = document.getElementById('editBookId').value;
+  if (!id) return;
+  if (!confirm('정말 이 책을 책장에서 삭제할까요?')) return;
+
+  let books = [];
+  try { books = JSON.parse(localStorage.getItem('mingle_books') || '[]'); } catch(e) {}
+  books = books.filter(b => String(b.id) !== String(id));
+  
+  saveBooksToLocalAndCloud(books);
+  closeBookDetailModal();
+}
