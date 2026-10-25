@@ -1508,12 +1508,12 @@
         <button onclick="closeOotdClosetModal()" class="text-stone-400 hover:text-stone-600 font-bold text-sm">✕</button>
       </div>
 
-      <!-- 새 옷 추가 바 (이름 치면 컬러 자동 감지!) -->
+      <!-- 🔍 노션 스타일 스마트 검색 및 추가 바 -->
       <div class="space-y-1">
-        <label class="text-[10px] text-stone-500 font-semibold block">✨ 새 옷 추가 (이름에 색상 단어를 넣으면 색깔이 쏙!)</label>
-        <div class="flex gap-1.5">
-          <input type="text" id="ootdNewClothInput" placeholder="예: 베이지 코튼팬츠, 소라 셔츠" onkeydown="if(event.key==='Enter') addNewClothToCloset()" class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-400">
-          <button onclick="addNewClothToCloset()" class="px-3 py-1.5 bg-stone-800 text-white rounded-xl text-xs font-bold shrink-0">추가</button>
+        <label class="text-[10px] text-stone-500 font-semibold block">🔍 옷 검색 및 추가 (색상 자동 인식)</label>
+        <div class="relative flex items-center">
+          <input type="text" id="ootdNewClothInput" oninput="onOotdSearchInput()" onkeydown="handleOotdEnterKey(event)" placeholder="옷 이름 검색 또는 새로 추가..." class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-400 pl-8 transition-colors">
+          <span class="absolute left-2.5 text-stone-400 text-xs">🔍</span>
         </div>
       </div>
 
@@ -1972,6 +1972,6 @@
 </div>
 
 <!-- 📁 거대한 통합 두뇌 파일 1개만 연결 -->
-<script src="js/main.js?v=20261017_v8"></script>
+<script src="js/main.js?v=20261025_v1"></script>
 </body>
 </html>
