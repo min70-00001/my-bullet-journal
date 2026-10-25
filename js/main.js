@@ -10345,3 +10345,174 @@ renderDayRoutineTodos = function() {
     `;
   }).join('');
 };
+
+// ==========================================
+// 📝 데일리 TO-DO UI/UX 전면 개편 (모달 통합, 미루기 개선)
+// ==========================================
+
+// 1. 커스텀 수정 모달 띄우기 (기본 prompt 대체!)
+function editRoutineTodoName(id) {
+  const rules = typeof getRoutineRules === 'function' ? getRoutineRules() : [];
+  const target = rules.find(r => r.id === id);
+  if (!target) return;
+
+  let editModal = document.getElementById('routineTodoEditModal');
+  if (!editModal) {
+     editModal = document.createElement('div');
+     editModal.id = 'routineTodoEditModal';
+     editModal.className = 'fixed inset-0 z-[70] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4';
+     document.body.appendChild(editModal);
+  }
+
+  editModal.innerHTML = `
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-xl space-y-3">
+      <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>✏️</span> 투두 내용 수정</h3>
+      <input type="hidden" id="editRoutineTodoId" value="${id}">
+      <input type="text" id="editRoutineTodoInput" value="${target.text}" class="w-full border border-stone-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-amber-400">
+      <div class="flex gap-2 mt-3 pt-1">
+        <button onclick="document.getElementById('routineTodoEditModal').classList.add('hidden')" class="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-xs py-2 rounded-xl transition">취소</button>
+        <button onclick="saveRoutineTodoEdit()" class="flex-1 bg-amber-400 hover:bg-amber-500 text-stone-900 font-bold text-xs py-2 rounded-xl shadow-xs transition">확인</button>
+      </div>
+    </div>
+  `;
+  editModal.classList.remove('hidden');
+  document.getElementById('editRoutineTodoInput').focus();
+}
+
+function saveRoutineTodoEdit() {
+  const id = parseInt(document.getElementById('editRoutineTodoId').value, 10);
+  const newText = document.getElementById('editRoutineTodoInput').value.trim();
+  if (!newText) return alert('내용을 입력해주세요!');
+
+  const rules = getRoutineRules();
+  const target = rules.find(r => r.id === id);
+  if (target) {
+    target.text = newText;
+    saveRoutineRules(rules);
+    if(document.getElementById('routineTodoManageModal') && !document.getElementById('routineTodoManageModal').classList.contains('hidden')) {
+        renderRoutineTodoManageList();
+    }
+  }
+  document.getElementById('routineTodoEditModal').classList.add('hidden');
+}
+
+// 2. 데일리 TO-DO 메인 렌더링 덮어쓰기 (미루기 버튼 텍스트 단축 & 매일 항목 제외!)
+const origRenderDayRoutineTodos = typeof renderDayRoutineTodos === 'function' ? renderDayRoutineTodos : function(){};
+renderDayRoutineTodos = function() {
+  const container = document.getElementById('routineTodoList');
+  if (!container) return;
+
+  const parts = currentDate.split('-');
+  const year = parseInt(parts[0], 10);
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const d = new Date(year, monthIdx, parseInt(parts[2], 10));
+  const dayOfWeek = d.getDay();
+  const dateNum = d.getDate();
+  const monthNum = d.getMonth() + 1;
+  const lastDayOfMonth = new Date(year, monthIdx + 1, 0).getDate();
+
+  const rules = typeof getRoutineRules === 'function' ? getRoutineRules() : [];
+  const dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : {};
+  const checks = dayData.routineChecks || {};
+  const postponedChecks = dayData.postponedChecks || {};
+  const postponedFromPast = dayData.postponedTodos || []; 
+
+  let activeRules = rules.filter(r => {
+    if (r.type === 'daily') return true;
+    if (r.type === 'weekly') return r.days && r.days.includes(dayOfWeek);
+    if (r.type === 'monthly_first' || r.type === 'monthly') return dateNum === 1;
+    if (r.type === 'monthly_last') return dateNum === lastDayOfMonth;
+    if (r.type === 'quarterly') return dateNum === 1 && [1, 4, 7, 10].includes(monthNum);
+    return false;
+  });
+
+  postponedFromPast.forEach(p => {
+     if (!activeRules.find(r => r.id === p.id)) {
+         activeRules.push({ ...p, isPostponedItem: true });
+     }
+  });
+
+  const typeRank = { daily: 1, weekly: 2, monthly_first: 3, monthly: 3, monthly_last: 4, quarterly: 5 };
+  activeRules.sort((a, b) => {
+    if (a.isPostponedItem && !b.isPostponedItem) return -1; 
+    if (!a.isPostponedItem && b.isPostponedItem) return 1;
+    const rankDiff = (typeRank[a.type] || 9) - (typeRank[b.type] || 9);
+    if (rankDiff !== 0) return rankDiff;
+    return (a.text||'').localeCompare(b.text||'', 'ko');
+  });
+
+  const countBadge = document.getElementById('routineTodoCount');
+  if (countBadge) countBadge.innerText = `${activeRules.length}건`;
+
+  if (activeRules.length === 0) {
+    container.innerHTML = `<p class="text-[11px] text-stone-300 py-2 text-center">오늘 해야 할 투두가 없어요 🌿</p>`;
+    return;
+  }
+
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  container.innerHTML = activeRules.map((r) => {
+    const isDone = !!checks[r.id];
+    const isPostponedToday = !!postponedChecks[r.id]; 
+    
+    let badge = '';
+    if (r.isPostponedItem) badge = '<span class="text-[9px] bg-rose-50 text-rose-600 border border-rose-200 px-1.5 py-0.2 rounded font-semibold shrink-0">어제 미룸 💦</span>';
+    else if (r.type === 'daily') badge = '<span class="text-[9px] bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.2 rounded font-semibold shrink-0">매일</span>';
+    else if (r.type === 'weekly') badge = `<span class="text-[9px] bg-sky-50 text-sky-900 border border-sky-200 px-1.5 py-0.2 rounded font-semibold shrink-0">${dayNames[dayOfWeek]}요일</span>`;
+    else if (r.type === 'monthly_first' || r.type === 'monthly') badge = '<span class="text-[9px] bg-emerald-50 text-emerald-900 border border-emerald-200 px-1.5 py-0.2 rounded font-semibold shrink-0">첫날</span>';
+    else if (r.type === 'monthly_last') badge = '<span class="text-[9px] bg-rose-50 text-rose-900 border border-rose-200 px-1.5 py-0.2 rounded font-semibold shrink-0">말일</span>';
+    else if (r.type === 'quarterly') badge = '<span class="text-[9px] bg-purple-50 text-purple-900 border border-purple-200 px-1.5 py-0.2 rounded font-semibold shrink-0">분기</span>';
+
+    let postponeBtnHtml = '';
+    // 💡 매일(daily) 항목이 아니고, 완료되지 않았고, 아직 미루지 않은 항목에만 '미루기' 버튼 표시!
+    if (!isDone && !isPostponedToday && r.type !== 'daily') {
+        postponeBtnHtml = `<button onclick="postponeRoutineTodo(${r.id}, '${r.text.replace(/'/g, "\\'")}', '${r.type}')" class="text-[9px] font-bold text-stone-400 hover:text-sky-500 hover:border-sky-300 bg-white border border-stone-200 px-2 py-1 rounded shadow-2xs transition shrink-0 ml-1">미루기</button>`;
+    } else if (isPostponedToday) {
+        badge = '<span class="text-[9px] bg-stone-100 text-stone-400 border border-stone-200 px-1.5 py-0.2 rounded font-semibold shrink-0">내일로 미룸</span>';
+    }
+
+    return `
+      <div class="flex items-center justify-between p-2 rounded-lg ${isPostponedToday ? 'bg-stone-50/50 opacity-60' : 'bg-stone-50'} border border-stone-100 text-xs transition-all shadow-2xs hover:border-amber-200">
+        <label class="flex items-center gap-1.5 flex-1 cursor-pointer min-w-0 pr-1">
+          <input type="checkbox" ${isDone ? 'checked' : ''} ${isPostponedToday ? 'disabled' : ''} onchange="toggleDayRoutineCheck(${r.id})" class="w-3.5 h-3.5 rounded text-amber-500 border-stone-300 ${isPostponedToday ? 'opacity-50' : 'cursor-pointer'} focus:ring-0">
+          <span class="${isDone || isPostponedToday ? 'line-through text-stone-300' : 'text-stone-700 font-bold'} truncate text-[11px]">${r.text}</span>
+          ${badge}
+        </label>
+        <div class="flex items-center shrink-0">
+          ${postponeBtnHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+};
+
+// 3. 투두 추가 시 모달 리스트도 즉시 갱신되도록 덮어쓰기
+const origAddRoutineTodo = typeof addRoutineTodo === 'function' ? addRoutineTodo : function(){};
+addRoutineTodo = function() {
+  const input = document.getElementById('newRoutineTodoInput');
+  const text = input ? input.value.trim() : '';
+  if (!text) return;
+
+  const typeSelect = document.getElementById('routineTypeSelect');
+  const type = typeSelect ? typeSelect.value : 'daily';
+  const rules = getRoutineRules();
+
+  const newRule = {
+    id: Date.now(),
+    text,
+    type,
+    days: type === 'weekly' ? [...selectedWeeklyDays] : null,
+    createdDate: typeof currentDate !== 'undefined' ? currentDate : new Date().toISOString().slice(0,10),
+    sortOrder: Date.now()
+  };
+
+  rules.push(newRule);
+  if (input) input.value = '';
+  selectedWeeklyDays = [];
+  if (typeof renderWeekDayChips === 'function') renderWeekDayChips();
+  saveRoutineRules(rules);
+  
+  if(document.getElementById('routineTodoManageModal') && !document.getElementById('routineTodoManageModal').classList.contains('hidden')) {
+      renderRoutineTodoManageList();
+  }
+};
