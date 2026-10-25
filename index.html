@@ -363,7 +363,7 @@
         </div>
       </div>
 
-      <!-- 데일리 TO-DO (첫날/말일/분기 주기, 미니멀 파스텔 텍스트 뱃지, 스크롤 없는 오가닉 높이) -->
+      <!-- 데일리 TO-DO (메인에서 폼 제거하고 깔끔해짐!) -->
       <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
@@ -372,35 +372,14 @@
             </h3>
             <p class="text-[10px] text-stone-400 mt-0.5">매일/요일/월별 반복 일정을 놓치지 마세요</p>
           </div>
-          <span class="text-[10px] text-sage-700 bg-sage-50 px-2 py-0.5 rounded-full font-medium" id="routineTodoCount">0건</span>
-        </div>
-
-        <div class="space-y-2 bg-stone-50 p-2.5 rounded-xl border border-stone-200">
-          <input type="text" id="newRoutineTodoInput" placeholder="새로운 고정 반복 루틴..." class="w-full bg-white border border-stone-200 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-amber-400" onkeypress="if(event.key==='Enter') addRoutineTodo()">
-          <div class="flex items-center gap-1.5">
-            <select id="routineTypeSelect" onchange="onRoutineTypeChange(this.value)" class="flex-1 bg-white border border-stone-200 rounded-xl text-[11px] px-2 py-1.5 text-stone-700 font-medium cursor-pointer">
-              <option value="daily">매일</option>
-              <option value="weekly">요일지정</option>
-              <option value="monthly_first">첫날 (매월 1일)</option>
-              <option value="monthly_last">말일 (매월 말일)</option>
-              <option value="quarterly">분기 (분기 첫날)</option>
-            </select>
-            <button onclick="addRoutineTodo()" class="bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs px-4 py-1.5 rounded-xl transition-colors shrink-0">추가</button>
-          </div>
-          <div id="weeklyDaysSelector" class="hidden flex items-center gap-1 pt-1 overflow-x-auto text-[10px]">
-            <span class="text-stone-400 shrink-0 font-medium mr-1">반복요일:</span>
-            <button type="button" onclick="toggleWeekDayChip(1)" id="wd_chip_1" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">월</button>
-            <button type="button" onclick="toggleWeekDayChip(2)" id="wd_chip_2" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">화</button>
-            <button type="button" onclick="toggleWeekDayChip(3)" id="wd_chip_3" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">수</button>
-            <button type="button" onclick="toggleWeekDayChip(4)" id="wd_chip_4" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">목</button>
-            <button type="button" onclick="toggleWeekDayChip(5)" id="wd_chip_5" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">금</button>
-            <button type="button" onclick="toggleWeekDayChip(6)" id="wd_chip_6" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">토</button>
-            <button type="button" onclick="toggleWeekDayChip(0)" id="wd_chip_0" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">일</button>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] text-sage-700 bg-sage-50 px-2 py-0.5 rounded-full font-medium" id="routineTodoCount">0건</span>
+            <button onclick="openRoutineTodoManageModal()" class="text-[10px] text-stone-500 border border-stone-200 bg-stone-100 px-2 py-0.5 rounded-lg hover:bg-stone-200 font-bold transition shadow-2xs cursor-pointer">⚙️ 전체 관리</button>
           </div>
         </div>
 
-        <!-- 오가닉 높이 리스트 (스크롤 박멸) -->
-        <div id="routineTodoList" class="space-y-1.5"></div>
+        <!-- 폼은 모달로 가고 오직 목록만 렌더링 -->
+        <div id="routineTodoList" class="space-y-1.5 mt-2"></div>
       </div>
 
       <!-- 🎵 오늘의 노래 (가로 슬림형 재배치) -->
@@ -1608,16 +1587,46 @@
   <!-- 🚀 밍글로그 V2 신규 모달 업데이트 영역 (1탄) -->
   <!-- ============================================== -->
 
-  <!-- 📝 1. 데일리 투두 전체 관리 모달 -->
-  <div id="routineTodoManageModal" class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl p-5 max-w-sm w-full h-[70vh] flex flex-col shadow-xl">
-      <div class="flex justify-between items-center border-b border-stone-100 pb-2 mb-2">
-        <h3 class="text-xs font-bold text-stone-800">⚙️ 반복 투두 전체 관리</h3>
-        <button onclick="closeRoutineTodoManageModal()" class="text-stone-400 font-bold text-lg">✕</button>
+  <!-- 📝 1. 데일리 투두 전체 관리 모달 (입력 폼 통합) -->
+  <div id="routineTodoManageModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full max-h-[85vh] flex flex-col shadow-xl">
+      <div class="flex justify-between items-center border-b border-stone-100 pb-2 mb-3 shrink-0">
+        <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5"><span>⚙️</span> 반복 투두 전체 관리</h3>
+        <button onclick="closeRoutineTodoManageModal()" class="text-stone-400 hover:text-stone-600 font-bold text-lg leading-none">✕</button>
       </div>
-      <div id="routineTodoManageList" class="flex-1 overflow-y-auto space-y-2 text-xs pr-1"></div>
+      
+      <!-- 여기로 쏙 들어온 새 투두 추가 폼! -->
+      <div class="space-y-2 bg-stone-50 p-3 rounded-xl border border-stone-200 mb-3 shrink-0">
+        <input type="text" id="newRoutineTodoInput" placeholder="새로운 고정 반복 루틴..." class="w-full bg-white border border-stone-200 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-amber-400" onkeypress="if(event.key==='Enter') addRoutineTodo()">
+        <div class="flex items-center gap-1.5">
+          <select id="routineTypeSelect" onchange="onRoutineTypeChange(this.value)" class="flex-1 bg-white border border-stone-200 rounded-xl text-[11px] px-2 py-1.5 text-stone-700 font-medium cursor-pointer">
+            <option value="daily">매일</option>
+            <option value="weekly">요일지정</option>
+            <option value="monthly_first">첫날 (매월 1일)</option>
+            <option value="monthly_last">말일 (매월 말일)</option>
+            <option value="quarterly">분기 (분기 첫날)</option>
+          </select>
+          <button onclick="addRoutineTodo()" class="bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs px-4 py-1.5 rounded-xl transition-colors shrink-0 shadow-xs">추가</button>
+        </div>
+        <div id="weeklyDaysSelector" class="hidden flex items-center gap-1 pt-1 overflow-x-auto text-[10px]">
+          <span class="text-stone-400 shrink-0 font-medium mr-1">반복요일:</span>
+          <button type="button" onclick="toggleWeekDayChip(1)" id="wd_chip_1" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">월</button>
+          <button type="button" onclick="toggleWeekDayChip(2)" id="wd_chip_2" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">화</button>
+          <button type="button" onclick="toggleWeekDayChip(3)" id="wd_chip_3" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">수</button>
+          <button type="button" onclick="toggleWeekDayChip(4)" id="wd_chip_4" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">목</button>
+          <button type="button" onclick="toggleWeekDayChip(5)" id="wd_chip_5" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">금</button>
+          <button type="button" onclick="toggleWeekDayChip(6)" id="wd_chip_6" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">토</button>
+          <button type="button" onclick="toggleWeekDayChip(0)" id="wd_chip_0" class="px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 font-medium">일</button>
+        </div>
+      </div>
+
+      <div class="text-[10px] text-stone-400 mb-1 shrink-0 font-medium flex items-center justify-between">
+        <span>등록된 목록 (순서 변경 및 삭제)</span>
+      </div>
+      <div id="routineTodoManageList" class="flex-1 overflow-y-auto space-y-2 text-xs pr-1 no-scrollbar pb-2"></div>
     </div>
   </div>
+
 
   <!-- ⭐ 2. 오늘의 할 일(단건) 수정 모달 -->
   <div id="todayTaskEditModal" class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
