@@ -10515,3 +10515,281 @@ addRoutineTodo = function() {
       renderRoutineTodoManageList();
   }
 };
+
+// ==========================================
+// 📝 데일리 TO-DO 2차 개편: 주기 수정 & 정렬 옵션 추가
+// ==========================================
+
+// 1. 정렬 스위치 토글 함수
+function toggleTodoSortMode() {
+  const cur = localStorage.getItem('mingle_todo_sort_mode') || 'auto'; // 기본값은 자동정렬!
+  localStorage.setItem('mingle_todo_sort_mode', cur === 'auto' ? 'manual' : 'auto');
+  renderRoutineTodoManageList();
+  if (typeof renderDayRoutineTodos === 'function') renderDayRoutineTodos();
+}
+
+// 2. 투두 내용 + 주기(타입) 수정까지 가능한 모달로 업그레이드!
+function editRoutineTodoName(id) {
+  const rules = typeof getRoutineRules === 'function' ? getRoutineRules() : [];
+  const target = rules.find(r => r.id === id);
+  if (!target) return;
+
+  let editModal = document.getElementById('routineTodoEditModal');
+  if (!editModal) {
+     editModal = document.createElement('div');
+     editModal.id = 'routineTodoEditModal';
+     editModal.className = 'fixed inset-0 z-[70] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4';
+     document.body.appendChild(editModal);
+  }
+
+  // 요일 체크박스 렌더링
+  let daysHtml = '';
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  for(let i=0; i<7; i++) {
+     const isChecked = (target.days && target.days.includes(i)) ? 'checked' : '';
+     daysHtml += `<label class="flex items-center gap-1 text-[11px] font-medium text-stone-600 bg-stone-50 px-1.5 py-1 rounded cursor-pointer border border-stone-200">
+       <input type="checkbox" value="${i}" class="edit-day-chk rounded text-amber-500 focus:ring-0 w-3 h-3" ${isChecked}>${dayNames[i]}
+     </label>`;
+  }
+
+  editModal.innerHTML = `
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-xl space-y-3.5">
+      <h3 class="text-xs font-bold text-stone-800 flex items-center gap-1.5 border-b border-stone-100 pb-2"><span>✏️</span> 투두 내용 및 주기 수정</h3>
+      <input type="hidden" id="editRoutineTodoId" value="${id}">
+      
+      <div class="space-y-2.5">
+        <div>
+            <label class="text-[10px] text-stone-500 font-bold block mb-1">투두 내용</label>
+            <input type="text" id="editRoutineTodoInput" value="${target.text}" class="w-full border border-stone-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-amber-400">
+        </div>
+        
+        <div>
+            <label class="text-[10px] text-stone-500 font-bold block mb-1">반복 주기</label>
+            <select id="editRoutineTypeSelect" onchange="document.getElementById('editWeeklyDaysWrap').style.display = this.value === 'weekly' ? 'flex' : 'none'" class="w-full border border-stone-200 rounded-xl px-2.5 py-2 text-stone-800 text-xs bg-white focus:outline-none focus:border-amber-400">
+              <option value="daily" ${target.type === 'daily' ? 'selected' : ''}>매일</option>
+              <option value="weekly" ${target.type === 'weekly' ? 'selected' : ''}>요일지정</option>
+              <option value="monthly_first" ${target.type === 'monthly_first' ? 'selected' : ''}>매월 첫날</option>
+              <option value="monthly_last" ${target.type === 'monthly_last' ? 'selected' : ''}>매월 말일</option>
+              <option value="quarterly" ${target.type === 'quarterly' ? 'selected' : ''}>분기별 첫날 (1,4,7,10월)</option>
+            </select>
+        </div>
+        
+        <div id="editWeeklyDaysWrap" class="flex-wrap gap-1.5 pt-1" style="display: ${target.type === 'weekly' ? 'flex' : 'none'};">
+          ${daysHtml}
+        </div>
+      </div>
+
+      <div class="flex gap-2 mt-4 pt-1">
+        <button onclick="document.getElementById('routineTodoEditModal').classList.add('hidden')" class="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-xs py-2 rounded-xl transition">취소</button>
+        <button onclick="saveRoutineTodoEdit()" class="flex-1 bg-amber-400 hover:bg-amber-500 text-stone-900 font-bold text-xs py-2 rounded-xl shadow-xs transition">확인</button>
+      </div>
+    </div>
+  `;
+  editModal.classList.remove('hidden');
+}
+
+function saveRoutineTodoEdit() {
+  const id = parseInt(document.getElementById('editRoutineTodoId').value, 10);
+  const newText = document.getElementById('editRoutineTodoInput').value.trim();
+  const newType = document.getElementById('editRoutineTypeSelect').value;
+  
+  if (!newText) return alert('내용을 입력해주세요!');
+
+  let newDays = null;
+  if (newType === 'weekly') {
+    const chks = document.querySelectorAll('.edit-day-chk:checked');
+    newDays = Array.from(chks).map(c => parseInt(c.value, 10));
+    if (newDays.length === 0) return alert('요일을 최소 하루 이상 선택해주세요!');
+  }
+
+  const rules = typeof getRoutineRules === 'function' ? getRoutineRules() : [];
+  const target = rules.find(r => r.id === id);
+  if (target) {
+    target.text = newText;
+    target.type = newType;
+    target.days = newDays;
+    if (typeof saveRoutineRules === 'function') saveRoutineRules(rules);
+    if(document.getElementById('routineTodoManageModal') && !document.getElementById('routineTodoManageModal').classList.contains('hidden')) {
+        renderRoutineTodoManageList();
+    }
+  }
+  document.getElementById('routineTodoEditModal').classList.add('hidden');
+}
+
+// 3. 전체 관리 모달 (정렬 스위치 추가)
+function renderRoutineTodoManageList() {
+  const container = document.getElementById('routineTodoManageList');
+  if (!container) return;
+  
+  const sortMode = localStorage.getItem('mingle_todo_sort_mode') || 'auto';
+  const rules = typeof getRoutineRules === 'function' ? getRoutineRules() : [];
+
+  let displayRules = [...rules];
+  if (sortMode === 'auto') {
+    const typeRank = { daily: 1, weekly: 2, monthly_first: 3, monthly: 3, monthly_last: 4, quarterly: 5 };
+    displayRules.sort((a, b) => {
+      const rankDiff = (typeRank[a.type] || 9) - (typeRank[b.type] || 9);
+      if (rankDiff !== 0) return rankDiff;
+      return (a.text||'').localeCompare(b.text||'', 'ko');
+    });
+  } else {
+    displayRules.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  }
+
+  let html = `
+    <div class="flex justify-between items-center mb-3 px-1 bg-stone-50 p-2 rounded-lg border border-stone-200">
+        <span class="text-[10px] text-stone-500 font-bold">목록 정렬 기준</span>
+        <button onclick="toggleTodoSortMode()" class="text-[10px] px-2.5 py-1 rounded-md border ${sortMode === 'auto' ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-white text-stone-500 border-stone-200'} font-bold transition shadow-2xs">
+            ${sortMode === 'auto' ? '✨ 자동 (기간순>가나다순)' : '✋ 수동 (직접 순서 변경)'}
+        </button>
+    </div>
+  `;
+
+  if (displayRules.length === 0) {
+    html += '<p class="text-[11px] text-stone-400 text-center py-4 bg-stone-50 rounded-xl border border-stone-100 border-dashed">등록된 전체 반복 투두가 없어요.</p>';
+  } else {
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    displayRules.forEach(r => {
+        let badge = '';
+        if (r.type === 'daily') badge = '매일';
+        else if (r.type === 'weekly') badge = r.days ? r.days.map(d => dayNames[d]+'요일').join(', ') : '';
+        else if (r.type === 'monthly_first' || r.type === 'monthly') badge = '매월 첫날';
+        else if (r.type === 'monthly_last') badge = '매월 말일';
+        else if (r.type === 'quarterly') badge = '분기별 (1,4,7,10월 1일)';
+
+        // 수동 모드일 때만 위/아래 순서 변경 버튼 노출
+        const moveBtns = sortMode === 'manual' ? `
+          <button onclick="moveRoutineOrder(${r.id}, -1); renderRoutineTodoManageList();" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▲</button>
+          <button onclick="moveRoutineOrder(${r.id}, 1); renderRoutineTodoManageList();" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▼</button>
+        ` : '';
+
+        html += `
+          <div class="flex items-center justify-between p-2.5 rounded-xl border border-stone-200 bg-white shadow-2xs mb-2">
+            <div class="flex-1 min-w-0 pr-2">
+              <div class="font-bold text-stone-800 text-xs truncate">${r.text}</div>
+              <div class="text-[10px] text-stone-500 mt-0.5">${badge}</div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <div class="flex items-center mr-1">${moveBtns}</div>
+              <button onclick="editRoutineTodoName(${r.id})" class="text-stone-400 hover:text-amber-600 text-[10px] px-1.5 font-bold transition border border-stone-200 bg-stone-50 rounded-md py-0.5">수정</button>
+              <button onclick="deleteRoutineRule(${r.id}); renderRoutineTodoManageList();" class="text-stone-300 hover:text-rose-500 font-bold text-xs px-1.5 transition">✕</button>
+            </div>
+          </div>
+        `;
+    });
+  }
+  container.innerHTML = html;
+}
+
+// 4. 메인 화면 투두 리스트 정렬 덮어쓰기
+var origRenderDayRoutineTodos2 = typeof renderDayRoutineTodos === 'function' ? renderDayRoutineTodos : function(){};
+renderDayRoutineTodos = function() {
+  const container = document.getElementById('routineTodoList');
+  if (!container) return;
+
+  const headerArea = container.parentElement.querySelector('.border-b');
+  if (headerArea && !headerArea.querySelector('.manage-btn-added')) {
+    const titleFlex = headerArea.querySelector('h3');
+    if (titleFlex) {
+      const btnHtml = `<button onclick="openRoutineTodoManageModal()" class="manage-btn-added text-[10px] text-stone-500 border border-stone-200 bg-stone-100 px-2 py-0.5 rounded-lg hover:bg-stone-200 font-bold transition ml-2 shadow-2xs cursor-pointer">⚙️ 전체 관리</button>`;
+      titleFlex.insertAdjacentHTML('beforeend', btnHtml);
+    }
+  }
+
+  const parts = currentDate.split('-');
+  const year = parseInt(parts[0], 10);
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const d = new Date(year, monthIdx, parseInt(parts[2], 10));
+  const dayOfWeek = d.getDay();
+  const dateNum = d.getDate();
+  const monthNum = d.getMonth() + 1;
+  const lastDayOfMonth = new Date(year, monthIdx + 1, 0).getDate();
+
+  const rules = typeof getRoutineRules === 'function' ? getRoutineRules() : [];
+  const dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : {};
+  const checks = dayData.routineChecks || {};
+  const postponedChecks = dayData.postponedChecks || {};
+  const postponedFromPast = dayData.postponedTodos || []; 
+
+  let activeRules = rules.filter(r => {
+    if (r.type === 'daily') return true;
+    if (r.type === 'weekly') return r.days && r.days.includes(dayOfWeek);
+    if (r.type === 'monthly_first' || r.type === 'monthly') return dateNum === 1;
+    if (r.type === 'monthly_last') return dateNum === lastDayOfMonth;
+    if (r.type === 'quarterly') return dateNum === 1 && [1, 4, 7, 10].includes(monthNum);
+    return false;
+  });
+
+  postponedFromPast.forEach(p => {
+     if (!activeRules.find(r => r.id === p.id)) {
+         activeRules.push({ ...p, isPostponedItem: true });
+     }
+  });
+
+  const sortMode = localStorage.getItem('mingle_todo_sort_mode') || 'auto';
+  
+  // 정렬 엔진: 미룬 항목 우선 > 설정된 모드(자동/수동)
+  activeRules.sort((a, b) => {
+    if (a.isPostponedItem && !b.isPostponedItem) return -1; 
+    if (!a.isPostponedItem && b.isPostponedItem) return 1;
+    
+    if (sortMode === 'auto') {
+        const typeRank = { daily: 1, weekly: 2, monthly_first: 3, monthly: 3, monthly_last: 4, quarterly: 5 };
+        const rankDiff = (typeRank[a.type] || 9) - (typeRank[b.type] || 9);
+        if (rankDiff !== 0) return rankDiff;
+        return (a.text||'').localeCompare(b.text||'', 'ko');
+    } else {
+        return (a.sortOrder || 0) - (b.sortOrder || 0);
+    }
+  });
+
+  const countBadge = document.getElementById('routineTodoCount');
+  if (countBadge) countBadge.innerText = `${activeRules.length}건`;
+
+  if (activeRules.length === 0) {
+    container.innerHTML = `<p class="text-[11px] text-stone-300 py-2 text-center">오늘 해야 할 투두가 없어요 🌿</p>`;
+    return;
+  }
+
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  container.innerHTML = activeRules.map((r) => {
+    const isDone = !!checks[r.id];
+    const isPostponedToday = !!postponedChecks[r.id]; 
+    
+    let badge = '';
+    if (r.isPostponedItem) badge = '<span class="text-[9px] bg-rose-50 text-rose-600 border border-rose-200 px-1.5 py-0.2 rounded font-semibold shrink-0">어제 미룸 💦</span>';
+    else if (r.type === 'daily') badge = '<span class="text-[9px] bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.2 rounded font-semibold shrink-0">매일</span>';
+    else if (r.type === 'weekly') badge = `<span class="text-[9px] bg-sky-50 text-sky-900 border border-sky-200 px-1.5 py-0.2 rounded font-semibold shrink-0">${dayNames[dayOfWeek]}요일</span>`;
+    else if (r.type === 'monthly_first' || r.type === 'monthly') badge = '<span class="text-[9px] bg-emerald-50 text-emerald-900 border border-emerald-200 px-1.5 py-0.2 rounded font-semibold shrink-0">첫날</span>';
+    else if (r.type === 'monthly_last') badge = '<span class="text-[9px] bg-rose-50 text-rose-900 border border-rose-200 px-1.5 py-0.2 rounded font-semibold shrink-0">말일</span>';
+    else if (r.type === 'quarterly') badge = '<span class="text-[9px] bg-purple-50 text-purple-900 border border-purple-200 px-1.5 py-0.2 rounded font-semibold shrink-0">분기</span>';
+
+    let postponeBtnHtml = '';
+    if (!isDone && !isPostponedToday && r.type !== 'daily') {
+        postponeBtnHtml = `<button onclick="postponeRoutineTodo(${r.id}, '${r.text.replace(/'/g, "\\'")}', '${r.type}')" class="text-[9px] font-bold text-stone-400 hover:text-sky-500 hover:border-sky-300 bg-white border border-stone-200 px-2 py-1 rounded shadow-2xs transition shrink-0 ml-1">미루기</button>`;
+    } else if (isPostponedToday) {
+        badge = '<span class="text-[9px] bg-stone-100 text-stone-400 border border-stone-200 px-1.5 py-0.2 rounded font-semibold shrink-0">내일로 미룸</span>';
+    }
+
+    const moveBtns = (!r.isPostponedItem && sortMode === 'manual') ? `
+        <button onclick="moveRoutineOrder(${r.id}, -1)" title="위로" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5 ml-1">▲</button>
+        <button onclick="moveRoutineOrder(${r.id}, 1)" title="아래로" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▼</button>
+        <button onclick="deleteRoutineRule(${r.id})" title="삭제" class="text-stone-300 hover:text-rose-500 font-bold px-1 text-xs">✕</button>
+    ` : '';
+
+    return `
+      <div class="flex items-center justify-between p-2 rounded-lg ${isPostponedToday ? 'bg-stone-50/50 opacity-60' : 'bg-stone-50'} border border-stone-100 text-xs transition-all shadow-2xs hover:border-amber-200">
+        <label class="flex items-center gap-1.5 flex-1 cursor-pointer min-w-0 pr-1">
+          <input type="checkbox" ${isDone ? 'checked' : ''} ${isPostponedToday ? 'disabled' : ''} onchange="toggleDayRoutineCheck(${r.id})" class="w-3.5 h-3.5 rounded text-amber-500 border-stone-300 ${isPostponedToday ? 'opacity-50' : 'cursor-pointer'} focus:ring-0">
+          <span class="${isDone || isPostponedToday ? 'line-through text-stone-300' : 'text-stone-700 font-bold'} truncate text-[11px]">${r.text}</span>
+          ${badge}
+        </label>
+        <div class="flex items-center shrink-0">
+          ${postponeBtnHtml}
+          ${moveBtns}
+        </div>
+      </div>
+    `;
+  }).join('');
+};
