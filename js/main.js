@@ -10138,3 +10138,210 @@ openOotdClosetModal = function(category) {
   const inp = document.getElementById('ootdNewClothInput');
   if (inp) inp.value = '';
 };
+
+// ==========================================
+// 📝 데일리 TO-DO 전체 관리 & 내일로 미루기 패치
+// ==========================================
+
+// 1. 전체 관리 모달 열기/닫기
+function openRoutineTodoManageModal() {
+  const modal = document.getElementById('routineTodoManageModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    renderRoutineTodoManageList();
+  }
+}
+
+function closeRoutineTodoManageModal() {
+  const modal = document.getElementById('routineTodoManageModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+// 2. 전체 관리 리스트 렌더링 (이름 수정 & 삭제)
+function renderRoutineTodoManageList() {
+  const container = document.getElementById('routineTodoManageList');
+  if (!container) return;
+  const rules = typeof getRoutineRules === 'function' ? getRoutineRules() : [];
+  
+  if (rules.length === 0) {
+    container.innerHTML = '<p class="text-[11px] text-stone-400 text-center py-4 bg-stone-50 rounded-xl border border-stone-100 border-dashed">등록된 전체 반복 투두가 없어요.</p>';
+    return;
+  }
+
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  container.innerHTML = rules.map(r => {
+    let badge = '';
+    if (r.type === 'daily') badge = '매일';
+    else if (r.type === 'weekly') badge = r.days ? r.days.map(d => dayNames[d]+'요일').join(', ') : '';
+    else if (r.type === 'monthly_first' || r.type === 'monthly') badge = '매월 첫날';
+    else if (r.type === 'monthly_last') badge = '매월 말일';
+    else if (r.type === 'quarterly') badge = '분기별 (1,4,7,10월 1일)';
+
+    return `
+      <div class="flex items-center justify-between p-2.5 rounded-xl border border-stone-200 bg-white shadow-2xs mb-2">
+        <div class="flex-1 min-w-0 pr-2">
+          <div class="font-bold text-stone-800 text-xs truncate">${r.text}</div>
+          <div class="text-[10px] text-stone-500 mt-0.5">${badge}</div>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button onclick="editRoutineTodoName(${r.id})" class="text-stone-400 hover:text-amber-600 text-xs px-1.5 font-bold transition">✏️ 수정</button>
+          <button onclick="deleteRoutineRule(${r.id}); renderRoutineTodoManageList();" class="text-stone-300 hover:text-rose-500 font-bold text-sm px-1 transition">✕</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function editRoutineTodoName(id) {
+  const rules = getRoutineRules();
+  const target = rules.find(r => r.id === id);
+  if (!target) return;
+  const newText = prompt('투두 내용을 수정해주세요:', target.text);
+  if (!newText || !newText.trim() || newText.trim() === target.text) return;
+  
+  target.text = newText.trim();
+  saveRoutineRules(rules);
+  renderRoutineTodoManageList();
+}
+
+// 3. 미루기 함수 (오늘 목록엔 취소선, 내일 목록엔 추가)
+function postponeRoutineTodo(ruleId, text, type) {
+  if (!confirm('💦 [' + text + '] 항목을 내일로 미룰까요?\n(내일의 투두 목록에 한 번 더 추가됩니다.)')) return;
+
+  // 내일 날짜 정확하게 계산 (월말/연말 자동 갱신)
+  const parts = currentDate.split('-');
+  const tmr = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10) + 1);
+  const mStr = (tmr.getMonth() + 1) < 10 ? '0' + (tmr.getMonth() + 1) : (tmr.getMonth() + 1);
+  const dStr = tmr.getDate() < 10 ? '0' + tmr.getDate() : tmr.getDate();
+  const tmrStr = `${tmr.getFullYear()}-${mStr}-${dStr}`;
+
+  // 1) 내일 데이터에 '미룬 항목'으로 쏙 밀어넣기
+  let tmrData = typeof getDayDataLocal === 'function' ? getDayDataLocal(tmrStr) : {};
+  if (!tmrData.postponedTodos) tmrData.postponedTodos = [];
+  
+  if (!tmrData.postponedTodos.find(p => p.id === ruleId)) {
+    tmrData.postponedTodos.push({ id: ruleId, text: text, type: type, fromDate: currentDate });
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(tmrStr, tmrData);
+    if (typeof db !== 'undefined' && db) db.collection('diary_days').doc(tmrStr).set({ postponedTodos: tmrData.postponedTodos }, { merge: true }).catch(console.error);
+  }
+
+  // 2) 오늘 데이터에는 '미룸 처리 완료' 표시 남기기
+  const todayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : {};
+  if (!todayData.postponedChecks) todayData.postponedChecks = {};
+  todayData.postponedChecks[ruleId] = true;
+  
+  if (typeof saveDayDataLocal === 'function') saveDayDataLocal(currentDate, todayData);
+  if (typeof db !== 'undefined' && db) db.collection('diary_days').doc(currentDate).set({ postponedChecks: todayData.postponedChecks }, { merge: true }).catch(console.error);
+
+  if (typeof renderDayRoutineTodos === 'function') renderDayRoutineTodos();
+}
+
+// 4. 기존 투두 렌더링 함수 덮어쓰기 (전체관리 버튼 + 미루기 로직 결합!)
+const origRenderDayRoutineTodos = typeof renderDayRoutineTodos === 'function' ? renderDayRoutineTodos : function(){};
+renderDayRoutineTodos = function() {
+  const container = document.getElementById('routineTodoList');
+  if (!container) return;
+
+  // 헤더에 [⚙️ 전체 관리] 버튼 쏙 끼워넣기
+  const headerArea = container.parentElement.querySelector('.border-b');
+  if (headerArea && !headerArea.querySelector('.manage-btn-added')) {
+    const titleFlex = headerArea.querySelector('h3');
+    if (titleFlex) {
+      const btnHtml = `<button onclick="openRoutineTodoManageModal()" class="manage-btn-added text-[10px] text-stone-500 border border-stone-200 bg-stone-100 px-2 py-0.5 rounded-lg hover:bg-stone-200 font-bold transition ml-2 shadow-2xs cursor-pointer">⚙️ 전체 관리</button>`;
+      titleFlex.insertAdjacentHTML('beforeend', btnHtml);
+    }
+  }
+
+  const parts = currentDate.split('-');
+  const year = parseInt(parts[0], 10);
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const d = new Date(year, monthIdx, parseInt(parts[2], 10));
+  const dayOfWeek = d.getDay();
+  const dateNum = d.getDate();
+  const monthNum = d.getMonth() + 1;
+  const lastDayOfMonth = new Date(year, monthIdx + 1, 0).getDate();
+
+  const rules = typeof getRoutineRules === 'function' ? getRoutineRules() : [];
+  const dayData = typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : {};
+  const checks = dayData.routineChecks || {};
+  const postponedChecks = dayData.postponedChecks || {};
+  const postponedFromPast = dayData.postponedTodos || []; 
+
+  // 원래 오늘 날짜에 배정된 투두들 필터링
+  let activeRules = rules.filter(r => {
+    if (r.type === 'daily') return true;
+    if (r.type === 'weekly') return r.days && r.days.includes(dayOfWeek);
+    if (r.type === 'monthly_first' || r.type === 'monthly') return dateNum === 1;
+    if (r.type === 'monthly_last') return dateNum === lastDayOfMonth;
+    if (r.type === 'quarterly') return dateNum === 1 && [1, 4, 7, 10].includes(monthNum);
+    return false;
+  });
+
+  // 어제(또는 과거)에서 미루기 버튼 눌러서 넘어온 투두들 스윽 합치기
+  postponedFromPast.forEach(p => {
+     if (!activeRules.find(r => r.id === p.id)) {
+         activeRules.push({ ...p, isPostponedItem: true });
+     }
+  });
+
+  // 정렬: 미룬 항목 우선 -> 주기 짧은순 -> 가나다순
+  const typeRank = { daily: 1, weekly: 2, monthly_first: 3, monthly: 3, monthly_last: 4, quarterly: 5 };
+  activeRules.sort((a, b) => {
+    if (a.isPostponedItem && !b.isPostponedItem) return -1; 
+    if (!a.isPostponedItem && b.isPostponedItem) return 1;
+    const rankDiff = (typeRank[a.type] || 9) - (typeRank[b.type] || 9);
+    if (rankDiff !== 0) return rankDiff;
+    return (a.text||'').localeCompare(b.text||'', 'ko');
+  });
+
+  const countBadge = document.getElementById('routineTodoCount');
+  if (countBadge) countBadge.innerText = `${activeRules.length}건`;
+
+  if (activeRules.length === 0) {
+    container.innerHTML = `<p class="text-[11px] text-stone-300 py-2 text-center">오늘 해야 할 투두가 없어요 🌿</p>`;
+    return;
+  }
+
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  container.innerHTML = activeRules.map((r) => {
+    const isDone = !!checks[r.id];
+    const isPostponedToday = !!postponedChecks[r.id]; 
+    
+    // 알록달록 미니멀 파스텔 뱃지
+    let badge = '';
+    if (r.isPostponedItem) badge = '<span class="text-[9px] bg-rose-50 text-rose-600 border border-rose-200 px-1.5 py-0.2 rounded font-semibold shrink-0">어제 미룸 💦</span>';
+    else if (r.type === 'daily') badge = '<span class="text-[9px] bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.2 rounded font-semibold shrink-0">매일</span>';
+    else if (r.type === 'weekly') badge = `<span class="text-[9px] bg-sky-50 text-sky-900 border border-sky-200 px-1.5 py-0.2 rounded font-semibold shrink-0">${dayNames[dayOfWeek]}요일</span>`;
+    else if (r.type === 'monthly_first' || r.type === 'monthly') badge = '<span class="text-[9px] bg-emerald-50 text-emerald-900 border border-emerald-200 px-1.5 py-0.2 rounded font-semibold shrink-0">첫날</span>';
+    else if (r.type === 'monthly_last') badge = '<span class="text-[9px] bg-rose-50 text-rose-900 border border-rose-200 px-1.5 py-0.2 rounded font-semibold shrink-0">말일</span>';
+    else if (r.type === 'quarterly') badge = '<span class="text-[9px] bg-purple-50 text-purple-900 border border-purple-200 px-1.5 py-0.2 rounded font-semibold shrink-0">분기</span>';
+
+    // 미루기 버튼 & 상태 뱃지 제어
+    let postponeBtnHtml = '';
+    if (!isDone && !isPostponedToday) {
+        postponeBtnHtml = `<button onclick="postponeRoutineTodo(${r.id}, '${r.text.replace(/'/g, "\\'")}', '${r.type}')" class="text-[9px] font-bold text-stone-400 hover:text-sky-500 hover:border-sky-300 bg-white border border-stone-200 px-2 py-1 rounded shadow-2xs transition shrink-0 ml-1">내일로 미루기 ➔</button>`;
+    } else if (isPostponedToday) {
+        badge = '<span class="text-[9px] bg-stone-100 text-stone-400 border border-stone-200 px-1.5 py-0.2 rounded font-semibold shrink-0">내일로 미룸 ➔</span>';
+    }
+
+    return `
+      <div class="flex items-center justify-between p-2 rounded-lg ${isPostponedToday ? 'bg-stone-50/50 opacity-60' : 'bg-stone-50'} border border-stone-100 text-xs transition-all shadow-2xs hover:border-amber-200">
+        <label class="flex items-center gap-1.5 flex-1 cursor-pointer min-w-0 pr-1">
+          <input type="checkbox" ${isDone ? 'checked' : ''} ${isPostponedToday ? 'disabled' : ''} onchange="toggleDayRoutineCheck(${r.id})" class="w-3.5 h-3.5 rounded text-amber-500 border-stone-300 ${isPostponedToday ? 'opacity-50' : 'cursor-pointer'}">
+          <span class="${isDone || isPostponedToday ? 'line-through text-stone-300' : 'text-stone-700 font-bold'} truncate text-[11px]">${r.text}</span>
+          ${badge}
+        </label>
+        <div class="flex items-center shrink-0">
+          ${postponeBtnHtml}
+          ${!r.isPostponedItem ? `
+            <button onclick="moveRoutineOrder(${r.id}, -1)" title="위로" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5 ml-1">▲</button>
+            <button onclick="moveRoutineOrder(${r.id}, 1)" title="아래로" class="text-stone-300 hover:text-stone-600 text-[10px] px-0.5">▼</button>
+            <button onclick="deleteRoutineRule(${r.id})" title="삭제" class="text-stone-300 hover:text-rose-500 font-bold px-1 text-xs">✕</button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+};
