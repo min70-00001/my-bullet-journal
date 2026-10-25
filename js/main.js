@@ -10397,7 +10397,7 @@ function saveRoutineTodoEdit() {
 }
 
 // 2. 데일리 TO-DO 메인 렌더링 덮어쓰기 (미루기 버튼 텍스트 단축 & 매일 항목 제외!)
-const origRenderDayRoutineTodos = typeof renderDayRoutineTodos === 'function' ? renderDayRoutineTodos : function(){};
+var origRenderDayRoutineTodos = typeof renderDayRoutineTodos === 'function' ? renderDayRoutineTodos : function(){};
 renderDayRoutineTodos = function() {
   const container = document.getElementById('routineTodoList');
   if (!container) return;
