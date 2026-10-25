@@ -9929,3 +9929,212 @@ window.addEventListener('DOMContentLoaded', () => {
     } catch(e) {}
   }, 250); 
 });
+
+// ==========================================
+// 👗 OOTD 노션 스타일 검색 & 기기 간 누적 횟수 동기화 패치
+// ==========================================
+
+// 1. 검색창 입력 시 리스트 실시간 필터링
+function onOotdSearchInput() {
+  const q = document.getElementById('ootdNewClothInput').value.trim();
+  renderClosetModalList(q);
+}
+
+// 2. 검색창에서 Enter 쳤을 때 (있으면 입기, 없으면 새로 등록 후 입기)
+function handleOotdEnterKey(event) {
+  if (event.key !== 'Enter') return;
+  
+  const q = document.getElementById('ootdNewClothInput').value.trim();
+  if (!q) return;
+  
+  const closet = getClosetData();
+  const list = closet[activeCategory] || [];
+  const exactMatch = list.find(c => c.name.toLowerCase() === q.toLowerCase());
+  
+  if (exactMatch) {
+    toggleSelectCloth(activeCategory, exactMatch.id);
+    document.getElementById('ootdNewClothInput').value = '';
+    renderClosetModalList();
+  } else {
+    addNewClothToCloset();
+  }
+}
+
+// 3. 옷장 목록 렌더링 덮어쓰기 (검색 + 착용 횟수 파이어베이스 정렬)
+function renderClosetModalList(searchQuery = '') {
+  const container = document.getElementById('ootdClosetList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const closet = getClosetData();
+  let list = (closet[activeCategory] || []).slice();
+  
+  // 🔍 검색어 필터링
+  if (searchQuery) {
+    list = list.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }
+  
+  let dayData = {};
+  try {
+    const key = 'mingle_day_' + currentDate;
+    dayData = JSON.parse(localStorage.getItem(key) || '{}');
+  } catch(e) {
+    dayData = (typeof getDayDataLocal === 'function' ? getDayDataLocal(currentDate) : window.currentDayData) || {};
+  }
+  
+  const selObj = dayData.ootdSelected || dayData.ootd || {};
+  let selectedIds = selObj[activeCategory] || [];
+  if (!Array.isArray(selectedIds)) selectedIds = selectedIds ? [String(selectedIds)] : [];
+
+  // ✨ 노션 스타일: 검색했는데 똑같은 이름이 없으면 '새로 추가하기' 버튼 생성!
+  const exactMatch = (closet[activeCategory] || []).find(c => c.name.toLowerCase() === searchQuery.toLowerCase());
+  if (searchQuery && !exactMatch) {
+    const addBtn = document.createElement('div');
+    addBtn.className = 'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border cursor-pointer select-none transition-all bg-amber-50 border-amber-300 text-amber-900 font-bold shadow-xs w-full justify-center mb-1.5';
+    addBtn.innerHTML = `<span>✨ '${searchQuery}' 새로 추가하기 (Enter)</span>`;
+    addBtn.onclick = () => addNewClothToCloset();
+    container.appendChild(addBtn);
+  }
+
+  if (list.length === 0 && !searchQuery) {
+    container.innerHTML = '<span class="text-[11px] text-stone-400 p-2 w-full text-center">등록된 옷이 없어요. 검색창에 입력해서 추가해보세요!</span>';
+    return;
+  }
+
+  // ☁️ 파이어베이스에 저장된 진짜 누적 횟수(wearCount) 기준으로 정렬!
+  list.sort((a, b) => (b.wearCount || 0) - (a.wearCount || 0));
+
+  list.forEach(item => {
+    const isSelected = selectedIds.map(String).includes(String(item.id));
+    const btn = document.createElement('div');
+    btn.className = isSelected 
+      ? 'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border cursor-pointer select-none transition-all bg-amber-100 border-amber-300 font-bold text-amber-900 shadow-xs ring-1 ring-amber-400' 
+      : 'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border cursor-pointer select-none transition-all bg-white border-stone-200 text-stone-600 hover:bg-stone-50';
+
+    const wearCnt = item.wearCount || 0;
+
+    btn.innerHTML = `
+      <span class="w-2.5 h-2.5 rounded-full border border-stone-300 shrink-0 pointer-events-none" style="background-color: ${item.color || '#A8A29E'};"></span>
+      <span class="cloth-title flex-1 pointer-events-none">${item.name}</span>
+      <span class="text-[10px] text-stone-400 font-normal shrink-0 pointer-events-none">(${wearCnt}회)</span>
+      <button type="button" onclick="event.stopPropagation(); editClothName('${item.id}', '${item.name.replace(/'/g, "\\'")}')" title="이름 수정" class="text-stone-300 hover:text-stone-500 p-1 transition-colors flex items-center">
+        <svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+      </button>
+      <button type="button" onclick="event.stopPropagation(); deleteClothFromCloset('${item.id}')" title="삭제" class="text-stone-300 hover:text-red-400 px-1 text-sm font-bold transition-colors">×</button>
+    `;
+
+    btn.onclick = () => toggleSelectCloth(activeCategory, item.id);
+    container.appendChild(btn);
+  });
+}
+
+// 4. 옷 토글 시 누적 횟수를 클라우드에 쏴주기
+function toggleSelectCloth(category, id) {
+  const strId = String(id);
+  const curDate = (typeof currentDate !== 'undefined' && currentDate) ? currentDate : new Date().toISOString().split('T')[0];
+  const key = 'mingle_day_' + curDate;
+  let dayData = {};
+  try { dayData = JSON.parse(localStorage.getItem(key)) || {}; } catch(e) { dayData = {}; }
+
+  if (!dayData.ootdSelected) dayData.ootdSelected = {};
+  if (!dayData.ootd) dayData.ootd = {};
+  if (!dayData.ootdNames) dayData.ootdNames = {};
+  if (!dayData.ootdColors) dayData.ootdColors = {};
+
+  let arr = [];
+  const sourceArr = dayData.ootdSelected[category] || dayData.ootd[category];
+  if (Array.isArray(sourceArr)) arr = sourceArr.map(String);
+  else if (sourceArr) arr = [String(sourceArr)];
+
+  const closet = getClosetData();
+  const cloth = (closet[category] || []).find(c => String(c.id) === strId || c.name === strId);
+  const clothName = cloth ? cloth.name : strId;
+  const clothColor = cloth ? (cloth.color || detectClothColor(clothName)) : detectClothColor(clothName);
+
+  if (arr.includes(strId)) {
+    // ⬇️ 옷 벗을 때 횟수 차감
+    arr = arr.filter(x => x !== strId);
+    if (dayData.ootdNames[category]) delete dayData.ootdNames[category][strId];
+    if (dayData.ootdColors[category]) delete dayData.ootdColors[category][strId];
+    if (cloth) cloth.wearCount = Math.max(0, (cloth.wearCount || 1) - 1); 
+  } else {
+    // ⬆️ 옷 입을 때 횟수 증가
+    arr.push(strId);
+    if (!dayData.ootdNames[category]) dayData.ootdNames[category] = {};
+    if (!dayData.ootdColors[category]) dayData.ootdColors[category] = {};
+    dayData.ootdNames[category][strId] = clothName;
+    dayData.ootdColors[category][strId] = clothColor;
+
+    if (category === 'top' || category === 'outer') {
+      if (clothColor && (!dayData.ootd.color || dayData.ootd.color === '#ecdcc9')) dayData.ootd.color = clothColor;
+    }
+    if (cloth) cloth.wearCount = (cloth.wearCount || 0) + 1;
+  }
+
+  // ☁️ 바뀐 누적 횟수를 클라우드에 영구 저장!
+  saveClosetData(closet); 
+
+  dayData.ootdSelected[category] = arr;
+  dayData.ootd[category] = arr;
+
+  try {
+    localStorage.setItem(key, JSON.stringify(dayData));
+    if (typeof saveDayDataLocal === 'function') saveDayDataLocal(curDate, dayData);
+  } catch(e) {}
+
+  if (window.currentDayData) {
+    window.currentDayData.ootdSelected = dayData.ootdSelected;
+    window.currentDayData.ootd = dayData.ootd;
+    window.currentDayData.ootdNames = dayData.ootdNames;
+    window.currentDayData.ootdColors = dayData.ootdColors;
+    if (dayData.ootd && dayData.ootd.color) window.currentDayData.ootd.color = dayData.ootd.color;
+  }
+
+  if (typeof db !== 'undefined' && db) {
+    db.collection('diary_days').doc(curDate).set({
+      ootdSelected: dayData.ootdSelected, ootd: dayData.ootd, ootdNames: dayData.ootdNames, ootdColors: dayData.ootdColors
+    }, { merge: true }).catch(err => console.error(err));
+  }
+
+  // 검색창 입력값 유지하면서 화면 갱신
+  const searchQ = document.getElementById('ootdNewClothInput') ? document.getElementById('ootdNewClothInput').value.trim() : '';
+  renderClosetModalList(searchQ);
+  
+  if (typeof renderOotd === 'function') try { renderOotd(); } catch(e) {}
+  if (typeof renderCalendar === 'function') try { renderCalendar(); } catch(e) {}
+}
+
+// 5. 새 옷 추가할 때 바로 입혀주기 & 횟수 0회 초기화
+function addNewClothToCloset() {
+  const input = document.getElementById('ootdNewClothInput');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) return;
+
+  const color = typeof detectClothColor === 'function' ? detectClothColor(name) : '#A8A29E';
+  const closet = getClosetData();
+  if (!closet[activeCategory]) closet[activeCategory] = [];
+
+  let existing = closet[activeCategory].find(c => c.name.toLowerCase() === name.toLowerCase());
+  let targetId = '';
+
+  if (existing) {
+    targetId = existing.id;
+  } else {
+    targetId = String(Date.now());
+    // 새 옷은 착용 횟수 0회로 등록!
+    closet[activeCategory].push({ id: targetId, name: name, color: color, wearCount: 0 }); 
+    saveClosetData(closet);
+  }
+
+  input.value = ''; // 추가 완료 후 검색창 비워주기
+  toggleSelectCloth(activeCategory, targetId); // 바로 착용!
+}
+
+// 모달 열 때 검색창 깨끗하게 비워주기
+const origOpenOotdClosetModal = openOotdClosetModal;
+openOotdClosetModal = function(category) {
+  origOpenOotdClosetModal(category);
+  const inp = document.getElementById('ootdNewClothInput');
+  if (inp) inp.value = '';
+};
